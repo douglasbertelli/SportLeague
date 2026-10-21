@@ -11,8 +11,8 @@ import '../../profile/domain/profile.dart';
 import '../data/auth_repository.dart';
 import 'role_selector.dart';
 
-/// Primeiro acesso de contas criadas com Google ou Apple: confirma o nome e
-/// escolhe o tipo de perfil, que o login social não informa.
+/// Etapa logo depois de criar a conta (por e-mail, Google ou Apple): escolha
+/// do tipo de perfil. Pede também o nome quando o cadastro não trouxe um.
 class CompleteProfilePage extends ConsumerStatefulWidget {
   const CompleteProfilePage({super.key});
 
@@ -23,6 +23,7 @@ class CompleteProfilePage extends ConsumerStatefulWidget {
 
 class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   final _formKey = GlobalKey<FormState>();
+  late final bool _askName;
   late final TextEditingController _nameController;
   UserRole? _role;
   bool _loading = false;
@@ -30,15 +31,15 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   @override
   void initState() {
     super.initState();
+    _askName = ref.read(currentProfileProvider).value?.needsName ?? false;
+    // A Apple envia o nome só no app e depois que o perfil já foi criado.
     final metadataName = ref
         .read(supabaseClientProvider)
         .auth
         .currentUser
         ?.userMetadata?['full_name'];
     _nameController = TextEditingController(
-      text: metadataName is String && metadataName.trim().isNotEmpty
-          ? metadataName.trim()
-          : ref.read(currentProfileProvider).value?.fullName,
+      text: metadataName is String ? metadataName.trim() : null,
     );
   }
 
@@ -62,8 +63,8 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
           .read(profileRepositoryProvider)
           .completeProfile(
             userId: userId,
-            fullName: _nameController.text,
             role: _role!,
+            fullName: _askName ? _nameController.text : null,
           );
       // Com o perfil completo, o router segue para o cadastro de endereço.
       ref.invalidate(currentProfileProvider);
@@ -80,7 +81,7 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   Widget build(BuildContext context) {
     return FormPage(
       appBar: AppBar(
-        title: const Text('Complete seu cadastro'),
+        title: const Text('Escolha seu perfil'),
         actions: [
           TextButton(
             onPressed: _loading
@@ -91,19 +92,26 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
         ],
       ),
       children: [
+        Text(
+          'Como você vai usar o SportLeague?',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+        const SizedBox(height: 16),
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nome completo'),
-                textCapitalization: TextCapitalization.words,
-                autofillHints: const [AutofillHints.name],
-                validator: Validators.fullName,
-              ),
-              const SizedBox(height: 24),
+              if (_askName) ...[
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Nome completo'),
+                  textCapitalization: TextCapitalization.words,
+                  autofillHints: const [AutofillHints.name],
+                  validator: Validators.fullName,
+                ),
+                const SizedBox(height: 24),
+              ],
               RoleSelector(onSaved: (role) => _role = role),
             ],
           ),

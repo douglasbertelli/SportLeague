@@ -35,15 +35,15 @@ class _FakeAuthRepository implements AuthRepository {
 }
 
 class _FakeProfileRepository implements ProfileRepository {
-  ({String userId, String fullName, UserRole role})? completed;
+  ({String userId, UserRole role, String? fullName})? completed;
 
   @override
   Future<void> completeProfile({
     required String userId,
-    required String fullName,
     required UserRole role,
+    String? fullName,
   }) async {
-    completed = (userId: userId, fullName: fullName, role: role);
+    completed = (userId: userId, role: role, fullName: fullName);
   }
 
   @override
@@ -109,9 +109,10 @@ void main() {
     );
   });
 
-  testWidgets('completar cadastro exige o perfil e salva nome e perfil', (
-    tester,
-  ) async {
+  Future<_FakeProfileRepository> pumpChooseProfile(
+    WidgetTester tester, {
+    required String fullName,
+  }) async {
     final profiles = _FakeProfileRepository();
     await tester.pumpWidget(
       ProviderScope(
@@ -125,10 +126,10 @@ void main() {
           ),
           currentUserIdProvider.overrideWithValue('u1'),
           currentProfileProvider.overrideWithValue(
-            const AsyncData(
+            AsyncData(
               Profile(
                 id: 'u1',
-                fullName: 'Ana Souza',
+                fullName: fullName,
                 plan: SubscriptionPlan.free,
               ),
             ),
@@ -138,24 +139,48 @@ void main() {
         child: const MaterialApp(home: CompleteProfilePage()),
       ),
     );
+    return profiles;
+  }
 
-    expect(find.text('Ana Souza'), findsOneWidget);
-
+  Future<void> tapContinue(WidgetTester tester) async {
     final submit = find.text('Continuar');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.pump();
+  }
+
+  testWidgets('escolha de perfil exige o perfil e não pede o nome de novo', (
+    tester,
+  ) async {
+    final profiles = await pumpChooseProfile(tester, fullName: 'Ana Souza');
+
+    expect(find.byType(TextFormField), findsNothing);
+
+    await tapContinue(tester);
     expect(find.text('Escolha o tipo de perfil'), findsOneWidget);
     expect(profiles.completed, isNull);
 
     await tester.ensureVisible(find.text('Administrador'));
     await tester.tap(find.text('Administrador'));
-    await tester.ensureVisible(submit);
-    await tester.tap(submit);
-    await tester.pump();
+    await tapContinue(tester);
 
     expect(profiles.completed?.userId, 'u1');
-    expect(profiles.completed?.fullName, 'Ana Souza');
     expect(profiles.completed?.role, UserRole.admin);
+    expect(profiles.completed?.fullName, isNull);
+  });
+
+  testWidgets('pede o nome quando o cadastro não trouxe um', (tester) async {
+    final profiles = await pumpChooseProfile(
+      tester,
+      fullName: Profile.placeholderName,
+    );
+
+    await tester.enterText(find.byType(TextFormField), 'Bruno Lima');
+    await tester.ensureVisible(find.text('Jogador'));
+    await tester.tap(find.text('Jogador'));
+    await tapContinue(tester);
+
+    expect(profiles.completed?.role, UserRole.player);
+    expect(profiles.completed?.fullName, 'Bruno Lima');
   });
 }

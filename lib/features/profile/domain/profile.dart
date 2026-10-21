@@ -45,16 +45,21 @@ class Profile {
     avatarUrl: map['avatar_url'] as String?,
   );
 
+  /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
+  /// nome (por exemplo, Apple pelo navegador).
+  static const placeholderName = 'Usuário';
+
   final String id;
   final String fullName;
 
-  /// Nulo em contas criadas por login social até o usuário escolher.
+  /// Nulo até o usuário escolher, logo depois de criar a conta.
   final UserRole? role;
   final SubscriptionPlan plan;
   final String? phone;
   final String? avatarUrl;
 
   bool get needsRole => role == null;
+  bool get needsName => fullName == placeholderName;
   bool get isAdmin => role == UserRole.admin;
   bool get isPremium => plan == SubscriptionPlan.premium;
 }

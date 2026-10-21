@@ -27,9 +27,9 @@ Começa pelo **futebol**; vôlei, basquete e outros esportes virão depois.
 
 ### Login com Google e Apple
 
-O login social entra na conta existente ou cria uma nova. Como Google e Apple
-não informam o tipo de perfil, no primeiro acesso o app abre **Complete seu
-cadastro** (nome + perfil) antes do endereço.
+O login social entra na conta existente ou cria uma nova. Como no cadastro por
+e-mail, no primeiro acesso o app abre **Escolha seu perfil** antes do endereço
+(e pede o nome se o provedor não enviou um).
 
 | Plataforma | Google                         | Apple                            |
 | ---------- | ------------------------------ | -------------------------------- |
@@ -78,13 +78,13 @@ configurado.
 
 ## Fluxo atual
 
-1. **Cadastro** com nome, e-mail, senha e escolha obrigatória do perfil:
+1. **Cadastro** com nome, e-mail e senha, ou **login social** com Google ou Apple.
+2. **Login** e recuperação de senha.
+3. **Escolha do perfil** (obrigatória no primeiro acesso):
    - **Administrador**: cria e gerencia times e jogadores.
    - **Jogador**: entra em times por busca ou convite.
-2. **Login** e recuperação de senha, ou **login social** com Google ou Apple
-   (no primeiro acesso, completa o cadastro com nome e perfil).
-3. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
-4. **Home** com as ações de cada perfil (times, jogadores e convites: próxima etapa).
+4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
+5. **Home** com as ações de cada perfil (times, jogadores e convites: próxima etapa).
 
 ## Estrutura
 
@@ -112,8 +112,8 @@ supabase/
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
-pagamentos (`service_role`). O papel também não, exceto uma única vez em contas
-criadas por login social, que começam sem papel até o usuário escolher.
+pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
+conta nova começa sem papel até o usuário escolher.
 
 ## Testes
 
