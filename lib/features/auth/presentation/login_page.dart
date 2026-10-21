@@ -8,6 +8,7 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
+import '../../../core/widgets/theme_mode_button.dart';
 import '../data/auth_repository.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -73,6 +74,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return FormPage(
+      appBar: AppBar(actions: const [ThemeModeButton()]),
       children: [
         const AppLogo(),
         const SizedBox(height: 32),

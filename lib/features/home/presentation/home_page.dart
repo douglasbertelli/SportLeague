@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/widgets/theme_mode_button.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/domain/profile.dart';
@@ -18,6 +19,7 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('SportLeague'),
         actions: [
+          const ThemeModeButton(),
           IconButton(
             tooltip: 'Editar endereço',
             icon: const Icon(Icons.location_on_outlined),
