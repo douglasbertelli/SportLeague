@@ -81,7 +81,7 @@ class _HomeContent extends StatelessWidget {
         Wrap(
           spacing: 8,
           children: [
-            Chip(label: Text(profile.role.label)),
+            if (profile.role case final role?) Chip(label: Text(role.label)),
             Chip(label: Text('Plano ${profile.plan.label}')),
             const Chip(
               avatar: Icon(Icons.sports_soccer, size: 18),

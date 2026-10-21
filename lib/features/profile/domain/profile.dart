@@ -27,7 +27,7 @@ class Profile {
   const Profile({
     required this.id,
     required this.fullName,
-    required this.role,
+    this.role,
     required this.plan,
     this.phone,
     this.avatarUrl,
@@ -36,7 +36,10 @@ class Profile {
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
     id: map['id'] as String,
     fullName: map['full_name'] as String,
-    role: UserRole.fromName(map['role'] as String),
+    role: switch (map['role']) {
+      final String name => UserRole.fromName(name),
+      _ => null,
+    },
     plan: SubscriptionPlan.fromName(map['plan'] as String),
     phone: map['phone'] as String?,
     avatarUrl: map['avatar_url'] as String?,
@@ -44,11 +47,14 @@ class Profile {
 
   final String id;
   final String fullName;
-  final UserRole role;
+
+  /// Nulo em contas criadas por login social até o usuário escolher.
+  final UserRole? role;
   final SubscriptionPlan plan;
   final String? phone;
   final String? avatarUrl;
 
+  bool get needsRole => role == null;
   bool get isAdmin => role == UserRole.admin;
   bool get isPremium => plan == SubscriptionPlan.premium;
 }

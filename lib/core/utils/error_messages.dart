@@ -1,9 +1,12 @@
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _connectionError =
     'Algo deu errado. Verifique sua conexão e tente novamente.';
 
-/// Converte erros do Supabase em mensagens amigáveis em português.
+/// Converte erros do Supabase e do login social em mensagens amigáveis em
+/// português.
 String friendlyErrorMessage(Object error) {
   if (error is AuthRetryableFetchException || error is AuthUnknownException) {
     // Falha de rede: a mensagem traz a URL da requisição, não o motivo.
@@ -38,6 +41,12 @@ String friendlyErrorMessage(Object error) {
   }
   if (error is PostgrestException) {
     return 'Não foi possível salvar os dados. Tente novamente.';
+  }
+  if (error is GoogleSignInException) {
+    return 'Não foi possível entrar com o Google. Tente novamente.';
+  }
+  if (error is SignInWithAppleException) {
+    return 'Não foi possível entrar com a Apple. Tente novamente.';
   }
   return _connectionError;
 }

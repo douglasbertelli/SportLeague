@@ -10,6 +10,7 @@ import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../data/auth_repository.dart';
+import 'social_sign_in_buttons.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -135,6 +136,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           onPressed: _loading ? null : () => context.push(Routes.signUp),
           child: const Text('Criar conta'),
         ),
+        const SizedBox(height: 24),
+        SocialSignInButtons(enabled: !_loading),
       ],
     );
   }

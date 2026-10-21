@@ -9,6 +9,7 @@ import '../../../core/widgets/loading_button.dart';
 import '../../profile/domain/profile.dart';
 import '../data/auth_repository.dart';
 import 'role_selector.dart';
+import 'social_sign_in_buttons.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -156,6 +157,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           loading: _loading,
           onPressed: _submit,
         ),
+        const SizedBox(height: 24),
+        SocialSignInButtons(enabled: !_loading),
       ],
     );
   }

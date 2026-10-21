@@ -5,8 +5,10 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../profile/data/profile_repository.dart';
 
-/// Exibida enquanto a sessão e o endereço carregam, ou se o carregamento falhar.
+/// Exibida enquanto a sessão, o perfil e o endereço carregam, ou se o
+/// carregamento falhar.
 class SplashPage extends ConsumerWidget {
   const SplashPage({super.key});
 
@@ -14,6 +16,7 @@ class SplashPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasError =
         ref.watch(authSessionProvider).hasError ||
+        ref.watch(currentProfileProvider).hasError ||
         ref.watch(myAddressProvider).hasError;
 
     return Scaffold(
@@ -34,7 +37,9 @@ class SplashPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: () => ref.invalidate(myAddressProvider),
+                  onPressed: () => ref
+                    ..invalidate(currentProfileProvider)
+                    ..invalidate(myAddressProvider),
                   child: const Text('Tentar novamente'),
                 ),
                 const SizedBox(height: 8),

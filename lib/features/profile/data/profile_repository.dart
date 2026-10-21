@@ -17,6 +17,17 @@ class ProfileRepository {
         .maybeSingle();
     return row == null ? null : Profile.fromMap(row);
   }
+
+  /// Conclui o cadastro de contas criadas por login social. O banco só aceita
+  /// definir o role enquanto ele ainda está nulo.
+  Future<void> completeProfile({
+    required String userId,
+    required String fullName,
+    required UserRole role,
+  }) => _client
+      .from('profiles')
+      .update({'full_name': fullName.trim(), 'role': role.name})
+      .eq('id', userId);
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>(
