@@ -24,6 +24,10 @@ String friendlyErrorMessage(Object error) {
         message.contains('already registered')) {
       return 'Este e-mail já está cadastrado.';
     }
+    if (code == 'email_address_invalid' ||
+        code == 'email_address_not_authorized') {
+      return 'Este e-mail não pode ser usado. Verifique o endereço.';
+    }
     if (error is AuthWeakPasswordException || code == 'weak_password') {
       return 'Senha fraca. Use pelo menos 8 caracteres.';
     }

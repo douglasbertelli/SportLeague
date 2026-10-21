@@ -27,4 +27,16 @@ void main() {
     );
     expect(friendlyErrorMessage(error), contains('Senha fraca'));
   });
+
+  test('e-mail recusado pelo Supabase', () {
+    const error = AuthApiException(
+      'Email address "ana@teste.dev" is invalid',
+      statusCode: '400',
+      code: 'email_address_invalid',
+    );
+    expect(
+      friendlyErrorMessage(error),
+      contains('Este e-mail não pode ser usado'),
+    );
+  });
 }
