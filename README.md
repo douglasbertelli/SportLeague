@@ -84,7 +84,37 @@ configurado.
    - **Administrador**: cria e gerencia times e jogadores.
    - **Jogador**: entra em times por busca ou convite.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
-5. **Home** com as ações de cada perfil (times, jogadores e convites: próxima etapa).
+5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
+   **Início, Jogos, Atletas e Perfil**:
+   - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
+     Cada time tem logo (galeria ou câmera, no Storage `team-logos`),
+     modalidade (Futsal, Society, Campo e/ou Futebol de Areia), gênero, faixa
+     de idade (Livre, Base 4 a 20 anos, Master a partir de 35) e data de
+     fundação;
+   - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
+     cada time tem os seus;
+   - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
+     para o dono e os atletas do time), nome, posição e número;
+   - amistoso: modalidade (uma das do time), adversário da **mesma
+     modalidade** — um time da plataforma, pesquisado pelo nome, ou um time
+     fictício criado pelo administrador e salvo para os próximos jogos —, jogar
+     como **mandante** (padrão) ou **visitante**, data e hora e local. O placar é lançado em outra tela. Contra um time da
+     plataforma, o amistoso aparece também na aba Jogos do adversário
+     ("Marcado por …").
+   - **Disponibilidade** (Início): calendário com os dias e horários em que o
+     time joga, avulsos ou recorrentes ("todo sábado às 15:00"). O amistoso só
+     pode ser marcado num horário livre do **adversário** (time da plataforma)
+     ou do **próprio time** (adversário fictício); horário com amistoso
+     pendente ou marcado fica ocupado. Horários recorrentes são no fuso de
+     Brasília.
+   - a aba Jogos tem as abas **Marcados, Pendentes, Cancelados e Realizados**
+     (roláveis na horizontal). Contra time da plataforma, o amistoso fica
+     pendente até o adversário **aceitar** ou **recusar**; contra time
+     fictício já nasce marcado. Os dois times podem cancelar; marcado com a
+     data passada vai para Realizados. Se quem marcou muda a data ou o
+     adversário, volta a ficar pendente.
+
+   Convites e a home do jogador: próxima etapa.
 
 ## Estrutura
 
@@ -95,7 +125,10 @@ lib/
     auth/      cadastro, login, seleção de perfil
     profile/   modelo de perfil (papel e plano)
     address/   endereço + consulta de CEP
-    home/      tela inicial
+    home/      tela inicial (barra inferior do administrador)
+    teams/     times do administrador e time ativo
+    athletes/  atletas de cada time
+    games/     jogos de cada time
     splash/    carregamento inicial
 supabase/
   migrations/  schema do banco (tabelas, RLS e triggers)
@@ -107,8 +140,11 @@ supabase/
 | --------------- | ---------------------------------------------------------------- |
 | `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
-| `teams`         | Times; apenas administradores criam                              |
-| `team_players`  | Jogadores do time (com ou sem conta no app)                      |
+| `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia), gênero, faixa de idade (livre, base, master), fundação e logo |
+| `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
+| `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
+| `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |
+| `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de

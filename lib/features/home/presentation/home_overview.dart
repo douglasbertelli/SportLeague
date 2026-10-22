@@ -1,24 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/routes.dart';
 import '../../profile/domain/profile.dart';
+import '../../teams/data/team_repository.dart';
 
 /// Boas-vindas com o resumo do perfil e as ações de cada tipo de perfil.
-class HomeOverview extends StatelessWidget {
+class HomeOverview extends ConsumerWidget {
   const HomeOverview({super.key, required this.profile});
 
   final Profile profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final actions = profile.isAdmin
-        ? const [
-            _ActionTile(icon: Icons.groups, title: 'Meus times'),
+        ? [
             _ActionTile(
-              icon: Icons.person_add_alt,
-              title: 'Cadastrar jogadores',
+              icon: Icons.shield_outlined,
+              title: 'Meus times',
+              subtitle: switch (ref.watch(myTeamsProvider).value?.length) {
+                null => null,
+                0 => 'Crie seu primeiro time',
+                1 => '1 time',
+                final count => '$count times',
+              },
+              onTap: () => context.push(Routes.teams),
             ),
-            _ActionTile(icon: Icons.mail_outline, title: 'Convites enviados'),
+            // Só faz sentido com um time ativo, cujo calendário é editado.
+            if (ref.watch(selectedTeamProvider).value case final team?)
+              _ActionTile(
+                icon: Icons.event_available,
+                title: 'Disponibilidade',
+                subtitle: 'Dias e horários em que o ${team.name} joga',
+                onTap: () => context.push(Routes.availability),
+              ),
+            const _ActionTile(
+              icon: Icons.mail_outline,
+              title: 'Convites enviados',
+            ),
           ]
         : const [
             _ActionTile(icon: Icons.search, title: 'Buscar times'),
@@ -51,20 +72,31 @@ class HomeOverview extends StatelessWidget {
   }
 }
 
+/// Ação da home; sem [onTap] aparece desabilitada como "Em breve".
 class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.title});
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+  });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = onTap == null ? 'Em breve' : this.subtitle;
     return Card(
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
-        subtitle: const Text('Em breve'),
-        enabled: false,
+        subtitle: subtitle == null ? null : Text(subtitle),
+        trailing: onTap == null ? null : const Icon(Icons.chevron_right),
+        enabled: onTap != null,
+        onTap: onTap,
       ),
     );
   }

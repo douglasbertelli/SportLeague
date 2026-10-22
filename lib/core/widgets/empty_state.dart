@@ -7,11 +7,15 @@ class EmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String message;
+
+  /// Botão opcional abaixo da mensagem.
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +41,10 @@ class EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (action case final action?) ...[
+              const SizedBox(height: 24),
+              action,
+            ],
           ],
         ),
       ),
