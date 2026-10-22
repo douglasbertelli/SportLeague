@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../availability/presentation/slot_picker_page.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
@@ -93,37 +94,48 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       extra: (teamId: team.id!, modality: modality),
     );
     if (opponent != null) {
+      final previousCalendar = _calendarFor(team)?.teamId;
       setState(() {
         _modality = modality;
         _opponent = opponent;
+        // O horário escolhido era do calendário de outro time.
+        if (_calendarFor(team)?.teamId != previousCalendar) _scheduledAt = null;
       });
     }
   }
 
-  Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final initial = _scheduledAt ?? DateTime(now.year, now.month, now.day, 15);
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 5),
-    );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (time == null) return;
-    setState(
-      () => _scheduledAt = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
+  /// Calendário que vale para o jogo: o do adversário da plataforma ou, contra
+  /// time fictício, o do próprio time. Nulo enquanto não há adversário.
+  ({String teamId, String owner})? _calendarFor(Team team) =>
+      switch (_opponent) {
+        null => null,
+        RegisteredOpponent(team: final rival) => (
+          teamId: rival.id!,
+          owner: 'do ${rival.name}',
+        ),
+        SavedOpponent(teamId: final rivalId?, :final name) => (
+          teamId: rivalId,
+          owner: 'do $name',
+        ),
+        _ => (teamId: team.id!, owner: 'do seu time'),
+      };
+
+  /// Só dá para escolher entre os horários livres do calendário que vale.
+  Future<void> _pickDateTime(Team team) async {
+    final calendar = _calendarFor(team);
+    if (calendar == null) {
+      setState(() => _showErrors = true);
+      return;
+    }
+    final slot = await Navigator.of(context).push<DateTime>(
+      MaterialPageRoute(
+        builder: (_) => SlotPickerPage(
+          teamId: calendar.teamId,
+          calendarOwner: calendar.owner,
+        ),
       ),
     );
+    if (slot != null) setState(() => _scheduledAt = slot);
   }
 
   Future<void> _save(Team team) async {
@@ -337,10 +349,15 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
             ),
             const SizedBox(height: 16),
             InkWell(
-              onTap: _pickDateTime,
+              onTap: _loading ? null : () => _pickDateTime(team),
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: 'Data e hora',
+                  helperText: switch (_calendarFor(team)) {
+                    null => 'Escolha o adversário primeiro',
+                    final calendar =>
+                      'Horários livres no calendário ${calendar.owner}',
+                  },
                   suffixIcon: const Icon(Icons.event),
                   errorText: _showErrors && scheduledAt == null
                       ? 'Escolha a data e a hora'

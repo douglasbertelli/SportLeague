@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/address/data/address_repository.dart';
 import '../../features/address/presentation/address_page.dart';
 import '../../features/athletes/domain/athlete.dart';
+import '../../features/availability/presentation/availability_page.dart';
 import '../../features/athletes/presentation/athlete_form_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
@@ -89,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   state.extra as ({String teamId, Modality modality});
               return OpponentPickerPage(teamId: teamId, modality: modality);
             },
+          ),
+          GoRoute(
+            path: 'availability',
+            builder: (_, _) => const AvailabilityPage(),
           ),
         ],
       ),

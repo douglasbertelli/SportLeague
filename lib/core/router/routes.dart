@@ -22,4 +22,7 @@ abstract final class Routes {
 
   /// Recebe `(teamId:, modality:)` em `extra`; devolve o `Opponent` no `pop`.
   static const pickOpponent = '/home/games/opponent';
+
+  /// Calendário de disponibilidade do time ativo.
+  static const availability = '/home/availability';
 }

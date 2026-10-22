@@ -1,6 +1,8 @@
 import 'package:sport_league/core/media/picked_image.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
+import 'package:sport_league/features/availability/data/availability_repository.dart';
+import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
@@ -195,5 +197,49 @@ class FakeOpponentRepository implements OpponentRepository {
       name: guest.name,
       modality: guest.modality,
     );
+  }
+}
+
+/// Horários cadastrados e livres por time, como o banco.
+class FakeAvailabilityRepository implements AvailabilityRepository {
+  FakeAvailabilityRepository({
+    Map<String, List<Availability>> byTeam = const {},
+    this.freeByTeam = const {},
+  }) : byTeam = {
+         for (final entry in byTeam.entries) entry.key: [...entry.value],
+       };
+
+  final Map<String, List<Availability>> byTeam;
+  final Map<String, List<DateTime>> freeByTeam;
+  final added = <Availability>[];
+  final deleted = <String>[];
+  final freeSlotRequests = <String>[];
+
+  @override
+  Future<List<Availability>> fetchByTeam(String teamId) async =>
+      byTeam[teamId] ?? const [];
+
+  @override
+  Future<void> add(Availability availability) async {
+    added.add(availability);
+    (byTeam[availability.teamId] ??= []).add(availability);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    deleted.add(id);
+    for (final list in byTeam.values) {
+      list.removeWhere((slot) => slot.id == id);
+    }
+  }
+
+  @override
+  Future<List<DateTime>> freeSlots(
+    String teamId, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    freeSlotRequests.add(teamId);
+    return freeByTeam[teamId] ?? const [];
   }
 }

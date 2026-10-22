@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_league/core/media/picked_image.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
@@ -13,6 +14,10 @@ import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
 import 'package:sport_league/features/athletes/presentation/athlete_form_page.dart';
 import 'package:sport_league/features/athletes/presentation/athletes_tab.dart';
+import 'package:sport_league/features/availability/data/availability_repository.dart';
+import 'package:sport_league/features/availability/domain/availability.dart';
+import 'package:sport_league/features/availability/presentation/availability_page.dart';
+import 'package:sport_league/features/availability/presentation/slot_picker_page.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/core/router/routes.dart';
@@ -44,6 +49,7 @@ Future<ProviderContainer> _container({
   FakeAthleteRepository? athletes,
   FakeGameRepository? games,
   FakeOpponentRepository? opponents,
+  FakeAvailabilityRepository? availability,
   PickImage? pickImage,
   Map<String, Object> saved = const {},
 }) async {
@@ -60,6 +66,9 @@ Future<ProviderContainer> _container({
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
       opponentRepositoryProvider.overrideWithValue(
         opponents ?? FakeOpponentRepository(),
+      ),
+      availabilityRepositoryProvider.overrideWithValue(
+        availability ?? FakeAvailabilityRepository(),
       ),
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
     ],
@@ -129,6 +138,8 @@ Future<void> _pumpTab(
 }
 
 void main() {
+  setUpAll(() => initializeDateFormatting('pt_BR'));
+
   group('time', () {
     test('normaliza campos opcionais ao salvar', () {
       const team = Team(
@@ -585,10 +596,18 @@ void main() {
         registered: [rival],
         guests: [guest],
       );
+      final soon = DateTime.now().add(const Duration(days: 3));
+      final rivalSlot = DateTime(soon.year, soon.month, soon.day, 15);
+      final availability = FakeAvailabilityRepository(
+        freeByTeam: {
+          'team-rival': [rivalSlot],
+        },
+      );
       final container = await _container(
         teams: FakeTeamRepository([teamA]),
         games: games,
         opponents: opponents,
+        availability: availability,
       );
       final game = Game(
         id: 'g1',
@@ -616,12 +635,25 @@ void main() {
       expect(find.text('Jogar como'), findsOneWidget);
       await tapVisible(tester, find.text('Visitante'));
 
+      // O adversário mudou: a data antiga sai e o horário vem do calendário
+      // do Real Bairro.
+      expect(find.text('Escolha a data e a hora'), findsNothing);
+      expect(
+        find.text('Horários livres no calendário do Real Bairro'),
+        findsOneWidget,
+      );
+      await tapVisible(tester, find.text('Data e hora'));
+      expect(find.text('Escolher dia e horário'), findsOneWidget);
+      expect(availability.freeSlotRequests.last, 'team-rival');
+      await tapVisible(tester, find.text('15:00'));
+
       await tapVisible(tester, find.text('Salvar'));
       final saved = games.updated.single;
       expect(saved.opponent, 'Real Bairro');
       expect(saved.opponentTeamId, 'team-rival');
       expect(saved.opponentGuestId, isNull);
       expect(saved.modality, Modality.society);
+      expect(saved.scheduledAt, rivalSlot);
       expect(saved.hostIsHome, isFalse);
       expect(saved.toMap()['host_is_home'], isFalse);
       expect(saved.toMap().containsKey('team_score'), isFalse);
@@ -891,5 +923,194 @@ void main() {
     expect(formatGameDay(DateTime(2026, 3, 12, 20)), '12/03/2026');
     expect(formatGameTime(DateTime(2026, 3, 12, 20)), '20:00');
     expect(formatGameTime(DateTime(2026, 3, 12, 9, 5)), '09:05');
+  });
+
+  group('disponibilidade', () {
+    test('avulso, recorrente e recorrente a partir de uma data', () {
+      final single = Availability.single(
+        teamId: 'team-a',
+        startsAt: DateTime(2026, 10, 25, 15),
+      );
+      const weekly = Availability.weekly(
+        teamId: 'team-a',
+        weekday: DateTime.saturday,
+        startTime: TimeOfDay(hour: 9, minute: 30),
+      );
+      final fromNovember = Availability.weekly(
+        teamId: 'team-a',
+        weekday: DateTime.saturday,
+        startTime: const TimeOfDay(hour: 9, minute: 30),
+        startsOn: DateTime(2026, 11, 1),
+      );
+
+      expect(single.occursOn(DateTime(2026, 10, 25)), isTrue);
+      expect(single.occursOn(DateTime(2026, 11, 1)), isFalse);
+      expect(weekly.occursOn(DateTime(2026, 10, 24)), isTrue); // sábado
+      expect(weekly.occursOn(DateTime(2026, 10, 25)), isFalse); // domingo
+      expect(weekly.at(DateTime(2026, 10, 24)), DateTime(2026, 10, 24, 9, 30));
+      expect(fromNovember.occursOn(DateTime(2026, 10, 31)), isFalse);
+      expect(fromNovember.occursOn(DateTime(2026, 11, 7)), isTrue);
+
+      expect(weekly.toMap(), {
+        'team_id': 'team-a',
+        'weekday': 6,
+        'start_time': '09:30:00',
+      });
+      expect(fromNovember.toMap()['starts_on'], '2026-11-01');
+      final loaded = Availability.fromMap({
+        'id': 'a1',
+        'team_id': 'team-a',
+        'weekday': 6,
+        'start_time': '09:30:00',
+        'starts_on': null,
+        'starts_at': null,
+      });
+      expect(loaded.isWeekly, isTrue);
+      expect(loaded.startTime, const TimeOfDay(hour: 9, minute: 30));
+    });
+
+    testWidgets('cadastra horário recorrente e mostra no dia', (tester) async {
+      final availability = FakeAvailabilityRepository();
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: availability,
+      );
+      // Sábado, 24/10/2026.
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24)),
+      );
+
+      expect(find.textContaining('Nenhum horário neste dia'), findsOneWidget);
+      await tester.tap(find.text('Adicionar horário'));
+      await tester.pumpAndSettle();
+      expect(find.text('Toda sábado neste horário'), findsOneWidget);
+      await tester.tap(find.text('Repetir toda semana'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar'));
+      await tester.pumpAndSettle();
+
+      final added = availability.added.single;
+      expect(added.isWeekly, isTrue);
+      expect(added.weekday, DateTime.saturday);
+      expect(added.startTime, const TimeOfDay(hour: 15, minute: 0));
+      expect(added.startsOn, DateTime(2026, 10, 24));
+      expect(find.text('Toda sábado'), findsOneWidget);
+      // Rolar arrastando por cima do calendário também move a tela.
+      await tester.scrollUntilVisible(
+        find.text('Toda sábado às 15:00'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Toda sábado às 15:00'), findsOneWidget);
+    });
+
+    testWidgets('a escolha do horário só oferece os horários livres', (
+      tester,
+    ) async {
+      final availability = FakeAvailabilityRepository(
+        freeByTeam: {
+          'team-rival': [
+            DateTime(2026, 10, 24, 15),
+            DateTime(2026, 10, 24, 18),
+            DateTime(2026, 10, 31, 15),
+          ],
+        },
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: availability,
+      );
+      await _pumpPage(
+        tester,
+        container,
+        SlotPickerPage(
+          teamId: 'team-rival',
+          calendarOwner: 'do Real Bairro',
+          today: DateTime(2026, 10, 22),
+        ),
+      );
+
+      // Abre no primeiro dia com horário livre.
+      expect(find.text('Horários em 24/10/2026'), findsOneWidget);
+      expect(find.text('15:00'), findsOneWidget);
+      expect(find.text('18:00'), findsOneWidget);
+
+      // Dia sem horário não é selecionável.
+      await tester.tap(find.text('25'));
+      await tester.pumpAndSettle();
+      expect(find.text('Horários em 24/10/2026'), findsOneWidget);
+
+      await tester.tap(find.text('31'));
+      await tester.pumpAndSettle();
+      expect(find.text('Horários em 31/10/2026'), findsOneWidget);
+      // Escolher o horário fecha a tela.
+      await tester.tap(find.text('15:00'));
+      await tester.pumpAndSettle();
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('contra time fictício vale o calendário do próprio time', (
+      tester,
+    ) async {
+      final soon = DateTime.now().add(const Duration(days: 2));
+      final mySlot = DateTime(soon.year, soon.month, soon.day, 20);
+      final availability = FakeAvailabilityRepository(
+        freeByTeam: {
+          'team-a': [mySlot],
+        },
+      );
+      final games = FakeGameRepository({});
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: games,
+        availability: availability,
+        opponents: FakeOpponentRepository(
+          guests: const [
+            GuestTeam(
+              id: 'guest-1',
+              ownerId: 'u1',
+              name: 'Pelada de Sábado',
+              modality: Modality.society,
+            ),
+          ],
+        ),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      // Sem adversário, o horário ainda não pode ser escolhido.
+      expect(find.text('Escolha o adversário primeiro'), findsOneWidget);
+      await tester.ensureVisible(find.text('Data e hora'));
+      await tester.tap(find.text('Data e hora'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolher dia e horário'), findsNothing);
+
+      await tester.tap(find.text('Society'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(InputDecorator, 'Adversário'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pelada de Sábado'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Data e hora'));
+      await tester.tap(find.text('Data e hora'));
+      await tester.pumpAndSettle();
+      expect(availability.freeSlotRequests.last, 'team-a');
+      await tester.tap(find.text('20:00'));
+      await tester.pumpAndSettle();
+
+      final submit = find.text('Marcar amistoso');
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(games.created.single.scheduledAt, mySlot);
+      expect(games.created.single.opponentGuestId, 'guest-1');
+    });
   });
 }

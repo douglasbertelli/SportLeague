@@ -28,6 +28,14 @@ class HomeOverview extends ConsumerWidget {
               },
               onTap: () => context.push(Routes.teams),
             ),
+            // Só faz sentido com um time ativo, cujo calendário é editado.
+            if (ref.watch(selectedTeamProvider).value case final team?)
+              _ActionTile(
+                icon: Icons.event_available,
+                title: 'Disponibilidade',
+                subtitle: 'Dias e horários em que o ${team.name} joga',
+                onTap: () => context.push(Routes.availability),
+              ),
             const _ActionTile(
               icon: Icons.mail_outline,
               title: 'Convites enviados',
