@@ -102,7 +102,9 @@ configurado.
      plataforma, o amistoso aparece também na aba Jogos do adversário
      ("Marcado por …").
    - **Disponibilidade** (Início): calendário com os dias e horários em que o
-     time joga, avulsos ou recorrentes ("todo sábado às 15:00"). O amistoso só
+     time joga, avulsos ou recorrentes ("todo sábado às 15:00"). Dá para mudar o
+     horário de um dia ou de todas as semanas e, num imprevisto, o
+     recorrente pode sair só de um dia, sem apagar as outras semanas. O amistoso só
      pode ser marcado num horário livre do **adversário** (time da plataforma)
      ou do **próprio time** (adversário fictício); horário com amistoso
      pendente ou marcado fica ocupado. Horários recorrentes são no fuso de
@@ -144,6 +146,7 @@ supabase/
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
 | `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
 | `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |
+| `team_availability_skips` | Dias pulados de um horário recorrente (imprevistos); só o dono altera |
 | `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 

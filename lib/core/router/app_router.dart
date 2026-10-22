@@ -86,9 +86,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'games/opponent',
             builder: (_, state) {
-              final (:teamId, :modality) =
-                  state.extra as ({String teamId, Modality modality});
-              return OpponentPickerPage(teamId: teamId, modality: modality);
+              final (:teamId, :modalities, :modality) =
+                  state.extra as OpponentPickerArgs;
+              return OpponentPickerPage(
+                teamId: teamId,
+                modalities: modalities,
+                modality: modality,
+              );
             },
           ),
           GoRoute(

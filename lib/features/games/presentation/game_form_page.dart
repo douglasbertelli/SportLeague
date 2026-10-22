@@ -14,6 +14,7 @@ import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/opponent.dart';
 import 'games_tab.dart';
+import 'opponent_picker_page.dart';
 
 /// Marca um amistoso para o time ativo ou edita/exclui um existente. O
 /// adversário precisa jogar a mesma modalidade; o placar é lançado em outra
@@ -69,35 +70,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     return null;
   }
 
-  /// Com uma só modalidade no time, ela já vem escolhida.
+  /// Com uma só modalidade no time, ela já vem escolhida; com mais de uma, é
+  /// escolhida junto com o adversário.
   Modality? _effectiveModality(Team team) =>
       _modality ??
       (team.modalities.length == 1 ? team.modalities.single : null);
 
-  void _selectModality(Modality modality) {
-    if (modality == _modality) return;
-    setState(() {
-      _modality = modality;
-      // O adversário escolhido era da outra modalidade.
-      _opponent = null;
-    });
-  }
-
   Future<void> _pickOpponent(Team team) async {
-    final modality = _effectiveModality(team);
-    if (modality == null) {
-      setState(() => _showErrors = true);
-      return;
-    }
-    final opponent = await context.push<Opponent>(
+    final picked = await context.push<PickedOpponent>(
       Routes.pickOpponent,
-      extra: (teamId: team.id!, modality: modality),
+      extra: (
+        teamId: team.id!,
+        modalities: team.modalities,
+        modality: _effectiveModality(team),
+      ),
     );
-    if (opponent != null) {
+    if (picked != null) {
       final previousCalendar = _calendarFor(team)?.teamId;
       setState(() {
-        _modality = modality;
-        _opponent = opponent;
+        _modality = picked.modality;
+        _opponent = picked.opponent;
         // O horário escolhido era do calendário de outro time.
         if (_calendarFor(team)?.teamId != previousCalendar) _scheduledAt = null;
       });
@@ -272,35 +264,11 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final scheduledAt = _scheduledAt;
 
     return [
-      Text('Time: ${team.name}', style: theme.textTheme.titleSmall),
-      const SizedBox(height: 16),
       Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Modalidade', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            if (team.modalities.length == 1)
-              Text(team.modalities.single.label)
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final option in team.modalities)
-                    ChoiceChip(
-                      label: Text(option.label),
-                      selected: option == modality,
-                      onSelected: (_) => _selectModality(option),
-                    ),
-                ],
-              ),
-            if (_showErrors && modality == null) ...[
-              const SizedBox(height: 4),
-              Text('Escolha a modalidade do jogo', style: errorStyle),
-            ],
-            const SizedBox(height: 16),
             Text('Jogar como', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
@@ -327,14 +295,14 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
                 decoration: InputDecoration(
                   labelText: 'Adversário',
                   helperText: switch (opponent) {
-                    _ when modality == null => 'Escolha a modalidade primeiro',
                     RegisteredOpponent() || SavedOpponent(teamId: _?) =>
                       'O time adversário precisa aceitar o amistoso',
-                    _ =>
-                      'Time da plataforma ou time fictício de '
-                          '${modality.label}',
+                    _ => 'Time da plataforma ou time fictício',
                   },
-                  errorText: _showErrors && opponent == null
+                  // Jogo antigo sem modalidade num time com várias: o
+                  // adversário é escolhido de novo, já com a modalidade.
+                  errorText:
+                      _showErrors && (opponent == null || modality == null)
                       ? 'Escolha o adversário'
                       : null,
                   suffixIcon: const Icon(Icons.search),

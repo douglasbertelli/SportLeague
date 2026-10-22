@@ -225,11 +225,42 @@ class FakeAvailabilityRepository implements AvailabilityRepository {
     (byTeam[availability.teamId] ??= []).add(availability);
   }
 
+  final updated = <Availability>[];
+
+  @override
+  Future<void> update(Availability availability) async {
+    updated.add(availability);
+    for (final list in byTeam.values) {
+      final index = list.indexWhere((slot) => slot.id == availability.id);
+      if (index >= 0) list[index] = availability;
+    }
+  }
+
   @override
   Future<void> delete(String id) async {
     deleted.add(id);
     for (final list in byTeam.values) {
       list.removeWhere((slot) => slot.id == id);
+    }
+  }
+
+  final skipped = <({String availabilityId, DateTime date})>[];
+
+  @override
+  Future<void> skipDate(String availabilityId, DateTime date) async {
+    skipped.add((availabilityId: availabilityId, date: date));
+    for (final list in byTeam.values) {
+      final index = list.indexWhere((slot) => slot.id == availabilityId);
+      if (index < 0) continue;
+      final slot = list[index];
+      list[index] = Availability.weekly(
+        id: slot.id,
+        teamId: slot.teamId,
+        weekday: slot.weekday!,
+        startTime: slot.startTime!,
+        startsOn: slot.startsOn,
+        skippedDates: {...slot.skippedDates, date},
+      );
     }
   }
 

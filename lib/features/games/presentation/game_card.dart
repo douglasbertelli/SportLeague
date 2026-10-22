@@ -52,7 +52,8 @@ class _GameCardState extends ConsumerState<GameCard> {
         _GameAction.edit,
         _GameAction.cancel,
       ],
-      GameStatus.pending => const [_GameAction.accept, _GameAction.decline],
+      // Aceitar e Recusar ficam à vista no card (_canRespond).
+      GameStatus.pending => const [],
       GameStatus.scheduled when isHost => const [
         _GameAction.edit,
         _GameAction.cancel,
@@ -102,6 +103,11 @@ class _GameCardState extends ConsumerState<GameCard> {
     }
   }
 
+  /// O adversário responde ao convite com botões no próprio card.
+  bool get _canRespond =>
+      _game.status == GameStatus.pending &&
+      !_game.isHostedBy(widget.viewerTeamId);
+
   /// Linha de situação que o layout não tem e que não pode se perder.
   String? _statusLine() {
     final viewer = widget.viewerTeamId;
@@ -109,7 +115,7 @@ class _GameCardState extends ConsumerState<GameCard> {
     final opponentName = _game.opponentNameFor(viewer);
     return switch (_game.status) {
       GameStatus.pending when isHost => 'Aguardando $opponentName aceitar',
-      GameStatus.pending => 'Aguardando sua resposta',
+      GameStatus.pending => null,
       GameStatus.canceled => switch (_game.canceledByTeamId) {
         null => 'Cancelado: o adversário foi excluído',
         final id when id == viewer => 'Cancelado pelo seu time',
@@ -231,6 +237,44 @@ class _GameCardState extends ConsumerState<GameCard> {
                     if (statusLine != null) ...[
                       const SizedBox(height: 12),
                       Text(statusLine, style: mutedStyle),
+                    ],
+                    if (_canRespond) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(88, 48),
+                                foregroundColor: colors.error,
+                              ),
+                              onPressed: _loading
+                                  ? null
+                                  : () => _run(_GameAction.decline),
+                              child: const Text('Recusar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(88, 48),
+                              ),
+                              onPressed: _loading
+                                  ? null
+                                  : () => _run(_GameAction.accept),
+                              child: _loading
+                                  ? const SizedBox.square(
+                                      dimension: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text('Aceitar'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ],
                 ),
