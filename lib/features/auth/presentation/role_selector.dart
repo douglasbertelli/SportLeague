@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../profile/domain/profile.dart';
 
-/// Seleção obrigatória do tipo de perfil no cadastro.
+/// Seleção obrigatória do tipo de perfil, logo depois de criar a conta.
 class RoleSelector extends FormField<UserRole> {
   RoleSelector({super.key, super.onSaved})
     : super(

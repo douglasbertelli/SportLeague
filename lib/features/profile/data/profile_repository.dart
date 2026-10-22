@@ -18,15 +18,19 @@ class ProfileRepository {
     return row == null ? null : Profile.fromMap(row);
   }
 
-  /// Conclui o cadastro de contas criadas por login social. O banco só aceita
-  /// definir o role enquanto ele ainda está nulo.
+  /// Define o tipo de perfil logo depois de criar a conta (e o nome, quando o
+  /// cadastro não trouxe um). O banco só aceita definir o role enquanto ele
+  /// ainda está nulo.
   Future<void> completeProfile({
     required String userId,
-    required String fullName,
     required UserRole role,
+    String? fullName,
   }) => _client
       .from('profiles')
-      .update({'full_name': fullName.trim(), 'role': role.name})
+      .update({
+        'role': role.name,
+        if (fullName != null) 'full_name': fullName.trim(),
+      })
       .eq('id', userId);
 }
 

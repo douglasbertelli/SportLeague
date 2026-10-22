@@ -6,9 +6,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
-import '../../profile/domain/profile.dart';
 import '../data/auth_repository.dart';
-import 'role_selector.dart';
 import 'social_sign_in_buttons.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -23,7 +21,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  UserRole? _role;
   bool _loading = false;
   bool _obscurePassword = true;
 
@@ -36,9 +33,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   Future<void> _submit() async {
-    final form = _formKey.currentState!;
-    if (!form.validate()) return;
-    form.save();
+    if (_loading || !_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
@@ -48,14 +43,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             fullName: _nameController.text,
             email: _emailController.text,
             password: _passwordController.text,
-            role: _role!,
           );
       if (!mounted) return;
       if (needsConfirmation) {
         await _showConfirmEmailDialog();
         if (mounted) context.pop();
       }
-      // Com sessão ativa, o router leva ao cadastro de endereço.
+      // Com sessão ativa, o router leva à escolha do tipo de perfil.
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -141,12 +135,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   ),
                   obscureText: true,
                   textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
                   validator: (value) => value != _passwordController.text
                       ? 'As senhas não conferem'
                       : null,
                 ),
-                const SizedBox(height: 24),
-                RoleSelector(onSaved: (role) => _role = role),
               ],
             ),
           ),
