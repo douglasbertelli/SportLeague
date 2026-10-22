@@ -4,13 +4,20 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/address/data/address_repository.dart';
 import '../../features/address/presentation/address_page.dart';
+import '../../features/athletes/domain/athlete.dart';
+import '../../features/athletes/presentation/athlete_form_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
+import '../../features/games/domain/game.dart';
+import '../../features/games/presentation/game_form_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
 import '../../features/splash/presentation/splash_page.dart';
+import '../../features/teams/domain/team.dart';
+import '../../features/teams/presentation/team_form_page.dart';
+import '../../features/teams/presentation/teams_page.dart';
 import '../supabase/supabase_providers.dart';
 import 'routes.dart';
 
@@ -49,6 +56,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const HomePage(),
         routes: [
           GoRoute(path: 'address', builder: (_, _) => const AddressPage()),
+          GoRoute(
+            path: 'teams',
+            builder: (_, _) => const TeamsPage(),
+            routes: [
+              GoRoute(path: 'new', builder: (_, _) => const TeamFormPage()),
+              GoRoute(
+                path: 'edit',
+                builder: (_, state) => TeamFormPage(team: state.extra as Team),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'athletes/new',
+            builder: (_, _) => const AthleteFormPage(),
+          ),
+          GoRoute(
+            path: 'athletes/edit',
+            builder: (_, state) =>
+                AthleteFormPage(athlete: state.extra as Athlete),
+          ),
+          GoRoute(path: 'games/new', builder: (_, _) => const GameFormPage()),
+          GoRoute(
+            path: 'games/edit',
+            builder: (_, state) => GameFormPage(game: state.extra as Game),
+          ),
         ],
       ),
     ],

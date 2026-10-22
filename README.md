@@ -84,7 +84,15 @@ configurado.
    - **Administrador**: cria e gerencia times e jogadores.
    - **Jogador**: entra em times por busca ou convite.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
-5. **Home** com as ações de cada perfil (times, jogadores e convites: próxima etapa).
+5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
+   **Início, Jogos, Atletas e Perfil**:
+   - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título;
+   - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
+     cada time tem os seus;
+   - jogo: adversário, data e hora, local, amistoso ou campeonato e placar
+     (preenchido depois do jogo).
+
+   Convites e a home do jogador: próxima etapa.
 
 ## Estrutura
 
@@ -95,7 +103,10 @@ lib/
     auth/      cadastro, login, seleção de perfil
     profile/   modelo de perfil (papel e plano)
     address/   endereço + consulta de CEP
-    home/      tela inicial
+    home/      tela inicial (barra inferior do administrador)
+    teams/     times do administrador e time ativo
+    athletes/  atletas de cada time
+    games/     jogos de cada time
     splash/    carregamento inicial
 supabase/
   migrations/  schema do banco (tabelas, RLS e triggers)
@@ -107,8 +118,9 @@ supabase/
 | --------------- | ---------------------------------------------------------------- |
 | `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
-| `teams`         | Times; apenas administradores criam                              |
-| `team_players`  | Jogadores do time (com ou sem conta no app)                      |
+| `teams`         | Times; apenas administradores criam, e cada um pode ter vários   |
+| `team_players`  | Atletas do time (com ou sem conta no app); só o dono do time altera |
+| `games`         | Jogos do time; só o dono altera, e só o dono e os atletas do time veem |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de

@@ -5,9 +5,11 @@ import '../../athletes/presentation/athletes_tab.dart';
 import '../../games/presentation/games_tab.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
+import '../../teams/presentation/team_switcher.dart';
 import 'home_overview.dart';
 
 /// Home do administrador: Início, Jogos, Atletas e Perfil na barra inferior.
+/// Jogos e Atletas mostram só os dados do time ativo, escolhido no título.
 /// Cada aba mantém o próprio estado (rolagem etc.) ao trocar de aba.
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key, required this.profile});
@@ -20,31 +22,16 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage> {
   static const _tabs = [
+    (label: 'Início', icon: Icons.home_outlined, selectedIcon: Icons.home),
     (
-      title: 'SportLeague',
-      label: 'Início',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-    ),
-    (
-      title: 'Jogos',
       label: 'Jogos',
       icon: Icons.sports_soccer_outlined,
       selectedIcon: Icons.sports_soccer,
     ),
-    (
-      title: 'Atletas',
-      label: 'Atletas',
-      icon: Icons.groups_outlined,
-      selectedIcon: Icons.groups,
-    ),
-    (
-      title: 'Perfil',
-      label: 'Perfil',
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-    ),
+    (label: 'Atletas', icon: Icons.groups_outlined, selectedIcon: Icons.groups),
+    (label: 'Perfil', icon: Icons.person_outline, selectedIcon: Icons.person),
   ];
+  static const _profileIndex = 3;
 
   int _index = 0;
 
@@ -52,7 +39,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tabs[_index].title),
+        // Início, Jogos e Atletas mostram o time ativo e permitem trocá-lo.
+        title: _index == _profileIndex
+            ? const Text('Perfil')
+            : const TeamSwitcher(),
         actions: const [ThemeModeButton()],
       ),
       body: IndexedStack(

@@ -42,4 +42,16 @@ abstract final class Validators {
     if (!RegExp(r'^[A-Za-z]{2}$').hasMatch(value!.trim())) return 'UF inválida';
     return null;
   }
+
+  static String? optionalState(String? value) =>
+      value == null || value.trim().isEmpty ? null : state(value);
+
+  /// Texto obrigatório com pelo menos 2 caracteres (nome de time, atleta,
+  /// adversário).
+  static String? name(String? value, {required String message}) {
+    final error = required(value, message: message);
+    if (error != null) return error;
+    if (value!.trim().length < 2) return 'Muito curto';
+    return null;
+  }
 }

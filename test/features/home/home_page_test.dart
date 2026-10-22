@@ -9,7 +9,12 @@ import 'package:sport_league/features/address/domain/address.dart';
 import 'package:sport_league/features/home/presentation/home_page.dart';
 import 'package:sport_league/features/profile/data/profile_repository.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
+import 'package:sport_league/features/athletes/data/athlete_repository.dart';
+import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../teams/fakes.dart';
 
 Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
   SharedPreferences.setMockInitialValues({});
@@ -18,6 +23,10 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
+        currentUserIdProvider.overrideWithValue('u1'),
+        teamRepositoryProvider.overrideWithValue(FakeTeamRepository([teamA])),
+        athleteRepositoryProvider.overrideWithValue(FakeAthleteRepository({})),
+        gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
         supabaseClientProvider.overrideWithValue(
           SupabaseClient(
             'http://localhost',
@@ -52,6 +61,7 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
       child: const MaterialApp(home: HomePage()),
     ),
   );
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -69,16 +79,19 @@ void main() {
         );
       }
       expect(find.text('Olá, Ana!'), findsOneWidget);
+      // O título mostra o time ativo.
+      expect(find.text('Amigos FC'), findsOneWidget);
+      expect(find.text('1 time'), findsOneWidget);
 
-      await tester.tap(find.text('Jogos'));
+      await tester.tap(find.descendant(of: bar, matching: find.text('Jogos')));
       await tester.pumpAndSettle();
-      expect(find.text('Nenhum jogo ainda'), findsOneWidget);
+      expect(find.text('Nenhum jogo neste time'), findsOneWidget);
 
       await tester.tap(
         find.descendant(of: bar, matching: find.text('Atletas')),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Nenhum atleta ainda'), findsOneWidget);
+      expect(find.text('Nenhum atleta neste time'), findsOneWidget);
 
       await tester.tap(find.descendant(of: bar, matching: find.text('Perfil')));
       await tester.pumpAndSettle();
