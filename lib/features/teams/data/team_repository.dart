@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../athletes/data/athlete_repository.dart';
 import '../domain/team.dart';
 
 class TeamRepository {
@@ -33,9 +34,22 @@ class TeamRepository {
   Future<void> update(Team team) =>
       _client.from('teams').update(team.toMap()).eq('id', team.id!);
 
-  /// Remove o time com os atletas e jogos dele (cascade no banco) e o logo.
+  /// Remove o time com os atletas e jogos dele (cascade no banco), o logo e as
+  /// fotos dos atletas.
   Future<void> delete(Team team) async {
+    final photoRows = await _client
+        .from('team_players')
+        .select('photo_path')
+        .eq('team_id', team.id!)
+        .not('photo_path', 'is', null);
     await _client.from('teams').delete().eq('id', team.id!);
+
+    final photoPaths = [
+      for (final row in photoRows) row['photo_path'] as String,
+    ];
+    if (photoPaths.isNotEmpty) {
+      await _client.storage.from(athletePhotosBucket).remove(photoPaths);
+    }
     if (team.logoUrl != null) await removeLogo(team);
   }
 

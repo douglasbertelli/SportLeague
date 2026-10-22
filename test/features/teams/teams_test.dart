@@ -11,6 +11,7 @@ import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
+import 'package:sport_league/features/athletes/presentation/athlete_form_page.dart';
 import 'package:sport_league/features/athletes/presentation/athletes_tab.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
@@ -374,6 +375,62 @@ void main() {
       expect(find.text('Escolha a data e a hora'), findsOneWidget);
       expect(find.text('Preencha os dois placares'), findsNWidgets(2));
       expect(games.created, isEmpty);
+    });
+  });
+
+  group('foto do atleta', () {
+    Future<void> tapSave(WidgetTester tester) async {
+      final submit = find.text('Cadastrar atleta');
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('cadastrar atleta exige a foto', (tester) async {
+      final athletes = FakeAthleteRepository({});
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+      );
+      await _pumpPage(tester, container, const AthleteFormPage());
+
+      await tester.enterText(find.byType(TextFormField).first, 'Carlos Lima');
+      await tapSave(tester);
+
+      expect(find.text('Adicione a foto do atleta'), findsOneWidget);
+      expect(athletes.created, isEmpty);
+    });
+
+    testWidgets('cadastrar atleta envia a foto e grava o caminho', (
+      tester,
+    ) async {
+      final athletes = FakeAthleteRepository({});
+      final photo = PickedImage(
+        bytes: Uint8List.fromList(_transparentPng),
+        contentType: 'image/png',
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+        pickImage: (source) async => photo,
+      );
+      await _pumpPage(tester, container, const AthleteFormPage());
+
+      await tester.tap(find.bySemanticsLabel('Adicionar foto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tirar foto'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Trocar foto'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField).first, 'Carlos Lima');
+      await tapSave(tester);
+
+      expect(athletes.created.single.name, 'Carlos Lima');
+      expect(athletes.created.single.teamId, 'team-a');
+      expect(athletes.uploadedPhotos['athlete-1'], same(photo));
+      // Pasta do dono do time, depois o time e o atleta.
+      expect(athletes.updated.last.photoPath, 'u1/team-a/athlete-1');
+      expect(find.text('Início'), findsOneWidget);
     });
   });
 

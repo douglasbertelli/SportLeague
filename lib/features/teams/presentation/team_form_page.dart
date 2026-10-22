@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
@@ -57,60 +57,6 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
     _stateController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickLogo() async {
-    final hasLogo = _newLogo != null || _currentLogoUrl != null;
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher da galeria'),
-              onTap: () => Navigator.of(context).pop('gallery'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Tirar foto'),
-              onTap: () => Navigator.of(context).pop('camera'),
-            ),
-            if (hasLogo)
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Remover logo'),
-                onTap: () => Navigator.of(context).pop('remove'),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null || !mounted) return;
-    if (choice == 'remove') {
-      setState(() {
-        _newLogo = null;
-        _removeLogo = true;
-      });
-      return;
-    }
-
-    try {
-      final image = await ref.read(pickImageProvider)(
-        choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-      );
-      if (image == null || !mounted) return;
-      setState(() {
-        _newLogo = image;
-        _removeLogo = false;
-      });
-    } catch (_) {
-      if (mounted) {
-        showErrorSnackBar(context, 'Não foi possível abrir a imagem.');
-      }
-    }
   }
 
   Future<void> _pickFoundedOn() async {
@@ -226,10 +172,20 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
       ),
       children: [
         Center(
-          child: _LogoPicker(
-            newLogo: _newLogo,
-            logoUrl: _currentLogoUrl,
-            onTap: _loading ? null : _pickLogo,
+          child: PhotoPicker(
+            noun: 'logo',
+            image: _newLogo,
+            url: _currentLogoUrl,
+            placeholderIcon: Icons.shield_outlined,
+            enabled: !_loading,
+            onPicked: (image) => setState(() {
+              _newLogo = image;
+              _removeLogo = false;
+            }),
+            onRemoved: () => setState(() {
+              _newLogo = null;
+              _removeLogo = true;
+            }),
           ),
         ),
         const SizedBox(height: 24),
@@ -377,61 +333,6 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
           onPressed: _save,
         ),
       ],
-    );
-  }
-}
-
-/// Logo em destaque no topo do formulário; toque para trocar ou remover.
-class _LogoPicker extends StatelessWidget {
-  const _LogoPicker({
-    required this.newLogo,
-    required this.logoUrl,
-    required this.onTap,
-  });
-
-  final PickedImage? newLogo;
-  final String? logoUrl;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final ImageProvider? image = switch ((newLogo, logoUrl)) {
-      (final logo?, _) => MemoryImage(logo.bytes),
-      (null, final url?) => NetworkImage(url),
-      _ => null,
-    };
-
-    return Semantics(
-      button: true,
-      label: image == null ? 'Adicionar logo' : 'Trocar logo',
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Stack(
-          children: [
-            CircleAvatar(
-              radius: 48,
-              foregroundImage: image,
-              onForegroundImageError: image == null ? null : (_, _) {},
-              child: const Icon(Icons.shield_outlined, size: 40),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: colorScheme.primary,
-                child: Icon(
-                  Icons.photo_camera,
-                  size: 16,
-                  color: colorScheme.onPrimary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

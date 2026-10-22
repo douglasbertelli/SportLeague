@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/media/photo_picker.dart';
+import '../../../core/media/picked_image.dart';
+import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -31,9 +34,21 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     text: widget.athlete?.jerseyNumber?.toString(),
   );
   late String? _position = widget.athlete?.position;
+
+  /// Foto escolhida e ainda não enviada.
+  PickedImage? _newPhoto;
+  bool _removePhoto = false;
+
+  /// Atleta já salvo: o recebido para edição ou o criado nesta tela (se o
+  /// envio da foto falhar, salvar de novo atualiza em vez de duplicar).
+  late Athlete? _saved = widget.athlete;
+  bool _photoMissing = false;
   bool _loading = false;
 
   bool get _isEditing => widget.athlete != null;
+
+  bool get _hasPhoto =>
+      _newPhoto != null || (!_removePhoto && _saved?.photoPath != null);
 
   @override
   void dispose() {
@@ -43,24 +58,51 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
   }
 
   Future<void> _save() async {
-    if (_loading || !_formKey.currentState!.validate()) return;
+    final fieldsValid = _formKey.currentState!.validate();
+    setState(() => _photoMissing = !_hasPhoto);
+    if (_loading || !fieldsValid || !_hasPhoto) return;
     final teamId =
         widget.athlete?.teamId ?? ref.read(selectedTeamProvider).value?.id;
-    if (teamId == null) return;
+    final ownerId = ref.read(currentUserIdProvider);
+    if (teamId == null || ownerId == null) return;
 
     final athlete = Athlete(
-      id: widget.athlete?.id,
+      id: _saved?.id,
       teamId: teamId,
       name: _nameController.text,
       position: _position,
       jerseyNumber: int.tryParse(_numberController.text),
+      profileId: _saved?.profileId,
+      photoPath: _removePhoto ? null : _saved?.photoPath,
     );
     final repository = ref.read(athleteRepositoryProvider);
-    await _run(
-      teamId,
-      () =>
-          _isEditing ? repository.update(athlete) : repository.create(athlete),
-    );
+    await _run(teamId, () async {
+      final previousPhoto = _saved?.photoPath;
+      if (_saved == null) {
+        _saved = await repository.create(athlete);
+      } else {
+        await repository.update(athlete);
+        _saved = athlete;
+      }
+
+      if (_newPhoto case final photo?) {
+        final path = await repository.uploadPhoto(
+          ownerId: ownerId,
+          athlete: _saved!,
+          image: photo,
+        );
+        _saved = _saved!.copyWith(photoPath: path);
+        await repository.update(_saved!);
+        _newPhoto = null;
+      } else if (_removePhoto && previousPhoto != null) {
+        try {
+          await repository.removePhoto(previousPhoto);
+        } catch (_) {
+          // O atleta já foi salvo sem foto; falhar aqui só deixa o arquivo
+          // órfão no Storage.
+        }
+      }
+    });
   }
 
   Future<void> _delete() async {
@@ -73,7 +115,7 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     if (!confirmed) return;
     await _run(
       athlete.teamId,
-      () => ref.read(athleteRepositoryProvider).delete(athlete.id!),
+      () => ref.read(athleteRepositoryProvider).delete(athlete),
     );
   }
 
@@ -84,6 +126,8 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
       ref.invalidate(teamAthletesProvider(teamId));
       if (mounted) context.pop();
     } catch (error) {
+      // Mesmo com erro, o atleta pode ter sido criado antes da foto.
+      ref.invalidate(teamAthletesProvider(teamId));
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -113,6 +157,27 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
         ],
       ),
       children: [
+        Center(
+          child: PhotoPicker(
+            noun: 'foto',
+            image: _newPhoto,
+            url: _removePhoto ? null : _saved?.photoUrl,
+            placeholderIcon: Icons.person_outline,
+            enabled: !_loading,
+            errorText: _photoMissing && !_hasPhoto
+                ? 'Adicione a foto do atleta'
+                : null,
+            onPicked: (image) => setState(() {
+              _newPhoto = image;
+              _removePhoto = false;
+            }),
+            onRemoved: () => setState(() {
+              _newPhoto = null;
+              _removePhoto = true;
+            }),
+          ),
+        ),
+        const SizedBox(height: 24),
         if (!_isEditing && teamName != null) ...[
           Text(
             'Time: $teamName',

@@ -93,6 +93,8 @@ configurado.
      fundação;
    - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
      cada time tem os seus;
+   - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
+     para o dono e os atletas do time), nome, posição e número;
    - jogo: adversário, data e hora, local, amistoso ou campeonato e placar
      (preenchido depois do jogo).
 
@@ -123,7 +125,7 @@ supabase/
 | `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia), gênero, faixa de idade (livre, base, master), fundação e logo |
-| `team_players`  | Atletas do time (com ou sem conta no app); só o dono do time altera |
+| `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
 | `games`         | Jogos do time; só o dono altera, e só o dono e os atletas do time veem |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 

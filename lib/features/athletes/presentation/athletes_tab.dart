@@ -7,6 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/no_team_placeholder.dart';
 import '../data/athlete_repository.dart';
+import '../domain/athlete.dart';
 
 /// Aba Atletas do administrador: atletas do time ativo.
 class AthletesTab extends ConsumerWidget {
@@ -75,16 +76,16 @@ class _AthleteList extends ConsumerWidget {
                     for (final athlete in athletes)
                       Card(
                         child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              athlete.jerseyNumber?.toString() ??
-                                  athlete.name[0].toUpperCase(),
-                            ),
-                          ),
+                          leading: _AthletePhoto(athlete: athlete),
                           title: Text(athlete.name),
-                          subtitle: athlete.position == null
-                              ? null
-                              : Text(athlete.position!),
+                          subtitle: switch ([
+                            ?athlete.position,
+                            if (athlete.jerseyNumber case final number?)
+                              'Nº $number',
+                          ]) {
+                            [] => null,
+                            final parts => Text(parts.join(' · ')),
+                          },
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () =>
                               context.push(Routes.editAthlete, extra: athlete),
@@ -94,6 +95,24 @@ class _AthleteList extends ConsumerWidget {
                 ),
               ),
       ),
+    );
+  }
+}
+
+/// Foto do atleta; sem foto (ou se a URL expirar), mostra a inicial do nome.
+class _AthletePhoto extends StatelessWidget {
+  const _AthletePhoto({required this.athlete});
+
+  final Athlete athlete;
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = athlete.photoUrl;
+    return CircleAvatar(
+      radius: 24,
+      foregroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
+      onForegroundImageError: photoUrl == null ? null : (_, _) {},
+      child: Text(athlete.name[0].toUpperCase()),
     );
   }
 }

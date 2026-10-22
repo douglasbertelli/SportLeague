@@ -65,9 +65,33 @@ class FakeAthleteRepository implements AthleteRepository {
   Future<List<Athlete>> fetchByTeam(String teamId) async =>
       byTeam[teamId] ?? const [];
 
+  final created = <Athlete>[];
+  final updated = <Athlete>[];
+  final uploadedPhotos = <String, PickedImage>{};
+
   @override
-  Future<void> create(Athlete athlete) async =>
-      (byTeam[athlete.teamId] ??= []).add(athlete);
+  Future<Athlete> create(Athlete athlete) async {
+    final saved = Athlete.fromMap({
+      ...athlete.toMap(),
+      'id': 'athlete-${created.length + 1}',
+    });
+    created.add(athlete);
+    (byTeam[athlete.teamId] ??= []).add(saved);
+    return saved;
+  }
+
+  @override
+  Future<void> update(Athlete athlete) async => updated.add(athlete);
+
+  @override
+  Future<String> uploadPhoto({
+    required String ownerId,
+    required Athlete athlete,
+    required PickedImage image,
+  }) async {
+    uploadedPhotos[athlete.id!] = image;
+    return '$ownerId/${athlete.teamId}/${athlete.id}';
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
