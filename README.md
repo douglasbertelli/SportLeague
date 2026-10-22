@@ -98,9 +98,14 @@ configurado.
    - amistoso: modalidade (uma das do time), adversário da **mesma
      modalidade** — um time da plataforma, pesquisado pelo nome, ou um time
      fictício criado pelo administrador e salvo para os próximos jogos —, jogar
-     como **mandante** (padrão) ou **visitante**, data e hora e local. O placar é lançado em outra tela. Contra um time da
+     como **mandante** (padrão) ou **visitante**, data e hora e **local** (obrigatório, escolhido entre os cadastrados). O placar é lançado em outra tela. Contra um time da
      plataforma, o amistoso aparece também na aba Jogos do adversário
      ("Marcado por …").
+   - **Locais** (Início): quadras e campos compartilhados entre os
+     administradores, com endereço (CEP pelo ViaCEP) e foto opcional. Ao
+     cadastrar um local, o app sugere os parecidos que já existem (mesmo CEP e
+     número, ou nome parecido na mesma cidade). Ao marcar o amistoso, o local é
+     escolhido na pesquisa ou cadastrado ali mesmo.
    - **Disponibilidade** (Início): calendário com os dias e horários em que o
      time joga, avulsos ou recorrentes ("todo sábado às 15:00"). Dá para mudar o
      horário de um dia ou de todas as semanas e, num imprevisto, o
@@ -131,6 +136,7 @@ lib/
     teams/     times do administrador e time ativo
     athletes/  atletas de cada time
     games/     jogos de cada time
+    venues/    locais das partidas (cadastro, pesquisa e foto)
     splash/    carregamento inicial
 supabase/
   migrations/  schema do banco (tabelas, RLS e triggers)
@@ -147,6 +153,7 @@ supabase/
 | `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
 | `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |
 | `team_availability_skips` | Dias pulados de um horário recorrente (imprevistos); só o dono altera |
+| `venues`        | Locais das partidas (nome, endereço com CEP e foto no Storage `venue-photos`); todos veem, só quem cadastrou altera. A função `similar_venues` sugere os parecidos antes de cadastrar |
 | `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 

@@ -13,6 +13,7 @@ import '../../teams/domain/team.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/opponent.dart';
+import '../../venues/domain/venue.dart';
 import 'games_tab.dart';
 import 'opponent_picker_page.dart';
 
@@ -30,9 +31,7 @@ class GameFormPage extends ConsumerStatefulWidget {
 
 class _GameFormPageState extends ConsumerState<GameFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late final _locationController = TextEditingController(
-    text: widget.game?.location,
-  );
+  late Venue? _venue = widget.game?.venue;
   late DateTime? _scheduledAt = widget.game?.scheduledAt;
   late Modality? _modality = widget.game?.modality;
 
@@ -53,10 +52,9 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
 
   bool get _isEditing => widget.game != null;
 
-  @override
-  void dispose() {
-    _locationController.dispose();
-    super.dispose();
+  Future<void> _pickVenue() async {
+    final venue = await context.push<Venue>(Routes.pickVenue);
+    if (venue != null) setState(() => _venue = venue);
   }
 
   /// Time do jogo: o do jogo em edição ou o time ativo.
@@ -136,11 +134,13 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
+    final venue = _venue;
     if (_loading ||
         !valid ||
         modality == null ||
         opponent == null ||
-        scheduledAt == null) {
+        scheduledAt == null ||
+        venue == null) {
       return;
     }
 
@@ -161,7 +161,9 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       modality: modality,
       hostIsHome: _hostIsHome,
       scheduledAt: scheduledAt,
-      location: _locationController.text,
+      venueId: venue.id,
+      // O texto antigo do local dá lugar ao local cadastrado.
+      location: null,
     );
     final repository = ref.read(gameRepositoryProvider);
     await _run(
@@ -262,6 +264,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
+    final venue = _venue;
 
     return [
       Form(
@@ -340,11 +343,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
               ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Local (opcional)'),
-              textCapitalization: TextCapitalization.sentences,
-              maxLength: 160,
+            InkWell(
+              onTap: _loading ? null : _pickVenue,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Local',
+                  helperText: switch ((venue, widget.game?.location)) {
+                    (final venue?, _) => venue.address,
+                    // Jogo antigo: mostra o texto digitado antes.
+                    (null, final old?) => 'Antes: $old',
+                    _ => 'Escolha um local cadastrado ou cadastre um novo',
+                  },
+                  helperMaxLines: 2,
+                  suffixIcon: const Icon(Icons.place_outlined),
+                  errorText: _showErrors && venue == null
+                      ? 'Escolha o local'
+                      : null,
+                ),
+                isEmpty: venue == null,
+                child: Text(venue?.name ?? ''),
+              ),
             ),
           ],
         ),

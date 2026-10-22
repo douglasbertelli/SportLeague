@@ -31,6 +31,9 @@ import 'package:sport_league/features/games/presentation/games_tab.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
+import 'package:sport_league/features/venues/data/venue_repository.dart';
+import 'package:sport_league/features/venues/presentation/venue_form_page.dart';
+import 'package:sport_league/features/venues/presentation/venues_page.dart';
 
 import 'fakes.dart';
 
@@ -50,6 +53,7 @@ Future<ProviderContainer> _container({
   FakeGameRepository? games,
   FakeOpponentRepository? opponents,
   FakeAvailabilityRepository? availability,
+  FakeVenueRepository? venues,
   PickImage? pickImage,
   Map<String, Object> saved = const {},
 }) async {
@@ -69,6 +73,9 @@ Future<ProviderContainer> _container({
       ),
       availabilityRepositoryProvider.overrideWithValue(
         availability ?? FakeAvailabilityRepository(),
+      ),
+      venueRepositoryProvider.overrideWithValue(
+        venues ?? FakeVenueRepository(),
       ),
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
     ],
@@ -101,6 +108,15 @@ Future<void> _pumpPage(
             modality: modality,
           );
         },
+      ),
+      GoRoute(
+        path: Routes.pickVenue,
+        builder: (_, _) => const VenuesPage(picking: true),
+      ),
+      GoRoute(
+        path: Routes.newVenue,
+        builder: (_, state) =>
+            VenueFormPage(initialName: state.extra as String?),
       ),
     ],
   );
@@ -587,6 +603,7 @@ void main() {
 
         expect(find.text('Escolha o adversário'), findsOneWidget);
         expect(find.text('Escolha a data e a hora'), findsOneWidget);
+        expect(find.text('Escolha o local'), findsOneWidget);
         expect(games.created, isEmpty);
       },
     );
@@ -611,12 +628,14 @@ void main() {
         games: games,
         opponents: opponents,
         availability: availability,
+        venues: FakeVenueRepository([arena]),
       );
       final game = Game(
         id: 'g1',
         teamId: 'team-a',
         opponent: 'Antigo FC',
         scheduledAt: DateTime(2026, 10, 25, 15),
+        location: 'Campo do Zé',
       );
       await _pumpPage(tester, container, GameFormPage(game: game));
 
@@ -655,8 +674,19 @@ void main() {
       expect(availability.freeSlotRequests.last, 'team-rival');
       await tapVisible(tester, find.text('15:00'));
 
+      // Jogo antigo: mostra o local digitado antes e pede um cadastrado.
+      expect(find.text('Antes: Campo do Zé'), findsOneWidget);
+      await tapVisible(tester, find.widgetWithText(InputDecorator, 'Local'));
+      expect(find.text('Escolher local'), findsOneWidget);
+      await tapVisible(tester, find.text('Arena Society Central'));
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      expect(find.text(arena.address), findsOneWidget);
+
       await tapVisible(tester, find.text('Salvar'));
       final saved = games.updated.single;
+      expect(saved.venueId, 'venue-1');
+      expect(saved.toMap()['venue_id'], 'venue-1');
+      expect(saved.toMap()['location'], isNull);
       expect(saved.opponent, 'Real Bairro');
       expect(saved.opponentTeamId, 'team-rival');
       expect(saved.opponentGuestId, isNull);
@@ -1269,6 +1299,7 @@ void main() {
         teams: FakeTeamRepository([teamA]),
         games: games,
         availability: availability,
+        venues: FakeVenueRepository([arena]),
         opponents: FakeOpponentRepository(
           guests: const [
             GuestTeam(
@@ -1301,12 +1332,122 @@ void main() {
       await tester.tap(find.text('20:00'));
       await tester.pumpAndSettle();
 
+      final venueField = find.widgetWithText(InputDecorator, 'Local');
+      await tester.ensureVisible(venueField);
+      await tester.tap(venueField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Arena Society Central'));
+      await tester.pumpAndSettle();
+
       final submit = find.text('Marcar amistoso');
       await tester.ensureVisible(submit);
       await tester.tap(submit);
       await tester.pumpAndSettle();
       expect(games.created.single.scheduledAt, mySlot);
       expect(games.created.single.opponentGuestId, 'guest-1');
+      expect(games.created.single.venueId, 'venue-1');
+    });
+  });
+
+  group('locais', () {
+    Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+      await tester.ensureVisible(finder);
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> fillAddress(WidgetTester tester, String name) async {
+      Finder field(String label) => find.widgetWithText(TextFormField, label);
+      await tester.enterText(field('Nome do local'), name);
+      await tester.enterText(field('Rua'), 'Rua das Flores');
+      await tester.enterText(field('Número'), '120');
+      await tester.enterText(field('Bairro'), 'Centro');
+      await tester.enterText(field('Cidade'), 'Campinas');
+      await tester.enterText(field('UF'), 'sp');
+      // CEP por último: com 8 dígitos ele consultaria o ViaCEP; aqui o
+      // campo é preenchido direto, sem o onChanged.
+      tester.widget<TextFormField>(field('CEP')).controller!.text = '13010000';
+      await tester.pump();
+    }
+
+    testWidgets('sugere o local que já existe em vez de cadastrar outro', (
+      tester,
+    ) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenuesPage(picking: true));
+
+      // Pesquisa sem achar e cadastra um novo com o nome digitado.
+      await tester.enterText(find.byType(TextField), 'Arena Society');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'arena society c');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Novo local'), findsOneWidget);
+      expect(find.text('arena society c'), findsOneWidget);
+
+      await fillAddress(tester, 'Arena Society');
+      await tapVisible(tester, find.text('Cadastrar local'));
+
+      // Sugere o existente; escolher ele volta para o amistoso sem cadastrar.
+      expect(venues.similarChecks.single.name, 'Arena Society');
+      expect(find.text('Esse local já existe?'), findsOneWidget);
+      await tapVisible(
+        tester,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Arena Society Central'),
+        ),
+      );
+      expect(venues.created, isEmpty);
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('cadastra mesmo assim quando não é o mesmo local', (
+      tester,
+    ) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenueFormPage());
+
+      await fillAddress(tester, 'Arena Society');
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Esse local já existe?'), findsOneWidget);
+      await tapVisible(tester, find.text('Cadastrar mesmo assim'));
+
+      final created = venues.created.single;
+      expect(created.name, 'Arena Society');
+      expect(created.createdBy, 'u1');
+      expect(created.toMap()['state'], 'SP');
+      expect(created.address, 'Rua das Flores, 120 - Centro, Campinas/SP');
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('sem parecidos, cadastra direto', (tester) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenueFormPage());
+
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Informe o nome do local'), findsOneWidget);
+      expect(venues.created, isEmpty);
+
+      await fillAddress(tester, 'Ginásio Municipal');
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Esse local já existe?'), findsNothing);
+      expect(venues.created.single.name, 'Ginásio Municipal');
     });
   });
 }

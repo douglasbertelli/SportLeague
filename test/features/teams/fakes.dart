@@ -9,6 +9,8 @@ import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
+import 'package:sport_league/features/venues/data/venue_repository.dart';
+import 'package:sport_league/features/venues/domain/venue.dart';
 
 const teamA = Team(
   id: 'team-a',
@@ -198,6 +200,59 @@ class FakeOpponentRepository implements OpponentRepository {
       modality: guest.modality,
     );
   }
+}
+
+const arena = Venue(
+  id: 'venue-1',
+  createdBy: 'u2',
+  name: 'Arena Society Central',
+  zipCode: '13010000',
+  street: 'Rua das Flores',
+  number: '120',
+  neighborhood: 'Centro',
+  city: 'Campinas',
+  state: 'SP',
+);
+
+/// Locais compartilhados: a pesquisa filtra pelo nome e os parecidos são os
+/// de mesmo nome (sem diferenciar maiúsculas) na mesma cidade.
+class FakeVenueRepository implements VenueRepository {
+  FakeVenueRepository([List<Venue> venues = const []]) : venues = [...venues];
+
+  final List<Venue> venues;
+  final created = <Venue>[];
+  final similarChecks = <Venue>[];
+
+  @override
+  Future<List<Venue>> search(String query) async => [
+    for (final venue in venues)
+      if (venue.name.toLowerCase().contains(query.trim().toLowerCase())) venue,
+  ];
+
+  @override
+  Future<List<Venue>> findSimilar(Venue venue) async {
+    similarChecks.add(venue);
+    return [
+      for (final other in venues)
+        if (other.city == venue.city &&
+            other.name.toLowerCase().contains(venue.name.trim().toLowerCase()))
+          other,
+    ];
+  }
+
+  @override
+  Future<Venue> create(Venue venue) async {
+    created.add(venue);
+    final saved = Venue.fromMap({
+      ...venue.toMap(),
+      'id': 'venue-${venues.length + 1}',
+    });
+    venues.add(saved);
+    return saved;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// Horários cadastrados e livres por time, como o banco.

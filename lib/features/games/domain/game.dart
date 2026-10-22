@@ -1,4 +1,5 @@
 import '../../teams/domain/team.dart';
+import '../../venues/domain/venue.dart';
 
 /// Situação guardada no banco. "Realizado" é derivado: marcado com a data já
 /// passada (ver [Game.stageAt]).
@@ -47,6 +48,8 @@ class Game {
     this.modality,
     this.opponentTeamId,
     this.opponentGuestId,
+    this.venueId,
+    this.venue,
     this.location,
     this.teamScore,
     this.opponentScore,
@@ -75,6 +78,11 @@ class Game {
       },
       opponentTeamId: map['opponent_team_id'] as String?,
       opponentGuestId: map['opponent_guest_id'] as String?,
+      venueId: map['venue_id'] as String?,
+      venue: switch (map['venue']) {
+        final Map<String, dynamic> venue => Venue.fromMap(venue),
+        _ => null,
+      },
       location: map['location'] as String?,
       teamScore: map['team_score'] as int?,
       opponentScore: map['opponent_score'] as int?,
@@ -116,6 +124,12 @@ class Game {
   final Modality? modality;
   final String? opponentTeamId;
   final String? opponentGuestId;
+
+  /// Local da partida. Jogos antigos têm só o texto em [location].
+  final String? venueId;
+
+  /// Local carregado junto com o jogo (select com venue); não é salvo.
+  final Venue? venue;
   final String? location;
   final int? teamScore;
   final int? opponentScore;
@@ -188,6 +202,7 @@ class Game {
       'modality': modality?.name,
       'host_is_home': hostIsHome,
       'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      'venue_id': venueId,
       'location': location == null || location.isEmpty ? null : location,
     };
   }

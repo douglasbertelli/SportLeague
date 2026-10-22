@@ -134,6 +134,11 @@ class _GameCardState extends ConsumerState<GameCard> {
     final score = _game.scoreFor(viewer);
     final actions = _actions();
     final statusLine = _statusLine();
+    // Local cadastrado; jogos antigos só têm o texto digitado.
+    final place = switch (_game.venue) {
+      final venue? => '${venue.name} · ${venue.cityLine}',
+      null => _game.location,
+    };
     final mutedStyle = theme.textTheme.bodyMedium?.copyWith(
       color: colors.onSurfaceVariant,
     );
@@ -230,9 +235,9 @@ class _GameCardState extends ConsumerState<GameCard> {
                           ),
                       ],
                     ),
-                    if (_game.location case final location?) ...[
+                    if (place != null) ...[
                       const SizedBox(height: 12),
-                      _Detail(icon: Icons.location_on_outlined, text: location),
+                      _Detail(icon: Icons.location_on_outlined, text: place),
                     ],
                     if (statusLine != null) ...[
                       const SizedBox(height: 12),
