@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../data/team_repository.dart';
 import 'no_team_placeholder.dart';
+import 'team_logo.dart';
 
 /// Meus times: escolhe o time ativo, edita e cria times.
 class TeamsPage extends ConsumerWidget {
@@ -38,18 +39,25 @@ class TeamsPage extends ConsumerWidget {
                   for (final team in teams)
                     Card(
                       child: ListTile(
-                        leading: Icon(
-                          team.id == selectedId
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: team.id == selectedId
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
+                        leading: TeamLogo(team: team),
+                        title: Row(
+                          children: [
+                            Flexible(child: Text(team.name)),
+                            if (team.id == selectedId) ...[
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.check_circle,
+                                size: 18,
+                                semanticLabel: 'Time ativo',
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ],
+                          ],
                         ),
-                        title: Text(team.name),
                         subtitle: Text(
-                          [team.sport.label, ?team.location].join(' · '),
+                          [team.summary, ?team.location].join('\n'),
                         ),
+                        isThreeLine: team.location != null,
                         trailing: IconButton(
                           tooltip: 'Editar ${team.name}',
                           icon: const Icon(Icons.edit_outlined),

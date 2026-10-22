@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../data/team_repository.dart';
+import 'team_logo.dart';
 
 /// Título da barra superior com o time ativo; ao tocar, troca de time.
 class TeamSwitcher extends ConsumerWidget {
@@ -26,6 +27,8 @@ class TeamSwitcher extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            TeamLogo(team: team, radius: 14),
+            const SizedBox(width: 8),
             Flexible(child: Text(team.name, overflow: TextOverflow.ellipsis)),
             const Icon(Icons.arrow_drop_down),
           ],
@@ -49,9 +52,9 @@ class _TeamSheet extends ConsumerWidget {
         children: [
           for (final team in teams)
             ListTile(
-              leading: const Icon(Icons.shield_outlined),
+              leading: TeamLogo(team: team),
               title: Text(team.name),
-              subtitle: team.location == null ? null : Text(team.location!),
+              subtitle: Text(team.summary),
               trailing: team.id == selectedId ? const Icon(Icons.check) : null,
               selected: team.id == selectedId,
               onTap: () {

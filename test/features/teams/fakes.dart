@@ -1,3 +1,4 @@
+import 'package:sport_league/core/media/picked_image.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
@@ -19,6 +20,8 @@ class FakeTeamRepository implements TeamRepository {
 
   final List<Team> teams;
   final created = <Team>[];
+  final updated = <Team>[];
+  final uploadedLogos = <String, PickedImage>{};
 
   @override
   Future<List<Team>> fetchByOwner(String ownerId) async =>
@@ -26,17 +29,26 @@ class FakeTeamRepository implements TeamRepository {
 
   @override
   Future<Team> create(Team team) async {
-    final saved = Team(
-      id: 'team-${teams.length + 1}',
-      ownerId: team.ownerId,
-      name: team.name,
-      city: team.city,
-      state: team.state,
-      description: team.description,
-    );
+    // Ida e volta pelo formato do banco, como o Supabase faria.
+    final saved = Team.fromMap({
+      ...team.toMap(),
+      'id': 'team-${teams.length + 1}',
+    });
     created.add(team);
     teams.add(saved);
     return saved;
+  }
+
+  @override
+  Future<void> update(Team team) async {
+    updated.add(team);
+    teams[teams.indexWhere((t) => t.id == team.id)] = team;
+  }
+
+  @override
+  Future<String> uploadLogo(Team team, PickedImage image) async {
+    uploadedLogos[team.id!] = image;
+    return 'https://storage.test/team-logos/${team.ownerId}/${team.id}';
   }
 
   @override

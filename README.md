@@ -86,7 +86,11 @@ configurado.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**:
-   - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título;
+   - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
+     Cada time tem logo (galeria ou câmera, no Storage `team-logos`),
+     modalidade (Futsal, Society, Campo e/ou Futebol de Areia), gênero, faixa
+     de idade (Livre, Base 4 a 20 anos, Master a partir de 35) e data de
+     fundação;
    - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
      cada time tem os seus;
    - jogo: adversário, data e hora, local, amistoso ou campeonato e placar
@@ -118,7 +122,7 @@ supabase/
 | --------------- | ---------------------------------------------------------------- |
 | `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
-| `teams`         | Times; apenas administradores criam, e cada um pode ter vários   |
+| `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia), gênero, faixa de idade (livre, base, master), fundação e logo |
 | `team_players`  | Atletas do time (com ou sem conta no app); só o dono do time altera |
 | `games`         | Jogos do time; só o dono altera, e só o dono e os atletas do time veem |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
@@ -29,9 +31,24 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
   late final _descriptionController = TextEditingController(
     text: widget.team?.description,
   );
+  late final Set<Modality> _modalities = {...?widget.team?.modalities};
+  late TeamGender? _gender = widget.team?.gender;
+  late AgeGroup _ageGroup = widget.team?.ageGroup ?? AgeGroup.open;
+  late DateTime? _foundedOn = widget.team?.foundedOn;
+
+  /// Logo escolhido e ainda não enviado.
+  PickedImage? _newLogo;
+  bool _removeLogo = false;
+
+  /// Time já salvo: o recebido para edição ou o criado nesta tela (se o envio
+  /// do logo falhar, salvar de novo atualiza em vez de criar outro time).
+  late Team? _saved = widget.team;
+  bool _showChoiceErrors = false;
   bool _loading = false;
 
   bool get _isEditing => widget.team != null;
+
+  String? get _currentLogoUrl => _removeLogo ? null : _saved?.logoUrl;
 
   @override
   void dispose() {
@@ -42,16 +59,91 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
     super.dispose();
   }
 
+  Future<void> _pickLogo() async {
+    final hasLogo = _newLogo != null || _currentLogoUrl != null;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher da galeria'),
+              onTap: () => Navigator.of(context).pop('gallery'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto'),
+              onTap: () => Navigator.of(context).pop('camera'),
+            ),
+            if (hasLogo)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Remover logo'),
+                onTap: () => Navigator.of(context).pop('remove'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'remove') {
+      setState(() {
+        _newLogo = null;
+        _removeLogo = true;
+      });
+      return;
+    }
+
+    try {
+      final image = await ref.read(pickImageProvider)(
+        choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
+      );
+      if (image == null || !mounted) return;
+      setState(() {
+        _newLogo = image;
+        _removeLogo = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Não foi possível abrir a imagem.');
+      }
+    }
+  }
+
+  Future<void> _pickFoundedOn() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _foundedOn ?? today,
+      firstDate: DateTime(1900),
+      lastDate: today,
+      helpText: 'Data de fundação',
+    );
+    if (date != null) setState(() => _foundedOn = date);
+  }
+
   Future<void> _save() async {
-    if (_loading || !_formKey.currentState!.validate()) return;
+    final fieldsValid = _formKey.currentState!.validate();
+    setState(() => _showChoiceErrors = true);
+    if (_loading || !fieldsValid || _modalities.isEmpty || _gender == null) {
+      return;
+    }
     final ownerId = ref.read(currentUserIdProvider);
     if (ownerId == null) return;
 
     final team = Team(
-      id: widget.team?.id,
+      id: _saved?.id,
       ownerId: ownerId,
       name: _nameController.text,
-      sport: widget.team?.sport ?? Sport.football,
+      sport: _saved?.sport ?? Sport.football,
+      modalities: _modalities,
+      gender: _gender,
+      ageGroup: _ageGroup,
+      foundedOn: _foundedOn,
+      logoUrl: _currentLogoUrl,
       city: _cityController.text,
       state: _stateController.text,
       description: _descriptionController.text,
@@ -59,12 +151,28 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
 
     await _run(() async {
       final repository = ref.read(teamRepositoryProvider);
-      if (_isEditing) {
-        await repository.update(team);
-      } else {
-        final created = await repository.create(team);
+      final hadLogo = _saved?.logoUrl != null;
+      if (_saved == null) {
+        _saved = await repository.create(team);
         // O time recém-criado passa a ser o time ativo.
-        await ref.read(selectedTeamIdProvider.notifier).select(created.id!);
+        await ref.read(selectedTeamIdProvider.notifier).select(_saved!.id!);
+      } else {
+        await repository.update(team);
+        _saved = team;
+      }
+
+      if (_newLogo case final logo?) {
+        final url = await repository.uploadLogo(_saved!, logo);
+        _saved = _saved!.copyWith(logoUrl: url);
+        await repository.update(_saved!);
+        _newLogo = null;
+      } else if (_removeLogo && hadLogo) {
+        try {
+          await repository.removeLogo(_saved!);
+        } catch (_) {
+          // O time já foi salvo sem logo; falhar aqui só deixa o arquivo
+          // órfão no Storage.
+        }
       }
     });
   }
@@ -78,7 +186,7 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
           'atletas e jogos dele. Essa ação não pode ser desfeita.',
     );
     if (!confirmed) return;
-    await _run(() => ref.read(teamRepositoryProvider).delete(widget.team!.id!));
+    await _run(() => ref.read(teamRepositoryProvider).delete(widget.team!));
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -88,6 +196,8 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
       ref.invalidate(myTeamsProvider);
       if (mounted) context.pop();
     } catch (error) {
+      // Mesmo com erro, o time pode ter sido criado antes do logo.
+      ref.invalidate(myTeamsProvider);
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -96,6 +206,12 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final errorStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.error,
+    );
+    final foundedOn = _foundedOn;
+
     return FormPage(
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar time' : 'Novo time'),
@@ -109,6 +225,14 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
         ],
       ),
       children: [
+        Center(
+          child: _LogoPicker(
+            newLogo: _newLogo,
+            logoUrl: _currentLogoUrl,
+            onTap: _loading ? null : _pickLogo,
+          ),
+        ),
+        const SizedBox(height: 24),
         Form(
           key: _formKey,
           child: Column(
@@ -124,6 +248,88 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
                     Validators.name(value, message: 'Informe o nome do time'),
               ),
               const SizedBox(height: 8),
+              Text('Modalidade', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final modality in Modality.values)
+                    FilterChip(
+                      label: Text(modality.label),
+                      selected: _modalities.contains(modality),
+                      onSelected: (selected) => setState(
+                        () => selected
+                            ? _modalities.add(modality)
+                            : _modalities.remove(modality),
+                      ),
+                    ),
+                ],
+              ),
+              if (_showChoiceErrors && _modalities.isEmpty) ...[
+                const SizedBox(height: 4),
+                Text('Escolha pelo menos uma modalidade', style: errorStyle),
+              ],
+              const SizedBox(height: 16),
+              Text('Gênero', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<TeamGender>(
+                segments: [
+                  for (final gender in TeamGender.values)
+                    ButtonSegment(value: gender, label: Text(gender.label)),
+                ],
+                selected: {?_gender},
+                emptySelectionAllowed: true,
+                onSelectionChanged: (selection) =>
+                    setState(() => _gender = selection.firstOrNull),
+              ),
+              if (_showChoiceErrors && _gender == null) ...[
+                const SizedBox(height: 4),
+                Text('Escolha o gênero', style: errorStyle),
+              ],
+              const SizedBox(height: 16),
+              Text('Faixa de idade', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<AgeGroup>(
+                segments: [
+                  for (final group in AgeGroup.values)
+                    ButtonSegment(value: group, label: Text(group.label)),
+                ],
+                selected: {_ageGroup},
+                onSelectionChanged: (selection) =>
+                    setState(() => _ageGroup = selection.first),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _ageGroup.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _pickFoundedOn,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Data de fundação (opcional)',
+                    suffixIcon: foundedOn == null
+                        ? const Icon(Icons.event)
+                        : IconButton(
+                            tooltip: 'Limpar data de fundação',
+                            icon: const Icon(Icons.close),
+                            onPressed: () => setState(() => _foundedOn = null),
+                          ),
+                  ),
+                  isEmpty: foundedOn == null,
+                  child: Text(
+                    foundedOn == null
+                        ? ''
+                        : MaterialLocalizations.of(context)
+                              .formatMediumDate(foundedOn),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -171,6 +377,61 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage> {
           onPressed: _save,
         ),
       ],
+    );
+  }
+}
+
+/// Logo em destaque no topo do formulário; toque para trocar ou remover.
+class _LogoPicker extends StatelessWidget {
+  const _LogoPicker({
+    required this.newLogo,
+    required this.logoUrl,
+    required this.onTap,
+  });
+
+  final PickedImage? newLogo;
+  final String? logoUrl;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final ImageProvider? image = switch ((newLogo, logoUrl)) {
+      (final logo?, _) => MemoryImage(logo.bytes),
+      (null, final url?) => NetworkImage(url),
+      _ => null,
+    };
+
+    return Semantics(
+      button: true,
+      label: image == null ? 'Adicionar logo' : 'Trocar logo',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Stack(
+          children: [
+            CircleAvatar(
+              radius: 48,
+              foregroundImage: image,
+              onForegroundImageError: image == null ? null : (_, _) {},
+              child: const Icon(Icons.shield_outlined, size: 40),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: colorScheme.primary,
+                child: Icon(
+                  Icons.photo_camera,
+                  size: 16,
+                  color: colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

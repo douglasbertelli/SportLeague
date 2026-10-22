@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/media/picked_image.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../domain/team.dart';
@@ -32,9 +33,35 @@ class TeamRepository {
   Future<void> update(Team team) =>
       _client.from('teams').update(team.toMap()).eq('id', team.id!);
 
-  /// Remove o time com os atletas e jogos dele (cascade no banco).
-  Future<void> delete(String teamId) =>
-      _client.from('teams').delete().eq('id', teamId);
+  /// Remove o time com os atletas e jogos dele (cascade no banco) e o logo.
+  Future<void> delete(Team team) async {
+    await _client.from('teams').delete().eq('id', team.id!);
+    if (team.logoUrl != null) await removeLogo(team);
+  }
+
+  static const _logoBucket = 'team-logos';
+
+  /// Pasta do dono + id do time: as regras do Storage só deixam o dono gravar.
+  static String _logoPath(Team team) => '${team.ownerId}/${team.id}';
+
+  /// Envia (ou substitui) o logo e retorna a URL pública. A URL muda a cada
+  /// envio para o app não mostrar a imagem antiga do cache.
+  Future<String> uploadLogo(Team team, PickedImage image) async {
+    final storage = _client.storage.from(_logoBucket);
+    final path = _logoPath(team);
+    await storage.uploadBinary(
+      path,
+      image.bytes,
+      fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+    );
+    return storage.getPublicUrl(
+      path,
+      cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+
+  Future<void> removeLogo(Team team) =>
+      _client.storage.from(_logoBucket).remove([_logoPath(team)]);
 }
 
 final teamRepositoryProvider = Provider<TeamRepository>(
