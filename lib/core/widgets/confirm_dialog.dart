@@ -5,6 +5,21 @@ Future<bool> confirmDelete(
   BuildContext context, {
   required String title,
   required String message,
+}) => confirmAction(
+  context,
+  title: title,
+  message: message,
+  confirmLabel: 'Excluir',
+);
+
+/// Pede confirmação antes de uma ação que não dá para desfazer. Retorna `true`
+/// se confirmada.
+Future<bool> confirmAction(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  String cancelLabel = 'Cancelar',
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -14,14 +29,14 @@ Future<bool> confirmDelete(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+          child: Text(cancelLabel),
         ),
         TextButton(
           style: TextButton.styleFrom(
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Excluir'),
+          child: Text(confirmLabel),
         ),
       ],
     ),

@@ -9,12 +9,14 @@ class GameRepository {
 
   final SupabaseClient _client;
 
-  /// Jogos do time, do mais antigo para o mais recente.
+  /// Jogos do time, do mais antigo para o mais recente: os que ele marcou e
+  /// os amistosos em que foi escolhido como adversário. Traz o nome de quem
+  /// marcou para o adversário exibir.
   Future<List<Game>> fetchByTeam(String teamId) async {
     final rows = await _client
         .from('games')
-        .select()
-        .eq('team_id', teamId)
+        .select('*, host:teams!games_team_id_fkey(name)')
+        .or('team_id.eq.$teamId,opponent_team_id.eq.$teamId')
         .order('scheduled_at');
     return rows.map(Game.fromMap).toList();
   }
@@ -26,6 +28,17 @@ class GameRepository {
 
   Future<void> delete(String gameId) =>
       _client.from('games').delete().eq('id', gameId);
+
+  /// O adversário aceita o amistoso pendente.
+  Future<void> accept(String gameId) =>
+      _setStatus(gameId, GameStatus.scheduled);
+
+  /// Cancela (ou recusa, se pendente). Vale para os dois times; o banco
+  /// registra qual deles cancelou.
+  Future<void> cancel(String gameId) => _setStatus(gameId, GameStatus.canceled);
+
+  Future<void> _setStatus(String gameId, GameStatus status) =>
+      _client.from('games').update({'status': status.name}).eq('id', gameId);
 }
 
 final gameRepositoryProvider = Provider<GameRepository>(

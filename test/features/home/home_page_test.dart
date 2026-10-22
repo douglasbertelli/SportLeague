@@ -85,7 +85,7 @@ void main() {
 
       await tester.tap(find.descendant(of: bar, matching: find.text('Jogos')));
       await tester.pumpAndSettle();
-      expect(find.text('Nenhum jogo neste time'), findsOneWidget);
+      expect(find.text('Nenhum amistoso marcado'), findsOneWidget);
 
       await tester.tap(
         find.descendant(of: bar, matching: find.text('Atletas')),

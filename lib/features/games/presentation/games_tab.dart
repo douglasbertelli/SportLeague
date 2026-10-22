@@ -3,17 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/no_team_placeholder.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
 
-/// Aba Jogos do administrador: jogos do time ativo, próximos e anteriores.
+/// Aba Jogos do administrador: amistosos do time ativo divididos em Marcados,
+/// Pendentes, Cancelados e Realizados.
 class GamesTab extends ConsumerWidget {
   const GamesTab({super.key, this.now});
 
-  /// Referência para separar próximos e anteriores (testes).
+  /// Referência para separar marcados e realizados (testes).
   final DateTime? now;
 
   @override
@@ -51,7 +54,7 @@ class _GameList extends ConsumerWidget {
         heroTag: 'new-game',
         onPressed: () => context.push(Routes.newGame),
         icon: const Icon(Icons.add),
-        label: const Text('Novo jogo'),
+        label: const Text('Novo amistoso'),
       ),
       body: games.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -62,32 +65,50 @@ class _GameList extends ConsumerWidget {
           ),
         ),
         data: (games) {
-          if (games.isEmpty) {
-            return const EmptyState(
-              icon: Icons.sports_soccer,
-              title: 'Nenhum jogo neste time',
-              message:
-                  'Marque amistosos e jogos de campeonato pelo botão abaixo.',
+          final byStage = {
+            for (final stage in GameStage.values)
+              stage: [
+                for (final game in games)
+                  if (game.stageAt(now) == stage) game,
+              ],
+          };
+          // Próximos primeiro; já realizados e cancelados, mais recentes
+          // primeiro.
+          for (final MapEntry(key: stage, value: list) in byStage.entries) {
+            list.sort(
+              (a, b) => switch (stage) {
+                GameStage.scheduled ||
+                GameStage.pending => a.scheduledAt.compareTo(b.scheduledAt),
+                _ => b.scheduledAt.compareTo(a.scheduledAt),
+              },
             );
           }
-          final upcoming = games.where((g) => !g.scheduledAt.isBefore(now));
-          final past = games.where((g) => g.scheduledAt.isBefore(now)).toList()
-            ..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
 
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(teamGamesProvider(teamId).future),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          return DefaultTabController(
+            length: GameStage.values.length,
+            child: Column(
               children: [
-                if (upcoming.isNotEmpty) ...[
-                  const _SectionTitle('Próximos'),
-                  for (final game in upcoming) _GameCard(game: game),
-                ],
-                if (past.isNotEmpty) ...[
-                  if (upcoming.isNotEmpty) const SizedBox(height: 16),
-                  const _SectionTitle('Anteriores'),
-                  for (final game in past) _GameCard(game: game),
-                ],
+                // Rola na horizontal quando as abas não cabem na tela.
+                TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  tabs: [
+                    for (final stage in GameStage.values)
+                      Tab(text: '${stage.label} (${byStage[stage]!.length})'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      for (final stage in GameStage.values)
+                        _StageList(
+                          stage: stage,
+                          games: byStage[stage]!,
+                          teamId: teamId,
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -97,54 +118,193 @@ class _GameList extends ConsumerWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+class _StageList extends ConsumerWidget {
+  const _StageList({
+    required this.stage,
+    required this.games,
+    required this.teamId,
+  });
 
-  final String text;
+  final GameStage stage;
+  final List<Game> games;
+  final String teamId;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (games.isEmpty) {
+      return EmptyState(
+        icon: switch (stage) {
+          GameStage.scheduled => Icons.event_available,
+          GameStage.pending => Icons.hourglass_empty,
+          GameStage.canceled => Icons.event_busy,
+          GameStage.played => Icons.sports_soccer,
+        },
+        title: switch (stage) {
+          GameStage.scheduled => 'Nenhum amistoso marcado',
+          GameStage.pending => 'Nenhum amistoso pendente',
+          GameStage.canceled => 'Nenhum amistoso cancelado',
+          GameStage.played => 'Nenhum amistoso realizado',
+        },
+        message: switch (stage) {
+          GameStage.scheduled =>
+            'Marque amistosos contra times da mesma modalidade pelo botão '
+                'abaixo.',
+          GameStage.pending =>
+            'Amistosos contra times da plataforma ficam aqui até o '
+                'adversário aceitar.',
+          GameStage.canceled =>
+            'Amistosos cancelados ou recusados por um dos times aparecem aqui.',
+          GameStage.played =>
+            'Amistosos marcados aparecem aqui depois da data do jogo.',
+        },
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(teamGamesProvider(teamId).future),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        children: [
+          for (final game in games)
+            _GameCard(game: game, viewerTeamId: teamId, stage: stage),
+        ],
+      ),
     );
   }
 }
 
-class _GameCard extends StatelessWidget {
-  const _GameCard({required this.game});
+/// Jogo do ponto de vista do time ativo ([viewerTeamId]). Quem marcou edita ao
+/// tocar; o adversário aceita ou recusa o pendente e pode cancelar o marcado.
+class _GameCard extends ConsumerStatefulWidget {
+  const _GameCard({
+    required this.game,
+    required this.viewerTeamId,
+    required this.stage,
+  });
 
   final Game game;
+  final String viewerTeamId;
+  final GameStage stage;
+
+  @override
+  ConsumerState<_GameCard> createState() => _GameCardState();
+}
+
+class _GameCardState extends ConsumerState<_GameCard> {
+  bool _loading = false;
+
+  Game get _game => widget.game;
+
+  Future<void> _respond({required bool accept}) async {
+    final opponentName = _game.opponentNameFor(widget.viewerTeamId);
+    if (!accept) {
+      final pending = _game.status == GameStatus.pending;
+      final confirmed = await confirmAction(
+        context,
+        title: pending ? 'Recusar amistoso?' : 'Cancelar amistoso?',
+        message: pending
+            ? 'O amistoso contra $opponentName será recusado e irá para '
+                  'Cancelados.'
+            : 'O amistoso contra $opponentName será cancelado para os dois '
+                  'times.',
+        confirmLabel: pending ? 'Recusar' : 'Cancelar amistoso',
+        cancelLabel: 'Voltar',
+      );
+      if (!confirmed) return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final repository = ref.read(gameRepositoryProvider);
+      await (accept
+          ? repository.accept(_game.id!)
+          : repository.cancel(_game.id!));
+      ref.invalidate(teamGamesProvider(widget.viewerTeamId));
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final result = game.resultLabel;
+    final viewer = widget.viewerTeamId;
+    final isHost = _game.isHostedBy(viewer);
+    final opponentName = _game.opponentNameFor(viewer);
+    final result = _game.resultLabelFor(viewer);
+    final pending = _game.status == GameStatus.pending;
+    final upcomingScheduled = widget.stage == GameStage.scheduled;
+
+    final lines = [
+      formatGameDate(context, _game.scheduledAt),
+      ?_game.location,
+      if (!isHost) 'Marcado por $opponentName',
+      if (pending && isHost) 'Aguardando $opponentName aceitar',
+      if (pending && !isHost) 'Aguardando sua resposta',
+      if (_game.status == GameStatus.canceled)
+        switch (_game.canceledByTeamId) {
+          null => 'Cancelado: o adversário foi excluído',
+          final id when id == viewer => 'Cancelado pelo seu time',
+          _ => 'Cancelado por $opponentName',
+        },
+    ];
+
+    final actions = <Widget>[
+      if (pending && !isHost) ...[
+        TextButton(
+          onPressed: _loading ? null : () => _respond(accept: false),
+          child: const Text('Recusar'),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : () => _respond(accept: true),
+          child: const Text('Aceitar'),
+        ),
+      ],
+      if (upcomingScheduled && !isHost)
+        TextButton(
+          onPressed: _loading ? null : () => _respond(accept: false),
+          child: const Text('Cancelar amistoso'),
+        ),
+    ];
+
     return Card(
-      child: ListTile(
-        title: Text('x ${game.opponent}'),
-        subtitle: Text(
-          [
-            formatGameDate(context, game.scheduledAt),
-            ?game.location,
-          ].join('\n'),
-        ),
-        isThreeLine: game.location != null,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(game.type.label, style: theme.textTheme.labelSmall),
-            if (result != null)
-              Text(
-                result,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text('x $opponentName'),
+            subtitle: Text(lines.join('\n')),
+            isThreeLine: lines.length > 1,
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_game.modality case final modality?)
+                  Text(modality.label, style: theme.textTheme.labelSmall),
+                if (result != null)
+                  Text(
+                    result,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+              ],
+            ),
+            // Só quem marcou edita, e cancelado não muda mais.
+            onTap: isHost && _game.status != GameStatus.canceled
+                ? () => context.push(Routes.editGame, extra: _game)
+                : null,
+          ),
+          if (actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                spacing: 8,
+                children: actions,
               ),
-          ],
-        ),
-        onTap: () => context.push(Routes.editGame, extra: game),
+            ),
+        ],
       ),
     );
   }

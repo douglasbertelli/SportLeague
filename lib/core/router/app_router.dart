@@ -11,6 +11,7 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
 import '../../features/games/domain/game.dart';
 import '../../features/games/presentation/game_form_page.dart';
+import '../../features/games/presentation/opponent_picker_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
@@ -80,6 +81,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'games/edit',
             builder: (_, state) => GameFormPage(game: state.extra as Game),
+          ),
+          GoRoute(
+            path: 'games/opponent',
+            builder: (_, state) {
+              final (:teamId, :modality) =
+                  state.extra as ({String teamId, Modality modality});
+              return OpponentPickerPage(teamId: teamId, modality: modality);
+            },
           ),
         ],
       ),

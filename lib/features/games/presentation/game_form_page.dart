@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
-import '../../../core/utils/validators.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../teams/data/team_repository.dart';
+import '../../teams/domain/team.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
+import '../domain/opponent.dart';
 import 'games_tab.dart';
 
-/// Marca um jogo para o time ativo ou edita/exclui um existente. O placar é
-/// opcional: os dois campos juntos ou nenhum.
+/// Marca um amistoso para o time ativo ou edita/exclui um existente. O
+/// adversário precisa jogar a mesma modalidade; o placar é lançado em outra
+/// tela.
 class GameFormPage extends ConsumerStatefulWidget {
   const GameFormPage({super.key, this.game});
 
@@ -26,32 +28,73 @@ class GameFormPage extends ConsumerStatefulWidget {
 
 class _GameFormPageState extends ConsumerState<GameFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late final _opponentController = TextEditingController(
-    text: widget.game?.opponent,
-  );
   late final _locationController = TextEditingController(
     text: widget.game?.location,
   );
-  late final _teamScoreController = TextEditingController(
-    text: widget.game?.teamScore?.toString(),
-  );
-  late final _opponentScoreController = TextEditingController(
-    text: widget.game?.opponentScore?.toString(),
-  );
   late DateTime? _scheduledAt = widget.game?.scheduledAt;
-  late GameType _type = widget.game?.type ?? GameType.friendly;
-  bool _dateMissing = false;
+  late Modality? _modality = widget.game?.modality;
+  late Opponent? _opponent = switch (widget.game) {
+    Game(:final opponent, :final opponentTeamId, :final opponentGuestId)
+        when opponentTeamId != null || opponentGuestId != null =>
+      SavedOpponent(
+        name: opponent,
+        teamId: opponentTeamId,
+        guestId: opponentGuestId,
+      ),
+    _ => null,
+  };
+  bool _showErrors = false;
   bool _loading = false;
 
   bool get _isEditing => widget.game != null;
 
   @override
   void dispose() {
-    _opponentController.dispose();
     _locationController.dispose();
-    _teamScoreController.dispose();
-    _opponentScoreController.dispose();
     super.dispose();
+  }
+
+  /// Time do jogo: o do jogo em edição ou o time ativo.
+  Team? _team() {
+    final teamId =
+        widget.game?.teamId ?? ref.watch(selectedTeamProvider).value?.id;
+    final teams = ref.watch(myTeamsProvider).value ?? const <Team>[];
+    for (final team in teams) {
+      if (team.id == teamId) return team;
+    }
+    return null;
+  }
+
+  /// Com uma só modalidade no time, ela já vem escolhida.
+  Modality? _effectiveModality(Team team) =>
+      _modality ??
+      (team.modalities.length == 1 ? team.modalities.single : null);
+
+  void _selectModality(Modality modality) {
+    if (modality == _modality) return;
+    setState(() {
+      _modality = modality;
+      // O adversário escolhido era da outra modalidade.
+      _opponent = null;
+    });
+  }
+
+  Future<void> _pickOpponent(Team team) async {
+    final modality = _effectiveModality(team);
+    if (modality == null) {
+      setState(() => _showErrors = true);
+      return;
+    }
+    final opponent = await context.push<Opponent>(
+      Routes.pickOpponent,
+      extra: (teamId: team.id!, modality: modality),
+    );
+    if (opponent != null) {
+      setState(() {
+        _modality = modality;
+        _opponent = opponent;
+      });
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -69,46 +112,52 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) return;
-    setState(() {
-      _scheduledAt = DateTime(
+    setState(
+      () => _scheduledAt = DateTime(
         date.year,
         date.month,
         date.day,
         time.hour,
         time.minute,
-      );
-      _dateMissing = false;
-    });
+      ),
+    );
   }
 
-  String? _validateScore(String? value, TextEditingController other) {
-    final empty = value == null || value.isEmpty;
-    if (empty != other.text.isEmpty) return 'Preencha os dois placares';
-    return null;
-  }
-
-  Future<void> _save() async {
+  Future<void> _save(Team team) async {
     final valid = _formKey.currentState!.validate();
-    setState(() => _dateMissing = _scheduledAt == null);
-    if (_loading || !valid || _scheduledAt == null) return;
-
-    final teamId =
-        widget.game?.teamId ?? ref.read(selectedTeamProvider).value?.id;
-    if (teamId == null) return;
+    setState(() => _showErrors = true);
+    final modality = _effectiveModality(team);
+    final opponent = _opponent;
+    final scheduledAt = _scheduledAt;
+    if (_loading ||
+        !valid ||
+        modality == null ||
+        opponent == null ||
+        scheduledAt == null) {
+      return;
+    }
 
     final game = Game(
       id: widget.game?.id,
-      teamId: teamId,
-      opponent: _opponentController.text,
-      scheduledAt: _scheduledAt!,
+      teamId: team.id!,
+      opponent: opponent.name,
+      opponentTeamId: switch (opponent) {
+        RegisteredOpponent(:final team) => team.id,
+        SavedOpponent(:final teamId) => teamId,
+        GuestOpponent() => null,
+      },
+      opponentGuestId: switch (opponent) {
+        GuestOpponent(:final guest) => guest.id,
+        SavedOpponent(:final guestId) => guestId,
+        RegisteredOpponent() => null,
+      },
+      modality: modality,
+      scheduledAt: scheduledAt,
       location: _locationController.text,
-      type: _type,
-      teamScore: int.tryParse(_teamScoreController.text),
-      opponentScore: int.tryParse(_opponentScoreController.text),
     );
     final repository = ref.read(gameRepositoryProvider);
     await _run(
-      teamId,
+      team.id!,
       () => _isEditing ? repository.update(game) : repository.create(game),
     );
   }
@@ -124,6 +173,24 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     await _run(
       game.teamId,
       () => ref.read(gameRepositoryProvider).delete(game.id!),
+    );
+  }
+
+  Future<void> _cancelGame() async {
+    final game = widget.game!;
+    final confirmed = await confirmAction(
+      context,
+      title: 'Cancelar amistoso?',
+      message:
+          'O amistoso contra ${game.opponent} irá para Cancelados'
+          '${game.opponentTeamId != null ? ' para os dois times' : ''}.',
+      confirmLabel: 'Cancelar amistoso',
+      cancelLabel: 'Voltar',
+    );
+    if (!confirmed) return;
+    await _run(
+      game.teamId,
+      () => ref.read(gameRepositoryProvider).cancel(game.id!),
     );
   }
 
@@ -143,16 +210,14 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final teamName = ref.watch(selectedTeamProvider).value?.name;
-    final scheduledAt = _scheduledAt;
-    final scoreFormatters = [
-      FilteringTextInputFormatter.digitsOnly,
-      LengthLimitingTextInputFormatter(3),
-    ];
+    final errorStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.error,
+    );
+    final team = _team();
 
     return FormPage(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Editar jogo' : 'Novo jogo'),
+        title: Text(_isEditing ? 'Editar amistoso' : 'Novo amistoso'),
         actions: [
           if (_isEditing)
             IconButton(
@@ -162,110 +227,134 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
             ),
         ],
       ),
-      children: [
-        if (!_isEditing && teamName != null) ...[
-          Text('Time: $teamName', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 16),
-        ],
-        Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SegmentedButton<GameType>(
-                segments: [
-                  for (final type in GameType.values)
-                    ButtonSegment(value: type, label: Text(type.label)),
-                ],
-                selected: {_type},
-                onSelectionChanged: (selection) =>
-                    setState(() => _type = selection.first),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _opponentController,
-                decoration: const InputDecoration(labelText: 'Adversário'),
-                textCapitalization: TextCapitalization.words,
-                textInputAction: TextInputAction.next,
-                maxLength: 80,
-                validator: (value) =>
-                    Validators.name(value, message: 'Informe o adversário'),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: _pickDateTime,
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Data e hora',
-                    suffixIcon: const Icon(Icons.event),
-                    errorText: _dateMissing ? 'Escolha a data e a hora' : null,
-                  ),
-                  isEmpty: scheduledAt == null,
-                  child: Text(
-                    scheduledAt == null
-                        ? ''
-                        : formatGameDate(context, scheduledAt),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Local (opcional)',
-                ),
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: 160,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Placar (depois do jogo)',
-                style: theme.textTheme.titleSmall,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _teamScoreController,
-                      decoration: InputDecoration(
-                        labelText: teamName ?? 'Seu time',
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: scoreFormatters,
-                      validator: (value) =>
-                          _validateScore(value, _opponentScoreController),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                    child: Text('x'),
-                  ),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _opponentScoreController,
-                      decoration: const InputDecoration(
-                        labelText: 'Adversário',
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: scoreFormatters,
-                      validator: (value) =>
-                          _validateScore(value, _teamScoreController),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+      children: switch (team) {
+        null => const [Center(child: CircularProgressIndicator())],
+        Team(modalities: final modalities) when modalities.isEmpty => [
+          Text(
+            'Cadastre a modalidade do time ${team.name} para marcar '
+            'amistosos.',
           ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => context.push(Routes.editTeam, extra: team),
+            child: const Text('Editar time'),
+          ),
+        ],
+        _ => _formChildren(context, team, errorStyle),
+      },
+    );
+  }
+
+  List<Widget> _formChildren(
+    BuildContext context,
+    Team team,
+    TextStyle? errorStyle,
+  ) {
+    final theme = Theme.of(context);
+    final modality = _effectiveModality(team);
+    final opponent = _opponent;
+    final scheduledAt = _scheduledAt;
+
+    return [
+      Text('Time: ${team.name}', style: theme.textTheme.titleSmall),
+      const SizedBox(height: 16),
+      Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Modalidade', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (team.modalities.length == 1)
+              Text(team.modalities.single.label)
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final option in team.modalities)
+                    ChoiceChip(
+                      label: Text(option.label),
+                      selected: option == modality,
+                      onSelected: (_) => _selectModality(option),
+                    ),
+                ],
+              ),
+            if (_showErrors && modality == null) ...[
+              const SizedBox(height: 4),
+              Text('Escolha a modalidade do jogo', style: errorStyle),
+            ],
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _loading ? null : () => _pickOpponent(team),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Adversário',
+                  helperText: switch (opponent) {
+                    _ when modality == null => 'Escolha a modalidade primeiro',
+                    RegisteredOpponent() || SavedOpponent(teamId: _?) =>
+                      'O time adversário precisa aceitar o amistoso',
+                    _ =>
+                      'Time da plataforma ou time fictício de '
+                          '${modality.label}',
+                  },
+                  errorText: _showErrors && opponent == null
+                      ? 'Escolha o adversário'
+                      : null,
+                  suffixIcon: const Icon(Icons.search),
+                ),
+                isEmpty: opponent == null,
+                child: Text(switch (opponent) {
+                  null => '',
+                  GuestOpponent(:final name) => '$name (fictício)',
+                  final opponent => opponent.name,
+                }),
+              ),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _pickDateTime,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Data e hora',
+                  suffixIcon: const Icon(Icons.event),
+                  errorText: _showErrors && scheduledAt == null
+                      ? 'Escolha a data e a hora'
+                      : null,
+                ),
+                isEmpty: scheduledAt == null,
+                child: Text(
+                  scheduledAt == null
+                      ? ''
+                      : formatGameDate(context, scheduledAt),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _locationController,
+              decoration: const InputDecoration(labelText: 'Local (opcional)'),
+              textCapitalization: TextCapitalization.sentences,
+              maxLength: 160,
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-        LoadingButton(
-          label: _isEditing ? 'Salvar' : 'Marcar jogo',
-          loading: _loading,
-          onPressed: _save,
+      ),
+      const SizedBox(height: 24),
+      LoadingButton(
+        label: _isEditing ? 'Salvar' : 'Marcar amistoso',
+        loading: _loading,
+        onPressed: () => _save(team),
+      ),
+      if (widget.game case final game?
+          when game.status != GameStatus.canceled) ...[
+        const SizedBox(height: 8),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+          onPressed: _loading ? null : _cancelGame,
+          child: const Text('Cancelar amistoso'),
         ),
       ],
-    );
+    ];
   }
 }

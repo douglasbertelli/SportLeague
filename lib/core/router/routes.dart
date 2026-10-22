@@ -19,4 +19,7 @@ abstract final class Routes {
 
   /// Recebe o `Game` em `extra`.
   static const editGame = '/home/games/edit';
+
+  /// Recebe `(teamId:, modality:)` em `extra`; devolve o `Opponent` no `pop`.
+  static const pickOpponent = '/home/games/opponent';
 }

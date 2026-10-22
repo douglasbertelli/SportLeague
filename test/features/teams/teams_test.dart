@@ -15,7 +15,11 @@ import 'package:sport_league/features/athletes/presentation/athlete_form_page.da
 import 'package:sport_league/features/athletes/presentation/athletes_tab.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
+import 'package:sport_league/core/router/routes.dart';
+import 'package:sport_league/features/games/data/opponent_repository.dart';
+import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/games/presentation/game_form_page.dart';
+import 'package:sport_league/features/games/presentation/opponent_picker_page.dart';
 import 'package:sport_league/features/games/presentation/games_tab.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
@@ -37,6 +41,7 @@ Future<ProviderContainer> _container({
   required FakeTeamRepository teams,
   FakeAthleteRepository? athletes,
   FakeGameRepository? games,
+  FakeOpponentRepository? opponents,
   PickImage? pickImage,
   Map<String, Object> saved = const {},
 }) async {
@@ -51,6 +56,9 @@ Future<ProviderContainer> _container({
         athletes ?? FakeAthleteRepository({}),
       ),
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
+      opponentRepositoryProvider.overrideWithValue(
+        opponents ?? FakeOpponentRepository(),
+      ),
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
     ],
   );
@@ -70,6 +78,14 @@ Future<void> _pumpPage(
         path: '/',
         builder: (_, _) => const Scaffold(body: Text('Início')),
         routes: [GoRoute(path: 'page', builder: (_, _) => page)],
+      ),
+      GoRoute(
+        path: Routes.pickOpponent,
+        builder: (_, state) {
+          final (:teamId, :modality) =
+              state.extra as ({String teamId, Modality modality});
+          return OpponentPickerPage(teamId: teamId, modality: modality);
+        },
       ),
     ],
   );
@@ -303,9 +319,8 @@ void main() {
       expect(find.text('Crie seu primeiro time'), findsOneWidget);
     });
 
-    testWidgets('a aba Jogos separa próximos e anteriores do time ativo', (
-      tester,
-    ) async {
+    testWidgets('a aba Jogos divide o time ativo em Marcados, Pendentes, '
+        'Cancelados e Realizados', (tester) async {
       final now = DateTime(2026, 10, 22, 12);
       final container = await _container(
         teams: FakeTeamRepository([teamA, teamB]),
@@ -324,7 +339,24 @@ void main() {
               teamId: 'team-a',
               opponent: 'Real Bairro',
               scheduledAt: DateTime(2026, 10, 25, 15),
-              type: GameType.championship,
+              modality: Modality.society,
+            ),
+            Game(
+              id: 'g4',
+              teamId: 'team-a',
+              opponent: 'Vila Nova',
+              opponentTeamId: 'team-vila',
+              status: GameStatus.pending,
+              scheduledAt: DateTime(2026, 10, 30, 15),
+            ),
+            Game(
+              id: 'g5',
+              teamId: 'team-a',
+              opponent: 'Desistentes FC',
+              opponentTeamId: 'team-desist',
+              status: GameStatus.canceled,
+              canceledByTeamId: 'team-desist',
+              scheduledAt: DateTime(2026, 10, 28, 15),
             ),
           ],
           'team-b': [
@@ -339,20 +371,161 @@ void main() {
       );
       await _pumpTab(tester, container, GamesTab(now: now));
 
-      expect(find.text('Próximos'), findsOneWidget);
-      expect(find.text('Anteriores'), findsOneWidget);
+      // As abas rolam na horizontal quando não cabem.
+      final tabBar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(tabBar.isScrollable, isTrue);
+      for (final label in [
+        'Marcados (1)',
+        'Pendentes (1)',
+        'Cancelados (1)',
+        'Realizados (1)',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+
       expect(find.text('x Real Bairro'), findsOneWidget);
-      expect(find.text('Campeonato'), findsOneWidget);
+      expect(find.text('Society'), findsOneWidget);
+      expect(find.text('x Outro Time'), findsNothing);
+
+      await tester.tap(find.text('Pendentes (1)'));
+      await tester.pumpAndSettle();
+      expect(find.text('x Vila Nova'), findsOneWidget);
+      expect(
+        find.textContaining('Aguardando Vila Nova aceitar'),
+        findsOneWidget,
+      );
+      // Quem marcou não aceita o próprio amistoso.
+      expect(find.text('Aceitar'), findsNothing);
+
+      await tester.tap(find.text('Cancelados (1)'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Cancelado por Desistentes FC'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Realizados (1)'));
+      await tester.pumpAndSettle();
       expect(find.text('x Unidos da Vila'), findsOneWidget);
       expect(find.text('Vitória 3 x 1'), findsOneWidget);
-      expect(find.text('x Outro Time'), findsNothing);
-      expect(
-        tester.getTopLeft(find.text('x Real Bairro')).dy,
-        lessThan(tester.getTopLeft(find.text('x Unidos da Vila')).dy),
-      );
     });
 
-    testWidgets('marcar jogo exige data e placar completo', (tester) async {
+    testWidgets('o adversário aceita ou recusa o amistoso pendente', (
+      tester,
+    ) async {
+      const rivalTeam = Team(
+        id: 'team-rival',
+        ownerId: 'u1',
+        name: 'Real Bairro',
+        modalities: {Modality.society},
+      );
+      Game invite(String id) => Game(
+        id: id,
+        teamId: 'team-a',
+        hostTeamName: 'Amigos FC',
+        opponent: 'Real Bairro',
+        opponentTeamId: 'team-rival',
+        status: GameStatus.pending,
+        modality: Modality.society,
+        scheduledAt: DateTime(2026, 10, 25, 15),
+      );
+      final games = FakeGameRepository({
+        'team-a': [invite('g1'), invite('g2')],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([rivalTeam]),
+        games: games,
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      await tester.tap(find.text('Pendentes (2)'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Aguardando sua resposta'), findsNWidgets(2));
+
+      await tester.tap(find.text('Aceitar').first);
+      await tester.pumpAndSettle();
+      expect(games.accepted, ['g1']);
+
+      await tester.tap(find.text('Recusar').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Recusar amistoso?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Recusar').last);
+      await tester.pumpAndSettle();
+      expect(games.canceled, ['g2']);
+    });
+
+    testWidgets('o adversário pode cancelar um amistoso marcado', (
+      tester,
+    ) async {
+      const rivalTeam = Team(
+        id: 'team-rival',
+        ownerId: 'u1',
+        name: 'Real Bairro',
+        modalities: {Modality.society},
+      );
+      final games = FakeGameRepository({
+        'team-a': [
+          Game(
+            id: 'g1',
+            teamId: 'team-a',
+            hostTeamName: 'Amigos FC',
+            opponent: 'Real Bairro',
+            opponentTeamId: 'team-rival',
+            modality: Modality.society,
+            scheduledAt: DateTime(2026, 10, 25, 15),
+          ),
+        ],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([rivalTeam]),
+        games: games,
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      expect(find.text('x Amigos FC'), findsOneWidget);
+      await tester.tap(find.text('Cancelar amistoso'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(TextButton, 'Cancelar amistoso').last,
+      );
+      await tester.pumpAndSettle();
+      expect(games.canceled, ['g1']);
+    });
+  });
+
+  group('amistoso', () {
+    const rival = Team(
+      id: 'team-rival',
+      ownerId: 'u2',
+      name: 'Real Bairro',
+      modalities: {Modality.society},
+    );
+    const guest = GuestTeam(
+      id: 'guest-1',
+      ownerId: 'u1',
+      name: 'Pelada de Sábado',
+      modality: Modality.society,
+    );
+
+    Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+      await tester.ensureVisible(finder);
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    final opponentField = find.widgetWithText(InputDecorator, 'Adversário');
+
+    testWidgets('sem tipo e sem placar; exige modalidade, adversário e data', (
+      tester,
+    ) async {
       final games = FakeGameRepository({});
       final container = await _container(
         teams: FakeTeamRepository([teamA]),
@@ -360,21 +533,111 @@ void main() {
       );
       await _pumpPage(tester, container, const GameFormPage());
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Adversário').first,
-        'Real Bairro',
-      );
-      final scoreFields = find.byType(TextFormField);
-      await tester.enterText(scoreFields.at(2), '2');
+      expect(find.text('Amistoso'), findsNothing);
+      expect(find.text('Campeonato'), findsNothing);
+      expect(find.textContaining('Placar'), findsNothing);
 
-      final submit = find.text('Marcar jogo');
-      await tester.ensureVisible(submit);
-      await tester.tap(submit);
-      await tester.pump();
+      await tapVisible(tester, find.text('Marcar amistoso'));
 
+      expect(find.text('Escolha a modalidade do jogo'), findsOneWidget);
+      expect(find.text('Escolha o adversário'), findsOneWidget);
       expect(find.text('Escolha a data e a hora'), findsOneWidget);
-      expect(find.text('Preencha os dois placares'), findsNWidgets(2));
       expect(games.created, isEmpty);
+
+      // Sem modalidade, a pesquisa do adversário não abre.
+      await tapVisible(tester, opponentField);
+      expect(find.text('Escolher adversário'), findsNothing);
+    });
+
+    testWidgets('pesquisa só a modalidade escolhida e salva o adversário', (
+      tester,
+    ) async {
+      final games = FakeGameRepository({});
+      final opponents = FakeOpponentRepository(
+        registered: [rival],
+        guests: [guest],
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: games,
+        opponents: opponents,
+      );
+      final game = Game(
+        id: 'g1',
+        teamId: 'team-a',
+        opponent: 'Antigo FC',
+        scheduledAt: DateTime(2026, 10, 25, 15),
+      );
+      await _pumpPage(tester, container, GameFormPage(game: game));
+
+      await tapVisible(tester, find.text('Society'));
+      await tapVisible(tester, opponentField);
+      expect(find.text('Escolher adversário'), findsOneWidget);
+      expect(opponents.searches.last.modality, Modality.society);
+      expect(opponents.searches.last.teamId, 'team-a');
+
+      await tester.enterText(find.byType(TextField), 'real');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(opponents.searches.last.query, 'real');
+
+      await tapVisible(tester, find.text('Real Bairro'));
+      expect(find.text('Real Bairro'), findsOneWidget);
+
+      await tapVisible(tester, find.text('Salvar'));
+      final saved = games.updated.single;
+      expect(saved.opponent, 'Real Bairro');
+      expect(saved.opponentTeamId, 'team-rival');
+      expect(saved.opponentGuestId, isNull);
+      expect(saved.modality, Modality.society);
+      expect(saved.toMap().containsKey('team_score'), isFalse);
+      expect(saved.toMap().containsKey('type'), isFalse);
+    });
+
+    testWidgets('cria time fictício quando o adversário não existe', (
+      tester,
+    ) async {
+      final opponents = FakeOpponentRepository();
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        opponents: opponents,
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      await tapVisible(tester, find.text('Campo'));
+      await tapVisible(tester, opponentField);
+      expect(find.text('Nenhum time encontrado.'), findsOneWidget);
+
+      await tapVisible(tester, find.text('Criar time fictício'));
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nome do time'),
+        'Várzea da Esquina',
+      );
+      await tapVisible(tester, find.text('Criar'));
+
+      final created = opponents.createdGuests.single;
+      expect(created.name, 'Várzea da Esquina');
+      expect(created.ownerId, 'u1');
+      expect(created.modality, Modality.field);
+      expect(find.text('Várzea da Esquina (fictício)'), findsOneWidget);
+    });
+
+    testWidgets('trocar a modalidade limpa o adversário escolhido', (
+      tester,
+    ) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        opponents: FakeOpponentRepository(registered: [rival]),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      await tapVisible(tester, find.text('Society'));
+      await tapVisible(tester, opponentField);
+      await tapVisible(tester, find.text('Real Bairro'));
+      expect(find.text('Real Bairro'), findsOneWidget);
+
+      await tapVisible(tester, find.text('Campo'));
+      expect(find.text('Real Bairro'), findsNothing);
     });
   });
 
@@ -445,10 +708,120 @@ void main() {
         opponentScore: opponent,
       );
 
-      expect(game().resultLabel, isNull);
-      expect(game(team: 2, opponent: 2).resultLabel, 'Empate 2 x 2');
-      expect(game(team: 0, opponent: 1).resultLabel, 'Derrota 0 x 1');
+      expect(game().resultLabelFor('team-a'), isNull);
+      expect(
+        game(team: 2, opponent: 2).resultLabelFor('team-a'),
+        'Empate 2 x 2',
+      );
+      expect(
+        game(team: 0, opponent: 1).resultLabelFor('team-a'),
+        'Derrota 0 x 1',
+      );
+      // Do lado do adversário, o placar se inverte.
+      expect(
+        game(team: 0, opponent: 1).resultLabelFor('team-rival'),
+        'Vitória 1 x 0',
+      );
       expect(game().toMap()['scheduled_at'], date.toUtc().toIso8601String());
     });
+
+    test('quem marcou e o adversário veem o outro time', () {
+      final game = Game.fromMap({
+        'id': 'g1',
+        'team_id': 'team-a',
+        'opponent': 'Real Bairro',
+        'opponent_team_id': 'team-rival',
+        'scheduled_at': '2026-10-25T18:00:00Z',
+        'modality': 'society',
+        'host': {'name': 'Amigos FC'},
+      });
+
+      expect(game.isHostedBy('team-a'), isTrue);
+      expect(game.opponentNameFor('team-a'), 'Real Bairro');
+      expect(game.isHostedBy('team-rival'), isFalse);
+      expect(game.opponentNameFor('team-rival'), 'Amigos FC');
+      expect(game.toMap().containsKey('host'), isFalse);
+    });
+
+    test('aba de cada situação; a situação não é enviada pelo formulário', () {
+      final now = DateTime(2026, 10, 22, 12);
+      Game game(GameStatus status, DateTime date) => Game(
+        teamId: 'team-a',
+        opponent: 'Real Bairro',
+        status: status,
+        scheduledAt: date,
+      );
+      final future = DateTime(2026, 10, 25);
+      final past = DateTime(2026, 10, 18);
+
+      expect(
+        game(GameStatus.scheduled, future).stageAt(now),
+        GameStage.scheduled,
+      );
+      expect(game(GameStatus.scheduled, past).stageAt(now), GameStage.played);
+      expect(game(GameStatus.pending, past).stageAt(now), GameStage.pending);
+      expect(
+        game(GameStatus.canceled, future).stageAt(now),
+        GameStage.canceled,
+      );
+      expect(
+        game(GameStatus.pending, future).toMap().containsKey('status'),
+        isFalse,
+      );
+      expect(GameStage.values.map((s) => s.label), [
+        'Marcados',
+        'Pendentes',
+        'Cancelados',
+        'Realizados',
+      ]);
+    });
+  });
+
+  testWidgets('amistoso marcado por outro time aparece para o adversário', (
+    tester,
+  ) async {
+    const rivalTeam = Team(
+      id: 'team-rival',
+      ownerId: 'u1',
+      name: 'Real Bairro',
+      modalities: {Modality.society},
+    );
+    final hosted = Game(
+      id: 'g1',
+      teamId: 'team-a',
+      hostTeamName: 'Amigos FC',
+      opponent: 'Real Bairro',
+      opponentTeamId: 'team-rival',
+      modality: Modality.society,
+      scheduledAt: DateTime(2026, 10, 18, 15),
+      teamScore: 0,
+      opponentScore: 2,
+    );
+    final container = await _container(
+      teams: FakeTeamRepository([rivalTeam]),
+      games: FakeGameRepository({
+        'team-a': [hosted],
+      }),
+    );
+    await _pumpTab(
+      tester,
+      container,
+      GamesTab(now: DateTime(2026, 10, 22, 12)),
+    );
+
+    // A data já passou: está em Realizados.
+    await tester.tap(find.text('Realizados (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('x Amigos FC'), findsOneWidget);
+    expect(find.textContaining('Marcado por Amigos FC'), findsOneWidget);
+    expect(find.text('Vitória 2 x 0'), findsOneWidget);
+    // Só quem marcou edita.
+    final tile = tester.widget<ListTile>(
+      find.ancestor(
+        of: find.text('x Amigos FC'),
+        matching: find.byType(ListTile),
+      ),
+    );
+    expect(tile.onTap, isNull);
   });
 }

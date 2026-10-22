@@ -95,8 +95,18 @@ configurado.
      cada time tem os seus;
    - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
      para o dono e os atletas do time), nome, posição e número;
-   - jogo: adversário, data e hora, local, amistoso ou campeonato e placar
-     (preenchido depois do jogo).
+   - amistoso: modalidade (uma das do time), adversário da **mesma
+     modalidade** — um time da plataforma, pesquisado pelo nome, ou um time
+     fictício criado pelo administrador e salvo para os próximos jogos —, data
+     e hora e local. O placar é lançado em outra tela. Contra um time da
+     plataforma, o amistoso aparece também na aba Jogos do adversário
+     ("Marcado por …").
+   - a aba Jogos tem as abas **Marcados, Pendentes, Cancelados e Realizados**
+     (roláveis na horizontal). Contra time da plataforma, o amistoso fica
+     pendente até o adversário **aceitar** ou **recusar**; contra time
+     fictício já nasce marcado. Os dois times podem cancelar; marcado com a
+     data passada vai para Realizados. Se quem marcou muda a data ou o
+     adversário, volta a ficar pendente.
 
    Convites e a home do jogador: próxima etapa.
 
@@ -126,7 +136,8 @@ supabase/
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia), gênero, faixa de idade (livre, base, master), fundação e logo |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
-| `games`         | Jogos do time; só o dono altera, e só o dono e os atletas do time veem |
+| `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
+| `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
