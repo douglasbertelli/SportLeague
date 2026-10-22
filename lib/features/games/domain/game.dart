@@ -37,8 +37,13 @@ class Game {
     required this.opponent,
     required this.scheduledAt,
     this.hostTeamName,
+    this.hostLogoUrl,
+    this.hostCity,
+    this.opponentLogoUrl,
+    this.opponentCity,
     this.status = GameStatus.scheduled,
     this.canceledByTeamId,
+    this.hostIsHome = true,
     this.modality,
     this.opponentTeamId,
     this.opponentGuestId,
@@ -47,24 +52,34 @@ class Game {
     this.opponentScore,
   });
 
-  factory Game.fromMap(Map<String, dynamic> map) => Game(
-    id: map['id'] as String,
-    teamId: map['team_id'] as String,
-    hostTeamName: (map['host'] as Map<String, dynamic>?)?['name'] as String?,
-    status: GameStatus.fromName(map['status'] as String? ?? 'scheduled'),
-    canceledByTeamId: map['canceled_by_team_id'] as String?,
-    opponent: map['opponent'] as String,
-    scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
-    modality: switch (map['modality']) {
-      final String name => Modality.fromName(name),
-      _ => null,
-    },
-    opponentTeamId: map['opponent_team_id'] as String?,
-    opponentGuestId: map['opponent_guest_id'] as String?,
-    location: map['location'] as String?,
-    teamScore: map['team_score'] as int?,
-    opponentScore: map['opponent_score'] as int?,
-  );
+  factory Game.fromMap(Map<String, dynamic> map) {
+    // Times carregados junto (select com host e opponent_team).
+    final host = map['host'] as Map<String, dynamic>?;
+    final opponentTeam = map['opponent_team'] as Map<String, dynamic>?;
+    return Game(
+      id: map['id'] as String,
+      teamId: map['team_id'] as String,
+      hostTeamName: host?['name'] as String?,
+      hostLogoUrl: host?['logo_url'] as String?,
+      hostCity: host?['city'] as String?,
+      opponentLogoUrl: opponentTeam?['logo_url'] as String?,
+      opponentCity: opponentTeam?['city'] as String?,
+      status: GameStatus.fromName(map['status'] as String? ?? 'scheduled'),
+      canceledByTeamId: map['canceled_by_team_id'] as String?,
+      hostIsHome: map['host_is_home'] as bool? ?? true,
+      opponent: map['opponent'] as String,
+      scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
+      modality: switch (map['modality']) {
+        final String name => Modality.fromName(name),
+        _ => null,
+      },
+      opponentTeamId: map['opponent_team_id'] as String?,
+      opponentGuestId: map['opponent_guest_id'] as String?,
+      location: map['location'] as String?,
+      teamScore: map['team_score'] as int?,
+      opponentScore: map['opponent_score'] as int?,
+    );
+  }
 
   /// Nulo antes de o jogo ser salvo.
   final String? id;
@@ -72,9 +87,13 @@ class Game {
   /// Time que marcou o jogo (o único que pode editá-lo).
   final String teamId;
 
-  /// Nome do time que marcou, carregado junto com o jogo para o adversário
-  /// exibir; não é salvo.
+  /// Nome, logo e cidade do time que marcou e do time adversário da
+  /// plataforma, carregados junto com o jogo para o card; não são salvos.
   final String? hostTeamName;
+  final String? hostLogoUrl;
+  final String? hostCity;
+  final String? opponentLogoUrl;
+  final String? opponentCity;
 
   /// Definida pelo banco ao marcar e nas respostas (aceitar, cancelar); não é
   /// enviada pelo formulário.
@@ -82,6 +101,10 @@ class Game {
 
   /// Time que cancelou ou recusou; nulo se o adversário foi excluído.
   final String? canceledByTeamId;
+
+  /// Se o time que marcou joga como mandante; o adversário fica com o lado
+  /// oposto.
+  final bool hostIsHome;
 
   /// Nome do adversário.
   final String opponent;
@@ -110,12 +133,34 @@ class Game {
   /// Se o time [viewerTeamId] marcou o jogo (senão, é o adversário).
   bool isHostedBy(String viewerTeamId) => teamId == viewerTeamId;
 
+  /// Se o time [viewerTeamId] joga como mandante.
+  bool isHomeFor(String viewerTeamId) =>
+      isHostedBy(viewerTeamId) ? hostIsHome : !hostIsHome;
+
   /// Se o time [viewerTeamId] cancelou ou recusou o jogo.
   bool wasCanceledBy(String viewerTeamId) => canceledByTeamId == viewerTeamId;
 
   /// Nome do outro time, do ponto de vista de [viewerTeamId].
   String opponentNameFor(String viewerTeamId) =>
       isHostedBy(viewerTeamId) ? opponent : hostTeamName ?? 'Time adversário';
+
+  /// Logo do outro time, do ponto de vista de [viewerTeamId] (nulo para time
+  /// fictício ou sem logo).
+  String? opponentLogoFor(String viewerTeamId) =>
+      isHostedBy(viewerTeamId) ? opponentLogoUrl : hostLogoUrl;
+
+  /// Cidade do outro time, do ponto de vista de [viewerTeamId].
+  String? opponentCityFor(String viewerTeamId) =>
+      isHostedBy(viewerTeamId) ? opponentCity : hostCity;
+
+  /// Placar "mine × theirs" do ponto de vista de [viewerTeamId]; nulo sem
+  /// placar.
+  (int, int)? scoreFor(String viewerTeamId) {
+    if (!hasScore) return null;
+    return isHostedBy(viewerTeamId)
+        ? (teamScore!, opponentScore!)
+        : (opponentScore!, teamScore!);
+  }
 
   /// "Vitória 3 x 1", "Empate 2 x 2" ou "Derrota 0 x 1" do ponto de vista de
   /// [viewerTeamId]; nulo sem placar.
@@ -141,6 +186,7 @@ class Game {
       'opponent_team_id': opponentTeamId,
       'opponent_guest_id': opponentGuestId,
       'modality': modality?.name,
+      'host_is_home': hostIsHome,
       'scheduled_at': scheduledAt.toUtc().toIso8601String(),
       'location': location == null || location.isEmpty ? null : location,
     };

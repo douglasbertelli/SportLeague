@@ -16,8 +16,10 @@ import 'package:sport_league/features/athletes/presentation/athletes_tab.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/core/router/routes.dart';
+import 'package:sport_league/core/theme/app_theme.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
+import 'package:sport_league/features/games/presentation/game_card.dart';
 import 'package:sport_league/features/games/presentation/game_form_page.dart';
 import 'package:sport_league/features/games/presentation/opponent_picker_page.dart';
 import 'package:sport_league/features/games/presentation/games_tab.dart';
@@ -94,6 +96,7 @@ Future<void> _pumpPage(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.dark(),
         routerConfig: router,
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
@@ -114,6 +117,7 @@ Future<void> _pumpTab(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
+        theme: AppTheme.dark(),
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -383,19 +387,32 @@ void main() {
         expect(find.text(label), findsOneWidget);
       }
 
-      expect(find.text('x Real Bairro'), findsOneWidget);
+      // Card: time ativo à esquerda (sigla), adversário à direita, mando.
+      expect(find.bySemanticsLabel('Amigos FC'), findsOneWidget);
+      expect(find.bySemanticsLabel('Real Bairro'), findsOneWidget);
+      expect(find.text('AMI'), findsOneWidget);
+      expect(find.text('REA'), findsOneWidget);
+      expect(find.text('25/10/2026'), findsOneWidget);
+      expect(find.text('15:00'), findsOneWidget);
+      expect(find.text('Mandante'), findsOneWidget);
       expect(find.text('Society'), findsOneWidget);
-      expect(find.text('x Outro Time'), findsNothing);
+      expect(find.bySemanticsLabel('Outro Time'), findsNothing);
 
       await tester.tap(find.text('Pendentes (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('x Vila Nova'), findsOneWidget);
+      expect(find.bySemanticsLabel('Vila Nova'), findsOneWidget);
       expect(
         find.textContaining('Aguardando Vila Nova aceitar'),
         findsOneWidget,
       );
-      // Quem marcou não aceita o próprio amistoso.
+      // Quem marcou não aceita o próprio amistoso: edita ou cancela.
+      await tester.tap(find.byTooltip('Ações do amistoso'));
+      await tester.pumpAndSettle();
       expect(find.text('Aceitar'), findsNothing);
+      expect(find.text('Editar'), findsOneWidget);
+      expect(find.text('Cancelar amistoso'), findsOneWidget);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Cancelados (1)'));
       await tester.pumpAndSettle();
@@ -406,8 +423,9 @@ void main() {
 
       await tester.tap(find.text('Realizados (1)'));
       await tester.pumpAndSettle();
-      expect(find.text('x Unidos da Vila'), findsOneWidget);
-      expect(find.text('Vitória 3 x 1'), findsOneWidget);
+      expect(find.bySemanticsLabel('Unidos da Vila'), findsOneWidget);
+      // Com placar, o "×" do cabeçalho vira o resultado.
+      expect(find.text('3 × 1'), findsOneWidget);
     });
 
     testWidgets('o adversário aceita ou recusa o amistoso pendente', (
@@ -446,14 +464,20 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Aguardando sua resposta'), findsNWidgets(2));
 
-      await tester.tap(find.text('Aceitar').first);
+      expect(find.text('Visitante'), findsNWidgets(2));
+
+      await tester.tap(find.byTooltip('Ações do amistoso').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aceitar'));
       await tester.pumpAndSettle();
       expect(games.accepted, ['g1']);
 
-      await tester.tap(find.text('Recusar').last);
+      await tester.tap(find.byTooltip('Ações do amistoso').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Recusar'));
       await tester.pumpAndSettle();
       expect(find.text('Recusar amistoso?'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Recusar').last);
+      await tester.tap(find.widgetWithText(TextButton, 'Recusar'));
       await tester.pumpAndSettle();
       expect(games.canceled, ['g2']);
     });
@@ -475,6 +499,8 @@ void main() {
             hostTeamName: 'Amigos FC',
             opponent: 'Real Bairro',
             opponentTeamId: 'team-rival',
+            // Quem marcou joga como visitante: o adversário é o mandante.
+            hostIsHome: false,
             modality: Modality.society,
             scheduledAt: DateTime(2026, 10, 25, 15),
           ),
@@ -490,12 +516,14 @@ void main() {
         GamesTab(now: DateTime(2026, 10, 22, 12)),
       );
 
-      expect(find.text('x Amigos FC'), findsOneWidget);
+      expect(find.bySemanticsLabel('Amigos FC'), findsOneWidget);
+      expect(find.text('Mandante'), findsOneWidget);
+      await tester.tap(find.byTooltip('Ações do amistoso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Editar'), findsNothing);
       await tester.tap(find.text('Cancelar amistoso'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.widgetWithText(TextButton, 'Cancelar amistoso').last,
-      );
+      await tester.tap(find.widgetWithText(TextButton, 'Cancelar amistoso'));
       await tester.pumpAndSettle();
       expect(games.canceled, ['g1']);
     });
@@ -584,12 +612,18 @@ void main() {
       await tapVisible(tester, find.text('Real Bairro'));
       expect(find.text('Real Bairro'), findsOneWidget);
 
+      // Jogar como: mandante por padrão; escolhe visitante.
+      expect(find.text('Jogar como'), findsOneWidget);
+      await tapVisible(tester, find.text('Visitante'));
+
       await tapVisible(tester, find.text('Salvar'));
       final saved = games.updated.single;
       expect(saved.opponent, 'Real Bairro');
       expect(saved.opponentTeamId, 'team-rival');
       expect(saved.opponentGuestId, isNull);
       expect(saved.modality, Modality.society);
+      expect(saved.hostIsHome, isFalse);
+      expect(saved.toMap()['host_is_home'], isFalse);
       expect(saved.toMap().containsKey('team_score'), isFalse);
       expect(saved.toMap().containsKey('type'), isFalse);
     });
@@ -725,6 +759,29 @@ void main() {
       expect(game().toMap()['scheduled_at'], date.toUtc().toIso8601String());
     });
 
+    test('mando: quem marcou escolhe e o adversário fica com o oposto', () {
+      Game game({required bool hostIsHome}) => Game(
+        teamId: 'team-a',
+        opponent: 'Real Bairro',
+        opponentTeamId: 'team-rival',
+        hostIsHome: hostIsHome,
+        scheduledAt: DateTime(2026, 10, 25),
+      );
+
+      expect(game(hostIsHome: true).isHomeFor('team-a'), isTrue);
+      expect(game(hostIsHome: true).isHomeFor('team-rival'), isFalse);
+      expect(game(hostIsHome: false).isHomeFor('team-a'), isFalse);
+      expect(game(hostIsHome: false).isHomeFor('team-rival'), isTrue);
+      // Jogos antigos, sem o campo, ficam com quem marcou como mandante.
+      final old = Game.fromMap({
+        'id': 'g1',
+        'team_id': 'team-a',
+        'opponent': 'Real Bairro',
+        'scheduled_at': '2026-10-25T18:00:00Z',
+      });
+      expect(old.hostIsHome, isTrue);
+    });
+
     test('quem marcou e o adversário veem o outro time', () {
       final game = Game.fromMap({
         'id': 'g1',
@@ -812,16 +869,27 @@ void main() {
     // A data já passou: está em Realizados.
     await tester.tap(find.text('Realizados (1)'));
     await tester.pumpAndSettle();
-    expect(find.text('x Amigos FC'), findsOneWidget);
-    expect(find.textContaining('Marcado por Amigos FC'), findsOneWidget);
-    expect(find.text('Vitória 2 x 0'), findsOneWidget);
-    // Só quem marcou edita.
-    final tile = tester.widget<ListTile>(
-      find.ancestor(
-        of: find.text('x Amigos FC'),
-        matching: find.byType(ListTile),
-      ),
+    // Do lado do adversário: o time ativo à esquerda e quem marcou à direita.
+    expect(find.bySemanticsLabel('Real Bairro'), findsOneWidget);
+    expect(find.bySemanticsLabel('Amigos FC'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('REA')).dx,
+      lessThan(tester.getTopLeft(find.text('AMI')).dx),
     );
-    expect(tile.onTap, isNull);
+    expect(find.text('Visitante'), findsOneWidget);
+    // Placar invertido para o adversário.
+    expect(find.text('2 × 0'), findsOneWidget);
+    // Jogo realizado: o adversário não tem ações.
+    expect(find.byTooltip('Ações do amistoso'), findsNothing);
+  });
+
+  test('sigla do time e formato de data e hora do card', () {
+    expect(teamCode('Barcelona'), 'BAR');
+    expect(teamCode('Bayern de Munique'), 'BAY');
+    expect(teamCode('São Paulo'), 'SÃO');
+    expect(teamCode('A1'), 'A1');
+    expect(formatGameDay(DateTime(2026, 3, 12, 20)), '12/03/2026');
+    expect(formatGameTime(DateTime(2026, 3, 12, 20)), '20:00');
+    expect(formatGameTime(DateTime(2026, 3, 12, 9, 5)), '09:05');
   });
 }

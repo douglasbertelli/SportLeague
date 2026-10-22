@@ -33,6 +33,9 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
   );
   late DateTime? _scheduledAt = widget.game?.scheduledAt;
   late Modality? _modality = widget.game?.modality;
+
+  /// Mando do time que marca; mandante por padrão.
+  late bool _hostIsHome = widget.game?.hostIsHome ?? true;
   late Opponent? _opponent = switch (widget.game) {
     Game(:final opponent, :final opponentTeamId, :final opponentGuestId)
         when opponentTeamId != null || opponentGuestId != null =>
@@ -152,6 +155,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
         RegisteredOpponent() => null,
       },
       modality: modality,
+      hostIsHome: _hostIsHome,
       scheduledAt: scheduledAt,
       location: _locationController.text,
     );
@@ -284,6 +288,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
               const SizedBox(height: 4),
               Text('Escolha a modalidade do jogo', style: errorStyle),
             ],
+            const SizedBox(height: 16),
+            Text('Jogar como', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: true,
+                  label: Text('Mandante'),
+                  icon: Icon(Icons.stadium_outlined),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('Visitante'),
+                  icon: Icon(Icons.directions_bus_outlined),
+                ),
+              ],
+              selected: {_hostIsHome},
+              onSelectionChanged: (selection) =>
+                  setState(() => _hostIsHome = selection.first),
+            ),
             const SizedBox(height: 16),
             InkWell(
               onTap: _loading ? null : () => _pickOpponent(team),

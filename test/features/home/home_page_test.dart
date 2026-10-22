@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
+import 'package:sport_league/core/theme/app_theme.dart';
 import 'package:sport_league/features/address/data/address_repository.dart';
 import 'package:sport_league/features/address/domain/address.dart';
 import 'package:sport_league/features/home/presentation/home_page.dart';
@@ -58,7 +59,7 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
           ),
         ),
       ],
-      child: const MaterialApp(home: HomePage()),
+      child: MaterialApp(theme: AppTheme.dark(), home: const HomePage()),
     ),
   );
   await tester.pumpAndSettle();

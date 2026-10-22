@@ -97,8 +97,8 @@ configurado.
      para o dono e os atletas do time), nome, posição e número;
    - amistoso: modalidade (uma das do time), adversário da **mesma
      modalidade** — um time da plataforma, pesquisado pelo nome, ou um time
-     fictício criado pelo administrador e salvo para os próximos jogos —, data
-     e hora e local. O placar é lançado em outra tela. Contra um time da
+     fictício criado pelo administrador e salvo para os próximos jogos —, jogar
+     como **mandante** (padrão) ou **visitante**, data e hora e local. O placar é lançado em outra tela. Contra um time da
      plataforma, o amistoso aparece também na aba Jogos do adversário
      ("Marcado por …").
    - a aba Jogos tem as abas **Marcados, Pendentes, Cancelados e Realizados**

@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
-import '../../../core/utils/error_messages.dart';
-import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/no_team_placeholder.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
+import 'game_card.dart';
 
 /// Aba Jogos do administrador: amistosos do time ativo divididos em Marcados,
 /// Pendentes, Cancelados e Realizados.
@@ -165,145 +164,7 @@ class _StageList extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           for (final game in games)
-            _GameCard(game: game, viewerTeamId: teamId, stage: stage),
-        ],
-      ),
-    );
-  }
-}
-
-/// Jogo do ponto de vista do time ativo ([viewerTeamId]). Quem marcou edita ao
-/// tocar; o adversário aceita ou recusa o pendente e pode cancelar o marcado.
-class _GameCard extends ConsumerStatefulWidget {
-  const _GameCard({
-    required this.game,
-    required this.viewerTeamId,
-    required this.stage,
-  });
-
-  final Game game;
-  final String viewerTeamId;
-  final GameStage stage;
-
-  @override
-  ConsumerState<_GameCard> createState() => _GameCardState();
-}
-
-class _GameCardState extends ConsumerState<_GameCard> {
-  bool _loading = false;
-
-  Game get _game => widget.game;
-
-  Future<void> _respond({required bool accept}) async {
-    final opponentName = _game.opponentNameFor(widget.viewerTeamId);
-    if (!accept) {
-      final pending = _game.status == GameStatus.pending;
-      final confirmed = await confirmAction(
-        context,
-        title: pending ? 'Recusar amistoso?' : 'Cancelar amistoso?',
-        message: pending
-            ? 'O amistoso contra $opponentName será recusado e irá para '
-                  'Cancelados.'
-            : 'O amistoso contra $opponentName será cancelado para os dois '
-                  'times.',
-        confirmLabel: pending ? 'Recusar' : 'Cancelar amistoso',
-        cancelLabel: 'Voltar',
-      );
-      if (!confirmed) return;
-    }
-
-    setState(() => _loading = true);
-    try {
-      final repository = ref.read(gameRepositoryProvider);
-      await (accept
-          ? repository.accept(_game.id!)
-          : repository.cancel(_game.id!));
-      ref.invalidate(teamGamesProvider(widget.viewerTeamId));
-    } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final viewer = widget.viewerTeamId;
-    final isHost = _game.isHostedBy(viewer);
-    final opponentName = _game.opponentNameFor(viewer);
-    final result = _game.resultLabelFor(viewer);
-    final pending = _game.status == GameStatus.pending;
-    final upcomingScheduled = widget.stage == GameStage.scheduled;
-
-    final lines = [
-      formatGameDate(context, _game.scheduledAt),
-      ?_game.location,
-      if (!isHost) 'Marcado por $opponentName',
-      if (pending && isHost) 'Aguardando $opponentName aceitar',
-      if (pending && !isHost) 'Aguardando sua resposta',
-      if (_game.status == GameStatus.canceled)
-        switch (_game.canceledByTeamId) {
-          null => 'Cancelado: o adversário foi excluído',
-          final id when id == viewer => 'Cancelado pelo seu time',
-          _ => 'Cancelado por $opponentName',
-        },
-    ];
-
-    final actions = <Widget>[
-      if (pending && !isHost) ...[
-        TextButton(
-          onPressed: _loading ? null : () => _respond(accept: false),
-          child: const Text('Recusar'),
-        ),
-        FilledButton(
-          onPressed: _loading ? null : () => _respond(accept: true),
-          child: const Text('Aceitar'),
-        ),
-      ],
-      if (upcomingScheduled && !isHost)
-        TextButton(
-          onPressed: _loading ? null : () => _respond(accept: false),
-          child: const Text('Cancelar amistoso'),
-        ),
-    ];
-
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            title: Text('x $opponentName'),
-            subtitle: Text(lines.join('\n')),
-            isThreeLine: lines.length > 1,
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (_game.modality case final modality?)
-                  Text(modality.label, style: theme.textTheme.labelSmall),
-                if (result != null)
-                  Text(
-                    result,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-              ],
-            ),
-            // Só quem marcou edita, e cancelado não muda mais.
-            onTap: isHost && _game.status != GameStatus.canceled
-                ? () => context.push(Routes.editGame, extra: _game)
-                : null,
-          ),
-          if (actions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 8,
-                children: actions,
-              ),
-            ),
+            GameCard(game: game, viewerTeamId: teamId, stage: stage),
         ],
       ),
     );
