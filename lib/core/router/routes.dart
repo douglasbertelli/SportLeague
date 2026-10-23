@@ -11,6 +11,9 @@ abstract final class Routes {
 
   /// Recebe o `Team` em `extra`.
   static const editTeam = '/home/teams/edit';
+
+  /// Perfil de um time (capa, contatos e uniformes); recebe o id em `extra`.
+  static const teamProfile = '/home/teams/profile';
   static const newAthlete = '/home/athletes/new';
 
   /// Recebe o `Athlete` em `extra`.
@@ -38,4 +41,7 @@ abstract final class Routes {
 
   /// Escolha do local do amistoso; devolve o `Venue` no `pop`.
   static const pickVenue = '/home/games/venue';
+
+  /// Escolha do local do time, no formulário do time; devolve o `Venue`.
+  static const pickTeamVenue = '/home/teams/venue';
 }

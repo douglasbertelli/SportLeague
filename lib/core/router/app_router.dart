@@ -19,6 +19,7 @@ import '../../features/profile/domain/profile.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/teams/domain/team.dart';
 import '../../features/teams/presentation/team_form_page.dart';
+import '../../features/teams/presentation/team_profile_page.dart';
 import '../../features/teams/presentation/teams_page.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/venue_form_page.dart';
@@ -70,6 +71,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'edit',
                 builder: (_, state) => TeamFormPage(team: state.extra as Team),
               ),
+              GoRoute(
+                path: 'profile',
+                builder: (_, state) =>
+                    TeamProfilePage(teamId: state.extra as String),
+              ),
+              GoRoute(
+                path: 'venue',
+                builder: (_, _) =>
+                    const VenuesPage(picking: true, offerTeamLink: false),
+              ),
             ],
           ),
           GoRoute(
@@ -89,12 +100,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'games/opponent',
             builder: (_, state) {
-              final (:teamId, :modalities, :modality) =
+              final (:teamId, :modalities, :modality, :playsAs) =
                   state.extra as OpponentPickerArgs;
               return OpponentPickerPage(
                 teamId: teamId,
                 modalities: modalities,
                 modality: modality,
+                playsAs: playsAs,
               );
             },
           ),
@@ -108,8 +120,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'new',
-                builder: (_, state) =>
-                    VenueFormPage(initialName: state.extra as String?),
+                builder: (_, state) => switch (state.extra) {
+                  final NewVenueArgs args => VenueFormPage(
+                    initialName: args.name,
+                    offerTeamLink: args.offerTeamLink,
+                  ),
+                  _ => const VenueFormPage(),
+                },
               ),
               GoRoute(
                 path: 'edit',

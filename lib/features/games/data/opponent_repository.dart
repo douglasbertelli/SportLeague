@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
+import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../domain/opponent.dart';
 
@@ -25,7 +26,7 @@ class OpponentRepository {
     final results = await Future.wait([
       _client
           .from('teams')
-          .select()
+          .select(teamColumns)
           .contains('modalities', [modality.name])
           .neq('id', teamId)
           .ilike('name', pattern)

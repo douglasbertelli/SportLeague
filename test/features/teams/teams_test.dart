@@ -31,7 +31,9 @@ import 'package:sport_league/features/games/presentation/games_tab.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
+import 'package:sport_league/features/teams/presentation/team_profile_page.dart';
 import 'package:sport_league/features/venues/data/venue_repository.dart';
+import 'package:sport_league/features/venues/domain/venue.dart';
 import 'package:sport_league/features/venues/presentation/venue_form_page.dart';
 import 'package:sport_league/features/venues/presentation/venues_page.dart';
 
@@ -100,12 +102,13 @@ Future<void> _pumpPage(
       GoRoute(
         path: Routes.pickOpponent,
         builder: (_, state) {
-          final (:teamId, :modalities, :modality) =
+          final (:teamId, :modalities, :modality, :playsAs) =
               state.extra as OpponentPickerArgs;
           return OpponentPickerPage(
             teamId: teamId,
             modalities: modalities,
             modality: modality,
+            playsAs: playsAs,
           );
         },
       ),
@@ -115,8 +118,13 @@ Future<void> _pumpPage(
       ),
       GoRoute(
         path: Routes.newVenue,
-        builder: (_, state) =>
-            VenueFormPage(initialName: state.extra as String?),
+        builder: (_, state) => switch (state.extra) {
+          final NewVenueArgs args => VenueFormPage(
+            initialName: args.name,
+            offerTeamLink: args.offerTeamLink,
+          ),
+          _ => const VenueFormPage(),
+        },
       ),
     ],
   );
@@ -135,6 +143,14 @@ Future<void> _pumpPage(
   );
   router.push('/page');
   await tester.pumpAndSettle();
+}
+
+/// Tela de celular em pé (360x780), para listas longas como a disponibilidade.
+void _usePhoneScreen(WidgetTester tester) {
+  tester.view
+    ..physicalSize = const Size(1080, 2340)
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
 }
 
 Future<void> _pumpTab(
@@ -176,14 +192,93 @@ void main() {
         'modalities': <String>[],
         'gender': null,
         'age_group': 'open',
+        'min_age': null,
+        'max_age': null,
         'founded_on': null,
         'logo_url': null,
         'description': null,
         'city': null,
         'state': 'SP',
+        'plays_as': 'both',
+        'phone': null,
+        'instagram': null,
+        'facebook': null,
+        'youtube': null,
+        'website': null,
+        'cover_url': null,
+        'kit_urls': <String>[],
+        'home_venue_id': null,
       });
       expect(teamB.location, 'Campinas/SP');
       expect(teamA.location, isNull);
+
+      // Contatos: telefone só com dígitos e Instagram sem o "@".
+      const contacts = Team(
+        ownerId: 'u1',
+        name: 'Amigos FC',
+        phone: '(19) 99999-8888',
+        instagram: ' @amigosfc ',
+        website: ' ',
+      );
+      expect(contacts.toMap()['phone'], '19999998888');
+      expect(contacts.toMap()['instagram'], 'amigosfc');
+      expect(contacts.toMap()['website'], isNull);
+      expect(formatPhone('19999998888'), '(19) 99999-8888');
+      expect(formatPhone('1933334444'), '(19) 3333-4444');
+    });
+
+    test('a fonte do app é a DM Sans', () {
+      for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+        expect(theme.textTheme.bodyMedium?.fontFamily, 'DM Sans');
+        expect(theme.textTheme.titleLarge?.fontFamily, 'DM Sans');
+        expect(theme.listTileTheme.subtitleTextStyle?.fontFamily, 'DM Sans');
+      }
+    });
+
+    test('subtítulos em cinza neutro, mais fracos que os títulos', () {
+      for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+        final grey = theme.colorScheme.onSurfaceVariant;
+        // Cinza: vermelho, verde e azul iguais (sem o tom verde do tema).
+        expect(grey.r, grey.g);
+        expect(grey.g, grey.b);
+        expect(theme.listTileTheme.subtitleTextStyle?.color, grey);
+        expect(grey, isNot(theme.colorScheme.onSurface));
+      }
+    });
+
+    test('faixa de idade: limites de Base e Master', () {
+      const youth = Team(
+        ownerId: 'u1',
+        name: 'Sub 15',
+        ageGroup: AgeGroup.youth,
+        minAge: 13,
+        maxAge: 15,
+      );
+      expect(youth.ageRange, '13 a 15 anos');
+      expect(youth.toMap()['min_age'], 13);
+      expect(youth.toMap()['max_age'], 15);
+
+      const master = Team(
+        ownerId: 'u1',
+        name: 'Veteranos',
+        ageGroup: AgeGroup.master,
+        minAge: 40,
+        maxAge: 50,
+      );
+      expect(master.ageRange, 'A partir de 40 anos');
+      expect(master.summary, 'Master 40+');
+      // Master não tem idade máxima; Livre não tem limites.
+      expect(master.toMap()['max_age'], isNull);
+      const open = Team(ownerId: 'u1', name: 'Livre FC', minAge: 10);
+      expect(open.toMap()['min_age'], isNull);
+    });
+
+    test('joga como: mandante, visitante ou ambos', () {
+      expect(PlaysAs.both.accepts(home: true), isTrue);
+      expect(PlaysAs.both.accepts(home: false), isTrue);
+      expect(PlaysAs.home.accepts(home: false), isFalse);
+      expect(PlaysAs.away.accepts(home: true), isFalse);
+      expect(PlaysAs.away.accepts(home: false), isTrue);
     });
 
     test('modalidade, gênero, faixa de idade e fundação vão e voltam', () {
@@ -192,20 +287,37 @@ void main() {
         'owner_id': 'u1',
         'name': 'Areia FC',
         'sport': 'football',
-        'modalities': ['beach', 'futsal'],
+        'modalities': ['challenge', 'beach', 'futsal'],
         'gender': 'female',
         'age_group': 'master',
         'founded_on': '2015-03-08',
         'logo_url': 'https://storage.test/logo',
+        'plays_as': 'away',
+        'instagram': 'areiafc',
+        'cover_url': 'https://storage.test/cover',
+        'kit_urls': [
+          'https://storage.test/kit-1',
+          'https://storage.test/kit-2',
+        ],
       });
 
-      expect(team.modalities, {Modality.futsal, Modality.beach});
+      expect(team.modalities, {
+        Modality.futsal,
+        Modality.beach,
+        Modality.challenge,
+      });
       expect(team.gender, TeamGender.female);
       expect(team.ageGroup, AgeGroup.master);
       expect(team.foundedOn, DateTime(2015, 3, 8));
-      expect(team.summary, 'Futsal, Futebol de Areia · Feminino · Master');
-      expect(team.toMap()['modalities'], ['futsal', 'beach']);
+      // Master antigo, sem idade gravada: vale a sugerida (35).
+      expect(team.summary, 'Futsal, Areia, Desafio · Feminino · Master 35+');
+      expect(team.ageRange, 'A partir de 35 anos');
+      expect(team.toMap()['modalities'], ['futsal', 'beach', 'challenge']);
       expect(team.toMap()['founded_on'], '2015-03-08');
+      expect(team.playsAs, PlaysAs.away);
+      expect(team.hasContacts, isTrue);
+      expect(team.coverUrl, 'https://storage.test/cover');
+      expect(team.kitUrls, hasLength(2));
 
       // Times criados antes destes campos.
       final old = Team.fromMap({
@@ -218,6 +330,9 @@ void main() {
       expect(old.gender, isNull);
       expect(old.ageGroup, AgeGroup.open);
       expect(old.summary, 'Livre');
+      expect(old.playsAs, PlaysAs.both);
+      expect(old.hasContacts, isFalse);
+      expect(old.kitUrls, isEmpty);
     });
 
     test('time ativo: o salvo, senão o primeiro, ou nenhum', () async {
@@ -250,16 +365,36 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('criar time exige modalidade e gênero', (tester) async {
+    testWidgets('as abas Time e Detalhes conferem os obrigatórios', (
+      tester,
+    ) async {
       final teams = FakeTeamRepository([teamA]);
       final container = await _container(teams: teams);
       await _pumpPage(tester, container, const TeamFormPage());
 
       await tester.enterText(find.byType(TextFormField).first, 'Várzea United');
-      await tapCreate(tester);
-
-      expect(find.text('Escolha pelo menos uma modalidade'), findsOneWidget);
+      // Pular para a aba Mídia confere antes a aba Time.
+      await tapVisible(tester, 'Mídia');
+      expect(find.text('Escolha a modalidade'), findsOneWidget);
       expect(find.text('Escolha o gênero'), findsOneWidget);
+      expect(find.text('Adicionar capa'), findsNothing);
+      expect(tester.widget<TabBar>(find.byType(TabBar)).controller!.index, 0);
+
+      await tapVisible(tester, 'Society');
+      await tapVisible(tester, 'Masculino');
+      await tapVisible(tester, 'Próximo');
+
+      // Aba Detalhes: mando, fundação e cidade.
+      expect(find.text('Joga como'), findsOneWidget);
+      await tapVisible(tester, 'Próximo');
+      expect(find.text('Informe a data de fundação'), findsOneWidget);
+      expect(find.text('Informe a cidade'), findsOneWidget);
+      expect(find.text('Informe a UF'), findsOneWidget);
+      expect(find.text('Telefone / WhatsApp'), findsNothing);
+
+      // Voltar não confere nada.
+      await tapVisible(tester, 'Time');
+      expect(find.text('Nome do time'), findsOneWidget);
       expect(teams.created, isEmpty);
     });
 
@@ -273,7 +408,7 @@ void main() {
       );
       final container = await _container(
         teams: teams,
-        pickImage: (source) async => logo,
+        pickImage: (source, {maxSize = smallImageSize}) async => logo,
       );
       await _pumpPage(tester, container, const TeamFormPage());
 
@@ -282,31 +417,162 @@ void main() {
       await tester.tap(find.text('Escolher da galeria'));
       await tester.pumpAndSettle();
 
+      Finder field(String label) => find.widgetWithText(TextFormField, label);
+
+      // Aba 1: time.
       await tester.enterText(find.byType(TextFormField).first, 'Várzea United');
       await tapVisible(tester, 'Society');
-      await tapVisible(tester, 'Campo');
+      await tapVisible(tester, 'Desafio');
       await tapVisible(tester, 'Feminino');
       await tapVisible(tester, 'Base');
+      // Base vem com 4 a 20 anos; o administrador ajusta (sub-15).
       expect(find.text('4 a 20 anos'), findsOneWidget);
+      await tester.enterText(field('Idade mínima'), '16');
+      await tester.enterText(field('Idade máxima'), '15');
+      await tapVisible(tester, 'Próximo');
+      expect(find.text('Entre 16 e 25'), findsOneWidget);
+      await tester.enterText(field('Idade mínima'), '13');
+      await tester.pump();
+      expect(find.text('13 a 15 anos'), findsOneWidget);
+      await tapVisible(tester, 'Próximo');
+
+      // Aba 2: detalhes.
+      await tapVisible(tester, 'Visitante');
+      expect(find.text(PlaysAs.away.description), findsOneWidget);
+      await tapVisible(tester, 'Data de fundação');
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Cidade'), 'Campinas');
+      await tester.enterText(field('UF'), 'sp');
+      await tapVisible(tester, 'Próximo');
+
+      // Aba 3: contato.
+      expect(find.text('Telefone / WhatsApp'), findsOneWidget);
+      await tester.enterText(field('Telefone / WhatsApp'), '199');
+      await tapVisible(tester, 'Próximo');
+      expect(find.text('Informe o DDD e o número'), findsOneWidget);
+      await tester.enterText(field('Telefone / WhatsApp'), '19999998888');
+      await tester.enterText(field('Instagram'), 'varzea.united');
+      await tapVisible(tester, 'Próximo');
+
+      // Aba 4: mídia — capa e dois uniformes.
+      await tapVisible(tester, 'Adicionar capa');
+      await tapVisible(tester, 'Escolher da galeria');
+      await tapVisible(tester, 'Adicionar uniforme');
+      await tapVisible(tester, 'Escolher da galeria');
+      await tapVisible(tester, 'Adicionar uniforme');
+      await tapVisible(tester, 'Escolher da galeria');
+      expect(find.bySemanticsLabel('Uniforme 2'), findsOneWidget);
+      expect(find.bySemanticsLabel('Adicionar uniforme'), findsOneWidget);
       await tapCreate(tester);
 
       final created = teams.created.single;
       expect(created.name, 'Várzea United');
       expect(created.ownerId, 'u1');
-      expect(created.modalities, {Modality.society, Modality.field});
+      // Uma modalidade só: escolher Desafio troca a Society.
+      expect(created.modalities, {Modality.challenge});
+      expect(created.playsAs, PlaysAs.away);
       expect(created.gender, TeamGender.female);
       expect(created.ageGroup, AgeGroup.youth);
+      expect(created.toMap()['min_age'], 13);
+      expect(created.toMap()['max_age'], 15);
+      expect(created.summary, 'Desafio · Feminino · Base 13-15');
+      expect(created.foundedOn, isNotNull);
+      expect(created.toMap()['city'], 'Campinas');
+      expect(created.toMap()['state'], 'SP');
+      expect(created.toMap()['phone'], '19999998888');
+      expect(created.toMap()['instagram'], 'varzea.united');
       expect(created.logoUrl, isNull);
+      expect(created.kitUrls, isEmpty);
 
-      // Depois de criado, o logo é enviado e a URL gravada no time.
+      // Depois de criado, as imagens são enviadas e as URLs gravadas no time.
       final active = await container.read(selectedTeamProvider.future);
       expect(active?.name, 'Várzea United');
       expect(teams.uploadedLogos[active!.id], same(logo));
+      expect(teams.uploadedCovers[active.id], same(logo));
+      expect(teams.uploadedKits, hasLength(2));
+      final saved = teams.updated.last;
+      expect(saved.logoUrl, 'https://storage.test/team-logos/u1/${active.id}');
       expect(
-        teams.updated.last.logoUrl,
-        'https://storage.test/team-logos/u1/${active.id}',
+        saved.coverUrl,
+        'https://storage.test/team-logos/u1/${active.id}-cover',
       );
+      expect(saved.kitUrls, [
+        'https://storage.test/team-logos/u1/${active.id}-kit-1',
+        'https://storage.test/team-logos/u1/${active.id}-kit-2',
+      ]);
       expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('editar remove um uniforme e salva de qualquer etapa', (
+      tester,
+    ) async {
+      final team = Team(
+        id: 'team-k',
+        ownerId: 'u1',
+        name: 'Kits FC',
+        modalities: const {Modality.society},
+        gender: TeamGender.male,
+        foundedOn: DateTime(2010),
+        city: 'Campinas',
+        state: 'SP',
+        kitUrls: const [
+          'https://storage.test/team-logos/u1/team-k-kit-a',
+          'https://storage.test/team-logos/u1/team-k-kit-b',
+        ],
+      );
+      final teams = FakeTeamRepository([team]);
+      final container = await _container(teams: teams);
+      await _pumpPage(tester, container, TeamFormPage(team: team));
+
+      await tapVisible(tester, 'Mídia');
+      await tester.ensureVisible(find.bySemanticsLabel('Uniforme 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Uniforme 1'));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, 'Remover uniforme');
+      expect(find.bySemanticsLabel('Uniforme 2'), findsNothing);
+      await tapVisible(tester, 'Contato');
+      await tapVisible(tester, 'Salvar');
+
+      expect(teams.updated.single.kitUrls, [
+        'https://storage.test/team-logos/u1/team-k-kit-b',
+      ]);
+      expect(teams.removedImages, [
+        'https://storage.test/team-logos/u1/team-k-kit-a',
+      ]);
+    });
+
+    testWidgets('o perfil mostra mando, uniformes e contatos', (tester) async {
+      // Tela de celular em pé, para caber o perfil inteiro.
+      tester.view
+        ..physicalSize = const Size(1080, 2340)
+        ..devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      const rival = Team(
+        id: 'team-rival',
+        ownerId: 'u2',
+        name: 'Real Bairro',
+        modalities: {Modality.society},
+        playsAs: PlaysAs.away,
+        phone: '19999998888',
+        instagram: 'realbairro',
+        kitUrls: ['https://storage.test/kit-1'],
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA, rival]),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        const TeamProfilePage(teamId: 'team-rival'),
+      );
+
+      expect(find.text('Joga como: Visitante'), findsOneWidget);
+      expect(find.text('Uniformes'), findsOneWidget);
+      expect(find.bySemanticsLabel('Uniforme 1'), findsOneWidget);
+      expect(find.text('(19) 99999-8888'), findsOneWidget);
+      expect(find.text('@realbairro'), findsOneWidget);
     });
   });
 
@@ -726,6 +992,119 @@ void main() {
       expect(find.text('Várzea da Esquina (fictício)'), findsOneWidget);
     });
 
+    testWidgets('o local vem preenchido com o de quem joga em casa', (
+      tester,
+    ) async {
+      const rivalVenue = Venue(
+        id: 'venue-r',
+        name: 'Campo do Real',
+        zipCode: '13020000',
+        street: 'Rua B',
+        number: '1',
+        neighborhood: 'Vila',
+        city: 'Campinas',
+        state: 'SP',
+      );
+      final home = Team(
+        id: 'team-a',
+        ownerId: 'u1',
+        name: 'Amigos FC',
+        modalities: const {Modality.society},
+        homeVenue: arena,
+      );
+      final rivalWithVenue = Team(
+        id: 'team-rival',
+        ownerId: 'u2',
+        name: 'Real Bairro',
+        modalities: const {Modality.society},
+        homeVenue: rivalVenue,
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([home]),
+        opponents: FakeOpponentRepository(registered: [rivalWithVenue]),
+        venues: FakeVenueRepository([arena, rivalVenue]),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      // Mandante: o local do próprio time.
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      expect(find.textContaining('local do Amigos FC'), findsOneWidget);
+
+      // Visitante contra time da plataforma: o local do adversário.
+      await tapVisible(tester, opponentField);
+      await tapVisible(tester, find.text('Real Bairro'));
+      await tapVisible(tester, find.text('Visitante'));
+      expect(find.text('Campo do Real'), findsOneWidget);
+      expect(find.textContaining('local do Real Bairro'), findsOneWidget);
+
+      // Escolhido à mão, não muda mais com o mando.
+      await tapVisible(tester, find.widgetWithText(InputDecorator, 'Local'));
+      await tapVisible(tester, find.text('Arena Society Central'));
+      await tapVisible(tester, find.text('Mandante'));
+      await tapVisible(tester, find.text('Visitante'));
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      expect(find.textContaining('local do'), findsNothing);
+    });
+
+    testWidgets('o mando respeita como os dois times jogam', (tester) async {
+      const host = Team(
+        id: 'team-h',
+        ownerId: 'u1',
+        name: 'Sem Campo FC',
+        modalities: {Modality.society},
+        playsAs: PlaysAs.away,
+      );
+      const visitorOnly = Team(
+        id: 'team-v',
+        ownerId: 'u2',
+        name: 'Também Visitante',
+        modalities: {Modality.society},
+        playsAs: PlaysAs.away,
+      );
+      const homeOnly = Team(
+        id: 'team-m',
+        ownerId: 'u3',
+        name: 'Dono da Quadra',
+        modalities: {Modality.society},
+        playsAs: PlaysAs.home,
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([host]),
+        opponents: FakeOpponentRepository(registered: [visitorOnly, homeOnly]),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      // O próprio time só joga fora: Mandante desabilitado, Visitante marcado.
+      expect(
+        find.text('O Sem Campo FC só joga como visitante.'),
+        findsOneWidget,
+      );
+      final segments = tester.widget<SegmentedButton<bool>>(
+        find.byType(SegmentedButton<bool>),
+      );
+      expect(segments.selected, {false});
+      expect(segments.segments.first.enabled, isFalse);
+
+      // Na pesquisa, outro time só visitante aparece desabilitado.
+      await tapVisible(tester, opponentField);
+      expect(
+        find.textContaining('Só joga como visitante, como o seu time'),
+        findsOneWidget,
+      );
+      final blocked = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Também Visitante'),
+      );
+      expect(blocked.enabled, isFalse);
+      await tapVisible(tester, find.text('Dono da Quadra'));
+      expect(find.text('Dono da Quadra'), findsOneWidget);
+      expect(
+        tester
+            .widget<SegmentedButton<bool>>(find.byType(SegmentedButton<bool>))
+            .selected,
+        {false},
+      );
+    });
+
     testWidgets('time de uma modalidade não escolhe modalidade', (
       tester,
     ) async {
@@ -779,7 +1158,7 @@ void main() {
       final container = await _container(
         teams: FakeTeamRepository([teamA]),
         athletes: athletes,
-        pickImage: (source) async => photo,
+        pickImage: (source, {maxSize = smallImageSize}) async => photo,
       );
       await _pumpPage(tester, container, const AthleteFormPage());
 
@@ -1023,6 +1402,75 @@ void main() {
       expect(everyWeekday(DateTime.monday), 'Toda segunda');
     });
 
+    testWidgets('dias e horários com jogo ficam em vermelho', (tester) async {
+      final games = FakeGameRepository({
+        'team-a': [
+          Game(
+            id: 'g1',
+            teamId: 'team-a',
+            opponent: 'Real Bairro',
+            opponentTeamId: 'team-rival',
+            status: GameStatus.scheduled,
+            scheduledAt: DateTime(2026, 10, 24, 15),
+          ),
+          Game(
+            id: 'g2',
+            teamId: 'team-a',
+            opponent: 'Vila Nova',
+            opponentTeamId: 'team-vila',
+            status: GameStatus.pending,
+            scheduledAt: DateTime(2026, 10, 31, 15),
+          ),
+          Game(
+            id: 'g3',
+            teamId: 'team-a',
+            opponent: 'Cancelado FC',
+            status: GameStatus.canceled,
+            scheduledAt: DateTime(2026, 10, 28, 15),
+          ),
+        ],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: games,
+        availability: FakeAvailabilityRepository(
+          byTeam: {
+            'team-a': [
+              const Availability.weekly(
+                id: 'w1',
+                teamId: 'team-a',
+                weekday: DateTime.saturday,
+                startTime: TimeOfDay(hour: 15, minute: 0),
+              ),
+            ],
+          },
+        ),
+      );
+      _usePhoneScreen(tester);
+      // Sábado, 24/10/2026.
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24)),
+      );
+
+      // Marcado e pendente pintam o dia; cancelado não.
+      Finder bookedDay(String day) => find.byWidgetPredicate(
+        (widget) =>
+            widget is Text && widget.semanticsLabel == '$day, dia com jogo',
+      );
+      expect(bookedDay('24'), findsOneWidget);
+      expect(bookedDay('31'), findsOneWidget);
+      expect(bookedDay('28'), findsNothing);
+      expect(find.text('Jogo contra Real Bairro'), findsOneWidget);
+      final time = tester.widget<Text>(find.text('15:00'));
+      expect(time.style?.color, AppTheme.dark().colorScheme.error);
+
+      await tester.tap(bookedDay('31'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aguardando resposta: Vila Nova'), findsOneWidget);
+    });
+
     testWidgets('remove um dia do recorrente ou todas as semanas', (
       tester,
     ) async {
@@ -1047,6 +1495,7 @@ void main() {
         teams: FakeTeamRepository([teamA]),
         availability: availability,
       );
+      _usePhoneScreen(tester);
       // Sábado, 24/10/2026.
       await _pumpPage(
         tester,
@@ -1407,6 +1856,42 @@ void main() {
       );
       expect(venues.created, isEmpty);
       expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('o local cadastrado vira o local do time ativo', (
+      tester,
+    ) async {
+      final teams = FakeTeamRepository([teamA]);
+      final venues = FakeVenueRepository();
+      final container = await _container(teams: teams, venues: venues);
+      await _pumpPage(tester, container, const VenueFormPage());
+
+      // Sem local, a opção já vem marcada.
+      expect(find.text('Local do Amigos FC'), findsOneWidget);
+      expect(
+        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+        isTrue,
+      );
+      await fillAddress(tester, 'Ginásio Municipal');
+      await tapVisible(tester, find.text('Cadastrar local'));
+
+      final linked = teams.updated.single;
+      expect(linked.id, 'team-a');
+      expect(linked.homeVenue?.id, venues.venues.single.id);
+      expect(linked.toMap()['home_venue_id'], venues.venues.single.id);
+    });
+
+    testWidgets('pelo formulário do time não oferece vincular', (tester) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: FakeVenueRepository(),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        const VenueFormPage(offerTeamLink: false),
+      );
+      expect(find.byType(SwitchListTile), findsNothing);
     });
 
     testWidgets('cadastra mesmo assim quando não é o mesmo local', (

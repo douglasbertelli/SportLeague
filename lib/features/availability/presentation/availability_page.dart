@@ -5,6 +5,8 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../games/data/game_repository.dart';
+import '../../games/domain/game.dart';
 import '../../games/presentation/game_card.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -258,10 +260,55 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
 
   Widget _content(BuildContext context, Team team, List<Availability> slots) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    // Amistosos pendentes ou marcados ocupam o horário: ficam em vermelho.
+    final booked = [
+      for (final game
+          in ref.watch(teamGamesProvider(team.id!)).value ?? const <Game>[])
+        if (game.status != GameStatus.canceled) game,
+    ];
+    List<Game> gamesOn(DateTime day) => [
+      for (final game in booked)
+        if (DateUtils.isSameDay(game.scheduledAt, day)) game,
+    ];
+    Game? gameAt(DateTime at) =>
+        booked.where((game) => game.scheduledAt == at).firstOrNull;
+
     final ofDay = [
       for (final slot in slots)
         if (slot.occursOn(_selectedDay)) slot,
     ]..sort((a, b) => a.at(_selectedDay).compareTo(b.at(_selectedDay)));
+    // Jogos do dia fora dos horários cadastrados (horário removido depois).
+    final otherGames = [
+      for (final game in gamesOn(_selectedDay))
+        if (!ofDay.any((slot) => slot.at(_selectedDay) == game.scheduledAt))
+          game,
+    ];
+
+    /// Dia com jogo: círculo vermelho (com borda quando selecionado).
+    Widget? bookedDay(DateTime day, {bool selected = false}) {
+      if (gamesOn(day).isEmpty) return null;
+      return Center(
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.error,
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(color: colors.onSurface, width: 2)
+                : null,
+          ),
+          child: Text(
+            '${day.day}',
+            semanticsLabel: '${day.day}, dia com jogo',
+            style: TextStyle(color: colors.onError),
+          ),
+        ),
+      );
+    }
+
     final weekly = [
       for (final slot in slots)
         if (slot.isWeekly) slot,
@@ -311,6 +358,11 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
               color: theme.colorScheme.onPrimaryContainer,
             ),
           ),
+          calendarBuilders: CalendarBuilders(
+            defaultBuilder: (_, day, _) => bookedDay(day),
+            todayBuilder: (_, day, _) => bookedDay(day),
+            selectedBuilder: (_, day, _) => bookedDay(day, selected: true),
+          ),
           selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
           eventLoader: (day) => [
             for (final slot in slots)
@@ -322,23 +374,66 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
           }),
           onPageChanged: (focused) => _focusedDay = focused,
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: colors.error,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Dia com jogo marcado ou aguardando resposta',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
         const Divider(),
         _SectionTitle(
           'Horários em ${formatGameDay(_selectedDay)} '
           '(${weekdayNames[_selectedDay.weekday]})',
         ),
-        if (ofDay.isEmpty)
+        if (ofDay.isEmpty && otherGames.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
               'Nenhum horário neste dia. Toque em "Adicionar horário".',
             ),
           ),
+        for (final game in otherGames)
+          ListTile(
+            leading: Icon(Icons.event_busy, color: colors.error),
+            title: Text(
+              formatGameTime(game.scheduledAt),
+              style: TextStyle(color: colors.error),
+            ),
+            subtitle: Text(_gameLine(game, team)),
+          ),
         for (final slot in ofDay)
           ListTile(
-            leading: const Icon(Icons.schedule),
-            title: Text(formatGameTime(slot.at(_selectedDay))),
-            subtitle: slot.isWeekly ? Text(everyWeekday(slot.weekday!)) : null,
+            leading: switch (gameAt(slot.at(_selectedDay))) {
+              null => const Icon(Icons.schedule),
+              _ => Icon(Icons.event_busy, color: colors.error),
+            },
+            title: Text(
+              formatGameTime(slot.at(_selectedDay)),
+              style: gameAt(slot.at(_selectedDay)) == null
+                  ? null
+                  : TextStyle(color: colors.error),
+            ),
+            subtitle: switch ((gameAt(slot.at(_selectedDay)), slot.isWeekly)) {
+              (final game?, _) => Text(_gameLine(game, team)),
+              (null, true) => Text(everyWeekday(slot.weekday!)),
+              _ => null,
+            },
             onTap: _saving ? null : () => _editOnDay(team, slot),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -379,6 +474,14 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
 }
 
 enum _Scope { thisDay, allWeeks }
+
+/// "Jogo contra Real Bairro" ou "Aguardando resposta: Real Bairro".
+String _gameLine(Game game, Team team) {
+  final opponent = game.opponentNameFor(team.id!);
+  return game.status == GameStatus.pending
+      ? 'Aguardando resposta: $opponent'
+      : 'Jogo contra $opponent';
+}
 
 /// Seletor de horário sempre em 24 horas, como os horários do app. Sem isso,
 /// com o aparelho em 12 horas, digitar "19" seria recusado.

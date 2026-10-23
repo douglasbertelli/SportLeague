@@ -87,10 +87,14 @@ configurado.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
-     Cada time tem logo (galeria ou câmera, no Storage `team-logos`),
-     modalidade (Futsal, Society, Campo e/ou Futebol de Areia), gênero, faixa
-     de idade (Livre, Base 4 a 20 anos, Master a partir de 35) e data de
-     fundação;
+     O cadastro tem quatro abas:
+     **Time** (logo, nome, uma modalidade — Futsal, Society, Campo, Areia ou
+     Desafio —, gênero e faixa de idade: Livre, Base com idade mínima e máxima
+     ou Master com idade mínima), **Detalhes** (joga como mandante,
+     visitante ou ambos, data de fundação e cidade/UF obrigatórias), **Contato** (telefone,
+     Instagram, Facebook, YouTube e site, opcionais) e **Mídia** (capa e até 3
+     fotos de uniforme, no Storage `team-logos`). Tocar no adversário no card
+     do jogo abre o perfil dele, com os uniformes para não confundir as cores;
    - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
      cada time tem os seus;
    - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
@@ -105,7 +109,10 @@ configurado.
      administradores, com endereço (CEP pelo ViaCEP) e foto opcional. Ao
      cadastrar um local, o app sugere os parecidos que já existem (mesmo CEP e
      número, ou nome parecido na mesma cidade). Ao marcar o amistoso, o local é
-     escolhido na pesquisa ou cadastrado ali mesmo.
+     escolhido na pesquisa ou cadastrado ali mesmo. O local cadastrado pode
+     virar o **local do time** (também escolhido na aba Detalhes do time): no
+     amistoso novo ele vem preenchido quando o time é mandante, e o do
+     adversário da plataforma quando é visitante; dá para trocar.
    - **Disponibilidade** (Início): calendário com os dias e horários em que o
      time joga, avulsos ou recorrentes ("todo sábado às 15:00"). Dá para mudar o
      horário de um dia ou de todas as semanas e, num imprevisto, o
@@ -148,7 +155,7 @@ supabase/
 | --------------- | ---------------------------------------------------------------- |
 | `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
-| `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia), gênero, faixa de idade (livre, base, master), fundação e logo |
+| `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
 | `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
 | `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |

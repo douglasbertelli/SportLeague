@@ -21,6 +21,7 @@ typedef OpponentPickerArgs = ({
   String teamId,
   Set<Modality> modalities,
   Modality? modality,
+  PlaysAs playsAs,
 });
 
 /// Escolha do adversário de um amistoso: pesquisa os times da plataforma e os
@@ -33,6 +34,7 @@ class OpponentPickerPage extends ConsumerStatefulWidget {
     required this.teamId,
     required this.modalities,
     this.modality,
+    this.playsAs = PlaysAs.both,
   });
 
   final String teamId;
@@ -42,6 +44,10 @@ class OpponentPickerPage extends ConsumerStatefulWidget {
 
   /// Modalidade já escolhida (edição), se houver.
   final Modality? modality;
+
+  /// Como o time que marca joga: um adversário que não aceita nenhum lado
+  /// compatível aparece desabilitado.
+  final PlaysAs playsAs;
 
   @override
   ConsumerState<OpponentPickerPage> createState() => _OpponentPickerPageState();
@@ -95,6 +101,14 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
     setState(() => _modality = modality);
     _refresh(_searchController.text);
   }
+
+  /// Se há um mando possível contra [rival]: um dos dois times recebe e o
+  /// outro vai até ele.
+  bool _canFace(Team rival) => [true, false].any(
+    (home) =>
+        widget.playsAs.accepts(home: home) &&
+        rival.playsAs.accepts(home: !home),
+  );
 
   void _pick(Opponent opponent) =>
       context.pop<PickedOpponent>((opponent: opponent, modality: _modality));
@@ -208,9 +222,17 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
                         leading: TeamLogo(team: team),
                         title: Text(team.name),
                         subtitle: Text(
-                          [team.summary, ?team.location].join('\n'),
+                          [
+                            team.summary,
+                            ?team.location,
+                            if (!_canFace(team))
+                              'Só joga como '
+                                  '${team.playsAs.label.toLowerCase()}, como '
+                                  'o seu time',
+                          ].join('\n'),
                         ),
-                        isThreeLine: team.location != null,
+                        isThreeLine: team.location != null || !_canFace(team),
+                        enabled: _canFace(team),
                         onTap: () => _pick(RegisteredOpponent(team)),
                       ),
                     ),

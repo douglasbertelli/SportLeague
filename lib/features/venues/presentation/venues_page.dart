@@ -14,9 +14,17 @@ import 'venue_photo.dart';
 /// [picking] (marcar amistoso) tocar num local o escolhe e fecha devolvendo o
 /// [Venue]; senão, tocar num local que o usuário cadastrou abre a edição.
 class VenuesPage extends ConsumerStatefulWidget {
-  const VenuesPage({super.key, this.picking = false});
+  const VenuesPage({
+    super.key,
+    this.picking = false,
+    this.offerTeamLink = true,
+  });
 
   final bool picking;
+
+  /// Se o cadastro de local oferece vincular ao time ativo (não quando a
+  /// escolha vem do próprio formulário do time).
+  final bool offerTeamLink;
 
   @override
   ConsumerState<VenuesPage> createState() => _VenuesPageState();
@@ -54,7 +62,10 @@ class _VenuesPageState extends ConsumerState<VenuesPage> {
   Future<void> _create() async {
     final venue = await context.push<Venue>(
       Routes.newVenue,
-      extra: _searchController.text.trim(),
+      extra: (
+        name: _searchController.text.trim(),
+        offerTeamLink: widget.offerTeamLink,
+      ),
     );
     if (!mounted || venue == null) return;
     if (widget.picking) {

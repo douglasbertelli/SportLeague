@@ -11,14 +11,22 @@ class PickedImage {
   final String contentType;
 }
 
-typedef PickImage = Future<PickedImage?> Function(ImageSource source);
+/// Lado maior das imagens pequenas (logo, foto do atleta).
+const smallImageSize = 512.0;
+
+/// Lado maior das imagens em destaque (capa, uniforme, local).
+const largeImageSize = 1280.0;
+
+typedef PickImage = Future<PickedImage?> Function(
+  ImageSource source, {
+  double maxSize,
+});
 
 /// Abre a galeria ou a câmera e devolve a imagem reduzida a no máximo
-/// [maxSize] px. Nulo se o usuário cancelar. Substituível nos testes.
+/// `maxSize` px. Nulo se o usuário cancelar. Substituível nos testes.
 final pickImageProvider = Provider<PickImage>((ref) {
-  const maxSize = 512.0;
   final picker = ImagePicker();
-  return (source) async {
+  return (source, {maxSize = smallImageSize}) async {
     final file = await picker.pickImage(
       source: source,
       maxWidth: maxSize,

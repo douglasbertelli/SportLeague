@@ -193,6 +193,15 @@ class _GameCardState extends ConsumerState<GameCard> {
                           logoUrl: _game.opponentLogoFor(viewer),
                           city: _game.opponentCityFor(viewer),
                           alignEnd: true,
+                          // Time da plataforma: abre o perfil (capa,
+                          // contatos e uniformes).
+                          onTap: switch (_game.opponentTeamIdFor(viewer)) {
+                            final teamId? => () => context.push(
+                              Routes.teamProfile,
+                              extra: teamId,
+                            ),
+                            null => null,
+                          },
                         ),
                       ),
                     ],
@@ -251,7 +260,12 @@ class _GameCardState extends ConsumerState<GameCard> {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(88, 48),
-                                foregroundColor: colors.error,
+                                // Texto verde e borda um pouco mais escura
+                                // que a padrão.
+                                foregroundColor: colors.primary,
+                                side: BorderSide(
+                                  color: _darker(colors.outline),
+                                ),
                               ),
                               onPressed: _loading
                                   ? null
@@ -336,12 +350,14 @@ class _TeamSide extends StatelessWidget {
     required this.logoUrl,
     required this.city,
     required this.alignEnd,
+    this.onTap,
   });
 
   final String name;
   final String? logoUrl;
   final String? city;
   final bool alignEnd;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -371,9 +387,11 @@ class _TeamSide extends StatelessWidget {
     );
     final logo = TeamLogo.url(logoUrl: logoUrl, radius: 24);
 
-    return Semantics(
+    final side = Semantics(
       container: true,
       label: name,
+      button: onTap != null,
+      hint: onTap == null ? null : 'Ver perfil do time',
       excludeSemantics: true,
       child: Row(
         mainAxisAlignment: alignEnd
@@ -384,6 +402,14 @@ class _TeamSide extends StatelessWidget {
             : [logo, const SizedBox(width: 12), texts],
       ),
     );
+    return switch (onTap) {
+      final onTap? => InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: side,
+      ),
+      null => side,
+    };
   }
 }
 
@@ -416,3 +442,9 @@ String formatGameTime(DateTime date) =>
     '${_two(date.hour)}:${_two(date.minute)}';
 
 String _two(int value) => value.toString().padLeft(2, '0');
+
+/// [color] com a luminosidade um pouco menor (borda do Recusar).
+Color _darker(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  return hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+}
