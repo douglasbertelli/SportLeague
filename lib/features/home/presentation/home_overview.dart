@@ -36,6 +36,12 @@ class HomeOverview extends ConsumerWidget {
                 subtitle: 'Dias e horários em que o ${team.name} joga',
                 onTap: () => context.push(Routes.availability),
               ),
+            _ActionTile(
+              icon: Icons.place_outlined,
+              title: 'Locais',
+              subtitle: 'Quadras e campos onde as partidas acontecem',
+              onTap: () => context.push(Routes.venues),
+            ),
             const _ActionTile(
               icon: Icons.mail_outline,
               title: 'Convites enviados',

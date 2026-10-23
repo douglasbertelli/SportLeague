@@ -31,6 +31,9 @@ import 'package:sport_league/features/games/presentation/games_tab.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
+import 'package:sport_league/features/venues/data/venue_repository.dart';
+import 'package:sport_league/features/venues/presentation/venue_form_page.dart';
+import 'package:sport_league/features/venues/presentation/venues_page.dart';
 
 import 'fakes.dart';
 
@@ -50,6 +53,7 @@ Future<ProviderContainer> _container({
   FakeGameRepository? games,
   FakeOpponentRepository? opponents,
   FakeAvailabilityRepository? availability,
+  FakeVenueRepository? venues,
   PickImage? pickImage,
   Map<String, Object> saved = const {},
 }) async {
@@ -69,6 +73,9 @@ Future<ProviderContainer> _container({
       ),
       availabilityRepositoryProvider.overrideWithValue(
         availability ?? FakeAvailabilityRepository(),
+      ),
+      venueRepositoryProvider.overrideWithValue(
+        venues ?? FakeVenueRepository(),
       ),
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
     ],
@@ -93,10 +100,23 @@ Future<void> _pumpPage(
       GoRoute(
         path: Routes.pickOpponent,
         builder: (_, state) {
-          final (:teamId, :modality) =
-              state.extra as ({String teamId, Modality modality});
-          return OpponentPickerPage(teamId: teamId, modality: modality);
+          final (:teamId, :modalities, :modality) =
+              state.extra as OpponentPickerArgs;
+          return OpponentPickerPage(
+            teamId: teamId,
+            modalities: modalities,
+            modality: modality,
+          );
         },
+      ),
+      GoRoute(
+        path: Routes.pickVenue,
+        builder: (_, _) => const VenuesPage(picking: true),
+      ),
+      GoRoute(
+        path: Routes.newVenue,
+        builder: (_, state) =>
+            VenueFormPage(initialName: state.extra as String?),
       ),
     ],
   );
@@ -473,19 +493,19 @@ void main() {
 
       await tester.tap(find.text('Pendentes (2)'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Aguardando sua resposta'), findsNWidgets(2));
+      // Aceitar e Recusar ficam à vista no card, sem menu.
+      expect(find.textContaining('Aguardando sua resposta'), findsNothing);
+      expect(find.byTooltip('Ações do amistoso'), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Aceitar'), findsNWidgets(2));
+      expect(find.widgetWithText(OutlinedButton, 'Recusar'), findsNWidgets(2));
 
       expect(find.text('Visitante'), findsNWidgets(2));
 
-      await tester.tap(find.byTooltip('Ações do amistoso').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Aceitar'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Aceitar').first);
       await tester.pumpAndSettle();
       expect(games.accepted, ['g1']);
 
-      await tester.tap(find.byTooltip('Ações do amistoso').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Recusar'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Recusar').last);
       await tester.pumpAndSettle();
       expect(find.text('Recusar amistoso?'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'Recusar'));
@@ -562,31 +582,31 @@ void main() {
 
     final opponentField = find.widgetWithText(InputDecorator, 'Adversário');
 
-    testWidgets('sem tipo e sem placar; exige modalidade, adversário e data', (
-      tester,
-    ) async {
-      final games = FakeGameRepository({});
-      final container = await _container(
-        teams: FakeTeamRepository([teamA]),
-        games: games,
-      );
-      await _pumpPage(tester, container, const GameFormPage());
+    testWidgets(
+      'sem tipo, placar, time e modalidade; exige adversário e data',
+      (tester) async {
+        final games = FakeGameRepository({});
+        final container = await _container(
+          teams: FakeTeamRepository([teamA]),
+          games: games,
+        );
+        await _pumpPage(tester, container, const GameFormPage());
 
-      expect(find.text('Amistoso'), findsNothing);
-      expect(find.text('Campeonato'), findsNothing);
-      expect(find.textContaining('Placar'), findsNothing);
+        expect(find.text('Amistoso'), findsNothing);
+        expect(find.text('Campeonato'), findsNothing);
+        expect(find.textContaining('Placar'), findsNothing);
+        expect(find.textContaining('Time: '), findsNothing);
+        expect(find.text('Modalidade'), findsNothing);
+        expect(find.text('Society'), findsNothing);
 
-      await tapVisible(tester, find.text('Marcar amistoso'));
+        await tapVisible(tester, find.text('Marcar amistoso'));
 
-      expect(find.text('Escolha a modalidade do jogo'), findsOneWidget);
-      expect(find.text('Escolha o adversário'), findsOneWidget);
-      expect(find.text('Escolha a data e a hora'), findsOneWidget);
-      expect(games.created, isEmpty);
-
-      // Sem modalidade, a pesquisa do adversário não abre.
-      await tapVisible(tester, opponentField);
-      expect(find.text('Escolher adversário'), findsNothing);
-    });
+        expect(find.text('Escolha o adversário'), findsOneWidget);
+        expect(find.text('Escolha a data e a hora'), findsOneWidget);
+        expect(find.text('Escolha o local'), findsOneWidget);
+        expect(games.created, isEmpty);
+      },
+    );
 
     testWidgets('pesquisa só a modalidade escolhida e salva o adversário', (
       tester,
@@ -608,18 +628,25 @@ void main() {
         games: games,
         opponents: opponents,
         availability: availability,
+        venues: FakeVenueRepository([arena]),
       );
       final game = Game(
         id: 'g1',
         teamId: 'team-a',
         opponent: 'Antigo FC',
         scheduledAt: DateTime(2026, 10, 25, 15),
+        location: 'Campo do Zé',
       );
       await _pumpPage(tester, container, GameFormPage(game: game));
 
-      await tapVisible(tester, find.text('Society'));
+      // A modalidade é escolhida na pesquisa do adversário.
       await tapVisible(tester, opponentField);
       expect(find.text('Escolher adversário'), findsOneWidget);
+      expect(find.text('Modalidade'), findsOneWidget);
+      await tapVisible(tester, find.text('Campo'));
+      expect(opponents.searches.last.modality, Modality.field);
+      expect(find.text('Real Bairro'), findsNothing);
+      await tapVisible(tester, find.text('Society'));
       expect(opponents.searches.last.modality, Modality.society);
       expect(opponents.searches.last.teamId, 'team-a');
 
@@ -647,8 +674,19 @@ void main() {
       expect(availability.freeSlotRequests.last, 'team-rival');
       await tapVisible(tester, find.text('15:00'));
 
+      // Jogo antigo: mostra o local digitado antes e pede um cadastrado.
+      expect(find.text('Antes: Campo do Zé'), findsOneWidget);
+      await tapVisible(tester, find.widgetWithText(InputDecorator, 'Local'));
+      expect(find.text('Escolher local'), findsOneWidget);
+      await tapVisible(tester, find.text('Arena Society Central'));
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      expect(find.text(arena.address), findsOneWidget);
+
       await tapVisible(tester, find.text('Salvar'));
       final saved = games.updated.single;
+      expect(saved.venueId, 'venue-1');
+      expect(saved.toMap()['venue_id'], 'venue-1');
+      expect(saved.toMap()['location'], isNull);
       expect(saved.opponent, 'Real Bairro');
       expect(saved.opponentTeamId, 'team-rival');
       expect(saved.opponentGuestId, isNull);
@@ -670,8 +708,8 @@ void main() {
       );
       await _pumpPage(tester, container, const GameFormPage());
 
-      await tapVisible(tester, find.text('Campo'));
       await tapVisible(tester, opponentField);
+      await tapVisible(tester, find.text('Campo'));
       expect(find.text('Nenhum time encontrado.'), findsOneWidget);
 
       await tapVisible(tester, find.text('Criar time fictício'));
@@ -688,22 +726,22 @@ void main() {
       expect(find.text('Várzea da Esquina (fictício)'), findsOneWidget);
     });
 
-    testWidgets('trocar a modalidade limpa o adversário escolhido', (
+    testWidgets('time de uma modalidade não escolhe modalidade', (
       tester,
     ) async {
+      final opponents = FakeOpponentRepository(registered: [rival]);
       final container = await _container(
-        teams: FakeTeamRepository([teamA]),
-        opponents: FakeOpponentRepository(registered: [rival]),
+        teams: FakeTeamRepository([teamB]),
+        opponents: opponents,
       );
       await _pumpPage(tester, container, const GameFormPage());
 
-      await tapVisible(tester, find.text('Society'));
       await tapVisible(tester, opponentField);
+      expect(find.text('Escolher adversário'), findsOneWidget);
+      expect(find.text('Modalidade'), findsNothing);
+      expect(opponents.searches.last.modality, Modality.society);
       await tapVisible(tester, find.text('Real Bairro'));
       expect(find.text('Real Bairro'), findsOneWidget);
-
-      await tapVisible(tester, find.text('Campo'));
-      expect(find.text('Real Bairro'), findsNothing);
     });
   });
 
@@ -967,6 +1005,196 @@ void main() {
       });
       expect(loaded.isWeekly, isTrue);
       expect(loaded.startTime, const TimeOfDay(hour: 9, minute: 30));
+
+      final withSkip = Availability.fromMap({
+        'id': 'a1',
+        'team_id': 'team-a',
+        'weekday': 6,
+        'start_time': '09:30:00',
+        'starts_on': null,
+        'starts_at': null,
+        'team_availability_skips': [
+          {'on_date': '2026-10-31'},
+        ],
+      });
+      expect(withSkip.occursOn(DateTime(2026, 10, 24)), isTrue);
+      expect(withSkip.occursOn(DateTime(2026, 10, 31)), isFalse);
+      expect(everyWeekday(DateTime.saturday), 'Todo sábado');
+      expect(everyWeekday(DateTime.monday), 'Toda segunda');
+    });
+
+    testWidgets('remove um dia do recorrente ou todas as semanas', (
+      tester,
+    ) async {
+      final availability = FakeAvailabilityRepository(
+        byTeam: {
+          'team-a': [
+            const Availability.weekly(
+              id: 'w1',
+              teamId: 'team-a',
+              weekday: DateTime.saturday,
+              startTime: TimeOfDay(hour: 15, minute: 0),
+            ),
+            Availability.single(
+              id: 's1',
+              teamId: 'team-a',
+              startsAt: DateTime(2026, 10, 24, 18),
+            ),
+          ],
+        },
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: availability,
+      );
+      // Sábado, 24/10/2026.
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24)),
+      );
+      expect(find.text('15:00'), findsOneWidget);
+      expect(find.text('18:00'), findsOneWidget);
+      // Tira a lista de baixo do botão "Adicionar horário".
+      await tester.drag(find.text('15:00'), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      // Imprevisto: tira só este sábado do recorrente.
+      await tester.tap(find.byTooltip('Remover horário').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Todas as semanas'), findsOneWidget);
+      await tester.tap(find.text('Só em 24/10/2026'));
+      await tester.pumpAndSettle();
+
+      expect(availability.skipped.single, (
+        availabilityId: 'w1',
+        date: DateTime(2026, 10, 24),
+      ));
+      expect(availability.deleted, isEmpty);
+      expect(find.text('15:00'), findsNothing);
+      expect(find.text('18:00'), findsOneWidget);
+      // O recorrente continua nas outras semanas.
+      await tester.scrollUntilVisible(
+        find.text('Todo sábado às 15:00'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Sem jogo em 24/10/2026'), findsOneWidget);
+
+      // O avulso sai de vez, com a confirmação de sempre.
+      await tester.tap(find.byTooltip('Remover horário'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Excluir'));
+      await tester.pumpAndSettle();
+      expect(availability.deleted, ['s1']);
+
+      // Pela lista de recorrentes, sai de todas as semanas.
+      await tester.tap(find.byTooltip('Remover horário recorrente'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Excluir'));
+      await tester.pumpAndSettle();
+      expect(availability.deleted, ['s1', 'w1']);
+      expect(find.text('Recorrentes'), findsNothing);
+    });
+
+    testWidgets('edita o horário de um dia ou de todas as semanas', (
+      tester,
+    ) async {
+      // Tela de celular em pé: o seletor de horário digitado não cabe na tela
+      // deitada padrão dos testes.
+      tester.view
+        ..physicalSize = const Size(1080, 2340)
+        ..devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final availability = FakeAvailabilityRepository(
+        byTeam: {
+          'team-a': [
+            const Availability.weekly(
+              id: 'w1',
+              teamId: 'team-a',
+              weekday: DateTime.saturday,
+              startTime: TimeOfDay(hour: 15, minute: 0),
+            ),
+            Availability.single(
+              id: 's1',
+              teamId: 'team-a',
+              startsAt: DateTime(2026, 10, 24, 18),
+            ),
+          ],
+        },
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: availability,
+      );
+      // Sábado, 24/10/2026.
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24)),
+      );
+      await tester.drag(find.text('15:00'), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      Future<void> pickTime(String hour, String minute) async {
+        await tester.tap(find.byIcon(Icons.keyboard_outlined));
+        await tester.pumpAndSettle();
+        final fields = find.descendant(
+          of: find.byType(Dialog),
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(fields.at(0), hour);
+        await tester.pump();
+        await tester.enterText(fields.at(1), minute);
+        await tester.pump();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+      }
+
+      // Avulso: muda o horário direto.
+      await tester.tap(find.byTooltip('Editar horário').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Novo horário'), findsOneWidget);
+      await pickTime('19', '30');
+      expect(availability.updated.single.id, 's1');
+      expect(
+        availability.updated.single.startsAt,
+        DateTime(2026, 10, 24, 19, 30),
+      );
+      expect(find.text('19:30'), findsOneWidget);
+      expect(find.text('18:00'), findsNothing);
+
+      // Recorrente, todas as semanas: muda o horário do recorrente.
+      await tester.tap(find.byTooltip('Editar horário').first);
+      await tester.pumpAndSettle();
+      await pickTime('17', '00');
+      expect(find.text('Mudar para 17:00?'), findsOneWidget);
+      await tester.tap(find.text('Todas as semanas'));
+      await tester.pumpAndSettle();
+      final weekly = availability.updated.last;
+      expect(weekly.id, 'w1');
+      expect(weekly.startTime, const TimeOfDay(hour: 17, minute: 0));
+      expect(find.text('17:00'), findsOneWidget);
+
+      // Recorrente, só neste dia: vira avulso e o dia sai do recorrente.
+      await tester.tap(find.byTooltip('Editar horário').first);
+      await tester.pumpAndSettle();
+      await pickTime('16', '00');
+      await tester.tap(find.text('Só em 24/10/2026'));
+      await tester.pumpAndSettle();
+      expect(availability.added.single.startsAt, DateTime(2026, 10, 24, 16));
+      expect(availability.skipped.single, (
+        availabilityId: 'w1',
+        date: DateTime(2026, 10, 24),
+      ));
+      expect(find.text('16:00'), findsOneWidget);
+      expect(find.text('17:00'), findsNothing);
+      expect(availability.deleted, isEmpty);
     });
 
     testWidgets('cadastra horário recorrente e mostra no dia', (tester) async {
@@ -985,7 +1213,7 @@ void main() {
       expect(find.textContaining('Nenhum horário neste dia'), findsOneWidget);
       await tester.tap(find.text('Adicionar horário'));
       await tester.pumpAndSettle();
-      expect(find.text('Toda sábado neste horário'), findsOneWidget);
+      expect(find.text('Todo sábado neste horário'), findsOneWidget);
       await tester.tap(find.text('Repetir toda semana'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Adicionar'));
@@ -996,10 +1224,10 @@ void main() {
       expect(added.weekday, DateTime.saturday);
       expect(added.startTime, const TimeOfDay(hour: 15, minute: 0));
       expect(added.startsOn, DateTime(2026, 10, 24));
-      expect(find.text('Toda sábado'), findsOneWidget);
+      expect(find.text('Todo sábado'), findsOneWidget);
       // Rolar arrastando por cima do calendário também move a tela.
       await tester.scrollUntilVisible(
-        find.text('Toda sábado às 15:00'),
+        find.text('Todo sábado às 15:00'),
         200,
         scrollable: find
             .descendant(
@@ -1008,7 +1236,7 @@ void main() {
             )
             .first,
       );
-      expect(find.text('Toda sábado às 15:00'), findsOneWidget);
+      expect(find.text('Todo sábado às 15:00'), findsOneWidget);
     });
 
     testWidgets('a escolha do horário só oferece os horários livres', (
@@ -1071,6 +1299,7 @@ void main() {
         teams: FakeTeamRepository([teamA]),
         games: games,
         availability: availability,
+        venues: FakeVenueRepository([arena]),
         opponents: FakeOpponentRepository(
           guests: const [
             GuestTeam(
@@ -1091,8 +1320,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Escolher dia e horário'), findsNothing);
 
-      await tester.tap(find.text('Society'));
-      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(InputDecorator, 'Adversário'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Pelada de Sábado'));
@@ -1105,12 +1332,122 @@ void main() {
       await tester.tap(find.text('20:00'));
       await tester.pumpAndSettle();
 
+      final venueField = find.widgetWithText(InputDecorator, 'Local');
+      await tester.ensureVisible(venueField);
+      await tester.tap(venueField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Arena Society Central'));
+      await tester.pumpAndSettle();
+
       final submit = find.text('Marcar amistoso');
       await tester.ensureVisible(submit);
       await tester.tap(submit);
       await tester.pumpAndSettle();
       expect(games.created.single.scheduledAt, mySlot);
       expect(games.created.single.opponentGuestId, 'guest-1');
+      expect(games.created.single.venueId, 'venue-1');
+    });
+  });
+
+  group('locais', () {
+    Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+      await tester.ensureVisible(finder);
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> fillAddress(WidgetTester tester, String name) async {
+      Finder field(String label) => find.widgetWithText(TextFormField, label);
+      await tester.enterText(field('Nome do local'), name);
+      await tester.enterText(field('Rua'), 'Rua das Flores');
+      await tester.enterText(field('Número'), '120');
+      await tester.enterText(field('Bairro'), 'Centro');
+      await tester.enterText(field('Cidade'), 'Campinas');
+      await tester.enterText(field('UF'), 'sp');
+      // CEP por último: com 8 dígitos ele consultaria o ViaCEP; aqui o
+      // campo é preenchido direto, sem o onChanged.
+      tester.widget<TextFormField>(field('CEP')).controller!.text = '13010000';
+      await tester.pump();
+    }
+
+    testWidgets('sugere o local que já existe em vez de cadastrar outro', (
+      tester,
+    ) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenuesPage(picking: true));
+
+      // Pesquisa sem achar e cadastra um novo com o nome digitado.
+      await tester.enterText(find.byType(TextField), 'Arena Society');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Arena Society Central'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'arena society c');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Novo local'), findsOneWidget);
+      expect(find.text('arena society c'), findsOneWidget);
+
+      await fillAddress(tester, 'Arena Society');
+      await tapVisible(tester, find.text('Cadastrar local'));
+
+      // Sugere o existente; escolher ele volta para o amistoso sem cadastrar.
+      expect(venues.similarChecks.single.name, 'Arena Society');
+      expect(find.text('Esse local já existe?'), findsOneWidget);
+      await tapVisible(
+        tester,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Arena Society Central'),
+        ),
+      );
+      expect(venues.created, isEmpty);
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('cadastra mesmo assim quando não é o mesmo local', (
+      tester,
+    ) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenueFormPage());
+
+      await fillAddress(tester, 'Arena Society');
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Esse local já existe?'), findsOneWidget);
+      await tapVisible(tester, find.text('Cadastrar mesmo assim'));
+
+      final created = venues.created.single;
+      expect(created.name, 'Arena Society');
+      expect(created.createdBy, 'u1');
+      expect(created.toMap()['state'], 'SP');
+      expect(created.address, 'Rua das Flores, 120 - Centro, Campinas/SP');
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('sem parecidos, cadastra direto', (tester) async {
+      final venues = FakeVenueRepository([arena]);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        venues: venues,
+      );
+      await _pumpPage(tester, container, const VenueFormPage());
+
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Informe o nome do local'), findsOneWidget);
+      expect(venues.created, isEmpty);
+
+      await fillAddress(tester, 'Ginásio Municipal');
+      await tapVisible(tester, find.text('Cadastrar local'));
+      expect(find.text('Esse local já existe?'), findsNothing);
+      expect(venues.created.single.name, 'Ginásio Municipal');
     });
   });
 }

@@ -25,4 +25,17 @@ abstract final class Routes {
 
   /// Calendário de disponibilidade do time ativo.
   static const availability = '/home/availability';
+
+  /// Locais das partidas (cadastro e pesquisa).
+  static const venues = '/home/venues';
+
+  /// Recebe o nome já digitado (`String`) em `extra`; devolve o `Venue` salvo
+  /// ou o existente escolhido no `pop`.
+  static const newVenue = '/home/venues/new';
+
+  /// Recebe o `Venue` em `extra`.
+  static const editVenue = '/home/venues/edit';
+
+  /// Escolha do local do amistoso; devolve o `Venue` no `pop`.
+  static const pickVenue = '/home/games/venue';
 }

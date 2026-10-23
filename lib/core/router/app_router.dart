@@ -20,6 +20,9 @@ import '../../features/splash/presentation/splash_page.dart';
 import '../../features/teams/domain/team.dart';
 import '../../features/teams/presentation/team_form_page.dart';
 import '../../features/teams/presentation/teams_page.dart';
+import '../../features/venues/domain/venue.dart';
+import '../../features/venues/presentation/venue_form_page.dart';
+import '../../features/venues/presentation/venues_page.dart';
 import '../supabase/supabase_providers.dart';
 import 'routes.dart';
 
@@ -86,10 +89,34 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'games/opponent',
             builder: (_, state) {
-              final (:teamId, :modality) =
-                  state.extra as ({String teamId, Modality modality});
-              return OpponentPickerPage(teamId: teamId, modality: modality);
+              final (:teamId, :modalities, :modality) =
+                  state.extra as OpponentPickerArgs;
+              return OpponentPickerPage(
+                teamId: teamId,
+                modalities: modalities,
+                modality: modality,
+              );
             },
+          ),
+          GoRoute(
+            path: 'games/venue',
+            builder: (_, _) => const VenuesPage(picking: true),
+          ),
+          GoRoute(
+            path: 'venues',
+            builder: (_, _) => const VenuesPage(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (_, state) =>
+                    VenueFormPage(initialName: state.extra as String?),
+              ),
+              GoRoute(
+                path: 'edit',
+                builder: (_, state) =>
+                    VenueFormPage(venue: state.extra as Venue),
+              ),
+            ],
           ),
           GoRoute(
             path: 'availability',

@@ -13,7 +13,7 @@ class AvailabilityRepository {
   Future<List<Availability>> fetchByTeam(String teamId) async {
     final rows = await _client
         .from('team_availability')
-        .select()
+        .select('*, team_availability_skips(on_date)')
         .eq('team_id', teamId)
         .order('starts_at')
         .order('weekday')
@@ -24,8 +24,18 @@ class AvailabilityRepository {
   Future<void> add(Availability availability) =>
       _client.from('team_availability').insert(availability.toMap());
 
+  Future<void> update(Availability availability) => _client
+      .from('team_availability')
+      .update(availability.toMap())
+      .eq('id', availability.id!);
+
   Future<void> delete(String id) =>
       _client.from('team_availability').delete().eq('id', id);
+
+  /// Tira o dia [date] do horário recorrente [availabilityId] (imprevisto).
+  Future<void> skipDate(String availabilityId, DateTime date) => _client
+      .from('team_availability_skips')
+      .insert({'availability_id': availabilityId, 'on_date': dateToDb(date)});
 
   /// Horários livres do time entre [from] e [to]: avulsos e recorrentes, já
   /// sem os que têm amistoso pendente ou marcado. Vem do banco (rpc), que não

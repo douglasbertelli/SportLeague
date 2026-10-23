@@ -13,7 +13,9 @@ import '../../teams/domain/team.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/opponent.dart';
+import '../../venues/domain/venue.dart';
 import 'games_tab.dart';
+import 'opponent_picker_page.dart';
 
 /// Marca um amistoso para o time ativo ou edita/exclui um existente. O
 /// adversário precisa jogar a mesma modalidade; o placar é lançado em outra
@@ -29,9 +31,7 @@ class GameFormPage extends ConsumerStatefulWidget {
 
 class _GameFormPageState extends ConsumerState<GameFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late final _locationController = TextEditingController(
-    text: widget.game?.location,
-  );
+  late Venue? _venue = widget.game?.venue;
   late DateTime? _scheduledAt = widget.game?.scheduledAt;
   late Modality? _modality = widget.game?.modality;
 
@@ -52,10 +52,9 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
 
   bool get _isEditing => widget.game != null;
 
-  @override
-  void dispose() {
-    _locationController.dispose();
-    super.dispose();
+  Future<void> _pickVenue() async {
+    final venue = await context.push<Venue>(Routes.pickVenue);
+    if (venue != null) setState(() => _venue = venue);
   }
 
   /// Time do jogo: o do jogo em edição ou o time ativo.
@@ -69,35 +68,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     return null;
   }
 
-  /// Com uma só modalidade no time, ela já vem escolhida.
+  /// Com uma só modalidade no time, ela já vem escolhida; com mais de uma, é
+  /// escolhida junto com o adversário.
   Modality? _effectiveModality(Team team) =>
       _modality ??
       (team.modalities.length == 1 ? team.modalities.single : null);
 
-  void _selectModality(Modality modality) {
-    if (modality == _modality) return;
-    setState(() {
-      _modality = modality;
-      // O adversário escolhido era da outra modalidade.
-      _opponent = null;
-    });
-  }
-
   Future<void> _pickOpponent(Team team) async {
-    final modality = _effectiveModality(team);
-    if (modality == null) {
-      setState(() => _showErrors = true);
-      return;
-    }
-    final opponent = await context.push<Opponent>(
+    final picked = await context.push<PickedOpponent>(
       Routes.pickOpponent,
-      extra: (teamId: team.id!, modality: modality),
+      extra: (
+        teamId: team.id!,
+        modalities: team.modalities,
+        modality: _effectiveModality(team),
+      ),
     );
-    if (opponent != null) {
+    if (picked != null) {
       final previousCalendar = _calendarFor(team)?.teamId;
       setState(() {
-        _modality = modality;
-        _opponent = opponent;
+        _modality = picked.modality;
+        _opponent = picked.opponent;
         // O horário escolhido era do calendário de outro time.
         if (_calendarFor(team)?.teamId != previousCalendar) _scheduledAt = null;
       });
@@ -144,11 +134,13 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
+    final venue = _venue;
     if (_loading ||
         !valid ||
         modality == null ||
         opponent == null ||
-        scheduledAt == null) {
+        scheduledAt == null ||
+        venue == null) {
       return;
     }
 
@@ -169,7 +161,9 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       modality: modality,
       hostIsHome: _hostIsHome,
       scheduledAt: scheduledAt,
-      location: _locationController.text,
+      venueId: venue.id,
+      // O texto antigo do local dá lugar ao local cadastrado.
+      location: null,
     );
     final repository = ref.read(gameRepositoryProvider);
     await _run(
@@ -270,37 +264,14 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
+    final venue = _venue;
 
     return [
-      Text('Time: ${team.name}', style: theme.textTheme.titleSmall),
-      const SizedBox(height: 16),
       Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Modalidade', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            if (team.modalities.length == 1)
-              Text(team.modalities.single.label)
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final option in team.modalities)
-                    ChoiceChip(
-                      label: Text(option.label),
-                      selected: option == modality,
-                      onSelected: (_) => _selectModality(option),
-                    ),
-                ],
-              ),
-            if (_showErrors && modality == null) ...[
-              const SizedBox(height: 4),
-              Text('Escolha a modalidade do jogo', style: errorStyle),
-            ],
-            const SizedBox(height: 16),
             Text('Jogar como', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
@@ -327,14 +298,14 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
                 decoration: InputDecoration(
                   labelText: 'Adversário',
                   helperText: switch (opponent) {
-                    _ when modality == null => 'Escolha a modalidade primeiro',
                     RegisteredOpponent() || SavedOpponent(teamId: _?) =>
                       'O time adversário precisa aceitar o amistoso',
-                    _ =>
-                      'Time da plataforma ou time fictício de '
-                          '${modality.label}',
+                    _ => 'Time da plataforma ou time fictício',
                   },
-                  errorText: _showErrors && opponent == null
+                  // Jogo antigo sem modalidade num time com várias: o
+                  // adversário é escolhido de novo, já com a modalidade.
+                  errorText:
+                      _showErrors && (opponent == null || modality == null)
                       ? 'Escolha o adversário'
                       : null,
                   suffixIcon: const Icon(Icons.search),
@@ -372,11 +343,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
               ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Local (opcional)'),
-              textCapitalization: TextCapitalization.sentences,
-              maxLength: 160,
+            InkWell(
+              onTap: _loading ? null : _pickVenue,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Local',
+                  helperText: switch ((venue, widget.game?.location)) {
+                    (final venue?, _) => venue.address,
+                    // Jogo antigo: mostra o texto digitado antes.
+                    (null, final old?) => 'Antes: $old',
+                    _ => 'Escolha um local cadastrado ou cadastre um novo',
+                  },
+                  helperMaxLines: 2,
+                  suffixIcon: const Icon(Icons.place_outlined),
+                  errorText: _showErrors && venue == null
+                      ? 'Escolha o local'
+                      : null,
+                ),
+                isEmpty: venue == null,
+                child: Text(venue?.name ?? ''),
+              ),
             ),
           ],
         ),

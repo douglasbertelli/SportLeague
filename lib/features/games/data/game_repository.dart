@@ -17,7 +17,8 @@ class GameRepository {
         .from('games')
         .select(
           '*, host:teams!games_team_id_fkey(name, logo_url, city), '
-          'opponent_team:teams!games_opponent_team_id_fkey(logo_url, city)',
+          'opponent_team:teams!games_opponent_team_id_fkey(logo_url, city), '
+          'venue:venues(*)',
         )
         .or('team_id.eq.$teamId,opponent_team_id.eq.$teamId')
         .order('scheduled_at');

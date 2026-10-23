@@ -13,18 +13,35 @@ import '../../teams/presentation/team_logo.dart';
 import '../data/opponent_repository.dart';
 import '../domain/opponent.dart';
 
-/// Escolha do adversário de um amistoso na [modality]: pesquisa os times da
-/// plataforma e os times fictícios do administrador; se o adversário não
-/// existir, cria um time fictício. Fecha devolvendo o [Opponent] escolhido.
+/// Adversário escolhido e a modalidade do jogo.
+typedef PickedOpponent = ({Opponent opponent, Modality modality});
+
+/// O que a rota da escolha do adversário recebe em `extra`.
+typedef OpponentPickerArgs = ({
+  String teamId,
+  Set<Modality> modalities,
+  Modality? modality,
+});
+
+/// Escolha do adversário de um amistoso: pesquisa os times da plataforma e os
+/// times fictícios do administrador que jogam a modalidade; se o adversário
+/// não existir, cria um time fictício. Com mais de uma modalidade no time, a
+/// modalidade do jogo é escolhida aqui. Fecha devolvendo o [PickedOpponent].
 class OpponentPickerPage extends ConsumerStatefulWidget {
   const OpponentPickerPage({
     super.key,
     required this.teamId,
-    required this.modality,
+    required this.modalities,
+    this.modality,
   });
 
   final String teamId;
-  final Modality modality;
+
+  /// Modalidades do time que marca.
+  final Set<Modality> modalities;
+
+  /// Modalidade já escolhida (edição), se houver.
+  final Modality? modality;
 
   @override
   ConsumerState<OpponentPickerPage> createState() => _OpponentPickerPageState();
@@ -32,6 +49,10 @@ class OpponentPickerPage extends ConsumerStatefulWidget {
 
 class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
   final _searchController = TextEditingController();
+  late Modality _modality =
+      widget.modality != null && widget.modalities.contains(widget.modality)
+      ? widget.modality!
+      : widget.modalities.first;
   Timer? _debounce;
   late Future<({List<Team> registered, List<GuestTeam> guests})> _results =
       _search('');
@@ -51,7 +72,7 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
       .search(
         teamId: widget.teamId,
         ownerId: ref.read(currentUserIdProvider)!,
-        modality: widget.modality,
+        modality: _modality,
         query: query,
       );
 
@@ -69,12 +90,21 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
     });
   }
 
+  void _selectModality(Modality modality) {
+    if (modality == _modality) return;
+    setState(() => _modality = modality);
+    _refresh(_searchController.text);
+  }
+
+  void _pick(Opponent opponent) =>
+      context.pop<PickedOpponent>((opponent: opponent, modality: _modality));
+
   Future<void> _createGuest() async {
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _GuestTeamDialog(
         initialName: _searchController.text.trim(),
-        modality: widget.modality,
+        modality: _modality,
       ),
     );
     if (name == null || !mounted) return;
@@ -87,10 +117,10 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
             GuestTeam(
               ownerId: ref.read(currentUserIdProvider)!,
               name: name,
-              modality: widget.modality,
+              modality: _modality,
             ),
           );
-      if (mounted) context.pop<Opponent>(GuestOpponent(guest));
+      if (mounted) _pick(GuestOpponent(guest));
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
     } finally {
@@ -128,8 +158,25 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
+              if (widget.modalities.length > 1) ...[
+                Text('Modalidade', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final option in widget.modalities)
+                      ChoiceChip(
+                        label: Text(option.label),
+                        selected: option == _modality,
+                        onSelected: (_) => _selectModality(option),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               Text(
-                'Só aparecem times que jogam ${widget.modality.label}.',
+                'Só aparecem times que jogam ${_modality.label}.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -164,8 +211,7 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
                           [team.summary, ?team.location].join('\n'),
                         ),
                         isThreeLine: team.location != null,
-                        onTap: () =>
-                            context.pop<Opponent>(RegisteredOpponent(team)),
+                        onTap: () => _pick(RegisteredOpponent(team)),
                       ),
                     ),
                 ],
@@ -181,8 +227,7 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
                         subtitle: Text(
                           'Time fictício · ${guest.modality.label}',
                         ),
-                        onTap: () =>
-                            context.pop<Opponent>(GuestOpponent(guest)),
+                        onTap: () => _pick(GuestOpponent(guest)),
                       ),
                     ),
                 ],

@@ -32,11 +32,9 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
   bool _saving = false;
 
   Future<void> _add(Team team) async {
-    final weekdayName = weekdayNames[_selectedDay.weekday]!;
     final result = await showDialog<({TimeOfDay time, bool weekly})>(
       context: context,
-      builder: (_) =>
-          _AddSlotDialog(day: _selectedDay, weekdayName: weekdayName),
+      builder: (_) => _AddSlotDialog(day: _selectedDay),
     );
     if (result == null) return;
 
@@ -68,9 +66,9 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
       context,
       title: 'Remover horário?',
       message: availability.isWeekly
-          ? 'O horário de toda ${weekdayNames[availability.weekday]} às '
-                '${_time(availability.startTime!)} será removido de todas as '
-                'semanas. Amistosos já marcados continuam.'
+          ? 'O horário de ${everyWeekday(availability.weekday!).toLowerCase()} '
+                'às ${_time(availability.startTime!)} será removido de todas '
+                'as semanas. Amistosos já marcados continuam.'
           : 'O horário de ${formatGameDay(availability.startsAt!)} às '
                 '${formatGameTime(availability.startsAt!)} será removido. '
                 'Amistosos já marcados continuam.',
@@ -80,6 +78,130 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
       team,
       () => ref.read(availabilityRepositoryProvider).delete(availability.id!),
     );
+  }
+
+  /// Pergunta se a mudança num horário recorrente vale só para o dia [day] ou
+  /// para todas as semanas.
+  Future<_Scope?> _askScope(
+    Availability availability,
+    DateTime day, {
+    required String title,
+    bool destructive = false,
+  }) => showDialog<_Scope>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(
+        '${everyWeekday(availability.weekday!)} às '
+        '${_time(availability.startTime!)}. Amistosos já marcados continuam.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_Scope.allWeeks),
+          child: const Text('Todas as semanas'),
+        ),
+        TextButton(
+          style: destructive
+              ? TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                )
+              : null,
+          onPressed: () => Navigator.of(context).pop(_Scope.thisDay),
+          child: Text('Só em ${formatGameDay(day)}'),
+        ),
+      ],
+    ),
+  );
+
+  /// Remover um horário no dia selecionado: o avulso sai de vez; o recorrente
+  /// pode sair só deste dia (imprevisto) ou de todas as semanas.
+  Future<void> _deleteOnDay(Team team, Availability availability) async {
+    if (!availability.isWeekly) return _delete(team, availability);
+    final day = _selectedDay;
+    final repository = ref.read(availabilityRepositoryProvider);
+    switch (await _askScope(
+      availability,
+      day,
+      title: 'Remover horário?',
+      destructive: true,
+    )) {
+      case null:
+        return;
+      case _Scope.allWeeks:
+        await _run(team, () => repository.delete(availability.id!));
+      case _Scope.thisDay:
+        await _run(team, () => repository.skipDate(availability.id!, day));
+    }
+  }
+
+  /// Mudar o horário no dia selecionado. No recorrente, "só neste dia" vira um
+  /// horário avulso no novo horário e o dia sai do recorrente.
+  Future<void> _editOnDay(Team team, Availability availability) async {
+    final day = _selectedDay;
+    final current = availability.at(day);
+    final time = await _showTimePicker24h(
+      context,
+      TimeOfDay.fromDateTime(current),
+      // Curto: o modo digitado tem altura fixa e o texto não pode quebrar.
+      helpText: 'Novo horário',
+    );
+    if (time == null || !mounted) return;
+    final moved = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      time.hour,
+      time.minute,
+    );
+    if (moved == current) return;
+    final repository = ref.read(availabilityRepositoryProvider);
+
+    if (!availability.isWeekly) {
+      await _run(
+        team,
+        () => repository.update(
+          Availability.single(
+            id: availability.id,
+            teamId: availability.teamId,
+            startsAt: moved,
+          ),
+        ),
+      );
+      return;
+    }
+    switch (await _askScope(
+      availability,
+      day,
+      title: 'Mudar para ${_time(time)}?',
+    )) {
+      case null:
+        return;
+      case _Scope.allWeeks:
+        await _run(
+          team,
+          () => repository.update(
+            Availability.weekly(
+              id: availability.id,
+              teamId: availability.teamId,
+              weekday: availability.weekday!,
+              startTime: time,
+              startsOn: availability.startsOn,
+            ),
+          ),
+        );
+      case _Scope.thisDay:
+        // Primeiro o avulso: se ele já existir, o recorrente fica como estava.
+        await _run(team, () async {
+          await repository.add(
+            Availability.single(teamId: availability.teamId, startsAt: moved),
+          );
+          await repository.skipDate(availability.id!, day);
+        });
+    }
   }
 
   Future<void> _run(Team team, Future<void> Function() action) async {
@@ -216,13 +338,22 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
           ListTile(
             leading: const Icon(Icons.schedule),
             title: Text(formatGameTime(slot.at(_selectedDay))),
-            subtitle: slot.isWeekly
-                ? Text('Toda ${weekdayNames[slot.weekday]}')
-                : null,
-            trailing: IconButton(
-              tooltip: 'Remover horário',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _saving ? null : () => _delete(team, slot),
+            subtitle: slot.isWeekly ? Text(everyWeekday(slot.weekday!)) : null,
+            onTap: _saving ? null : () => _editOnDay(team, slot),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Editar horário',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: _saving ? null : () => _editOnDay(team, slot),
+                ),
+                IconButton(
+                  tooltip: 'Remover horário',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _saving ? null : () => _deleteOnDay(team, slot),
+                ),
+              ],
             ),
           ),
         if (weekly.isNotEmpty) ...[
@@ -232,12 +363,9 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
             ListTile(
               leading: const Icon(Icons.repeat),
               title: Text(
-                'Toda ${weekdayNames[slot.weekday]} às '
-                '${_time(slot.startTime!)}',
+                '${everyWeekday(slot.weekday!)} às ${_time(slot.startTime!)}',
               ),
-              subtitle: slot.startsOn == null
-                  ? null
-                  : Text('A partir de ${formatGameDay(slot.startsOn!)}'),
+              subtitle: _weeklyDetails(slot),
               trailing: IconButton(
                 tooltip: 'Remover horário recorrente',
                 icon: const Icon(Icons.delete_outline),
@@ -248,6 +376,41 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
       ],
     );
   }
+}
+
+enum _Scope { thisDay, allWeeks }
+
+/// Seletor de horário sempre em 24 horas, como os horários do app. Sem isso,
+/// com o aparelho em 12 horas, digitar "19" seria recusado.
+Future<TimeOfDay?> _showTimePicker24h(
+  BuildContext context,
+  TimeOfDay initialTime, {
+  String? helpText,
+}) => showTimePicker(
+  context: context,
+  initialTime: initialTime,
+  helpText: helpText,
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+    child: child!,
+  ),
+);
+
+/// "A partir de 24/10/2026 · Sem jogo em 31/10/2026", só com os dias pulados
+/// que ainda vão acontecer.
+Widget? _weeklyDetails(Availability slot) {
+  final today = DateUtils.dateOnly(DateTime.now());
+  final skipped = [
+    for (final date in slot.skippedDates)
+      if (!date.isBefore(today)) date,
+  ]..sort();
+  final details = [
+    if (slot.startsOn case final startsOn?)
+      'A partir de ${formatGameDay(startsOn)}',
+    if (skipped.isNotEmpty)
+      'Sem jogo em ${skipped.map(formatGameDay).join(', ')}',
+  ];
+  return details.isEmpty ? null : Text(details.join(' · '));
 }
 
 String _time(TimeOfDay time) =>
@@ -270,10 +433,9 @@ class _SectionTitle extends StatelessWidget {
 
 /// Escolhe o horário do dia e se ele se repete toda semana.
 class _AddSlotDialog extends StatefulWidget {
-  const _AddSlotDialog({required this.day, required this.weekdayName});
+  const _AddSlotDialog({required this.day});
 
   final DateTime day;
-  final String weekdayName;
 
   @override
   State<_AddSlotDialog> createState() => _AddSlotDialogState();
@@ -284,7 +446,7 @@ class _AddSlotDialogState extends State<_AddSlotDialog> {
   bool _weekly = false;
 
   Future<void> _pickTime() async {
-    final time = await showTimePicker(context: context, initialTime: _time);
+    final time = await _showTimePicker24h(context, _time);
     if (time != null) setState(() => _time = time);
   }
 
@@ -310,7 +472,7 @@ class _AddSlotDialogState extends State<_AddSlotDialog> {
             value: _weekly,
             onChanged: (value) => setState(() => _weekly = value),
             title: const Text('Repetir toda semana'),
-            subtitle: Text('Toda ${widget.weekdayName} neste horário'),
+            subtitle: Text('${everyWeekday(widget.day.weekday)} neste horário'),
           ),
         ],
       ),
