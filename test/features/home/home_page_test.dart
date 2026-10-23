@@ -81,8 +81,23 @@ void main() {
       }
       expect(find.text('Olá, Ana!'), findsOneWidget);
       // O título mostra o time ativo.
-      expect(find.text('Amigos FC'), findsOneWidget);
-      expect(find.text('1 time'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Amigos FC'),
+        ),
+        findsOneWidget,
+      );
+      // Painel do time no Início: próximo jogo e estatísticas.
+      expect(find.text('Nenhum amistoso marcado.'), findsOneWidget);
+      expect(find.text('Marcar amistoso'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('1 time'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Vitórias'), findsOneWidget);
+      expect(find.text('Atalhos'), findsOneWidget);
 
       await tester.tap(find.descendant(of: bar, matching: find.text('Jogos')));
       await tester.pumpAndSettle();

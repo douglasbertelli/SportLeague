@@ -9,6 +9,7 @@ import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
+import 'package:sport_league/features/teams/domain/team_stats.dart';
 import 'package:sport_league/features/venues/data/venue_repository.dart';
 import 'package:sport_league/features/venues/domain/venue.dart';
 
@@ -89,6 +90,47 @@ class FakeTeamRepository implements TeamRepository {
       teams.where((team) => team.id == teamId).firstOrNull;
 
   @override
+  Future<List<Team>> search(String query) async => [
+    for (final team in teams)
+      if (team.name.toLowerCase().contains(query.trim().toLowerCase())) team,
+  ];
+
+  /// Números de cada time no perfil; seguidores e seguindo vêm de [follows].
+  final statsByTeam = <String, TeamStats>{};
+
+  /// Pares (quem segue, quem é seguido).
+  final follows = <({String follower, String followed})>{};
+
+  @override
+  Future<TeamStats> stats(String teamId) async {
+    final base = statsByTeam[teamId] ?? const TeamStats();
+    return TeamStats(
+      played: base.played,
+      wins: base.wins,
+      draws: base.draws,
+      losses: base.losses,
+      goalsFor: base.goalsFor,
+      goalsAgainst: base.goalsAgainst,
+      recent: base.recent,
+      upcoming: base.upcoming,
+      followers: follows.where((f) => f.followed == teamId).length,
+      following: follows.where((f) => f.follower == teamId).length,
+    );
+  }
+
+  @override
+  Future<bool> isFollowing(String followerId, String followedId) async =>
+      follows.contains((follower: followerId, followed: followedId));
+
+  @override
+  Future<void> follow(String followerId, String followedId) async =>
+      follows.add((follower: followerId, followed: followedId));
+
+  @override
+  Future<void> unfollow(String followerId, String followedId) async =>
+      follows.remove((follower: followerId, followed: followedId));
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -167,6 +209,15 @@ class FakeGameRepository implements GameRepository {
 
   @override
   Future<void> cancel(String gameId) async => canceled.add(gameId);
+
+  final scores = <String, (int, int)>{};
+
+  @override
+  Future<void> setScore(
+    String gameId, {
+    required int teamScore,
+    required int opponentScore,
+  }) async => scores[gameId] = (teamScore, opponentScore);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

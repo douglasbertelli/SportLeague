@@ -33,6 +33,16 @@ class GameRepository {
   Future<void> delete(String gameId) =>
       _client.from('games').delete().eq('id', gameId);
 
+  /// Placar lançado por quem marcou, depois do jogo.
+  Future<void> setScore(
+    String gameId, {
+    required int teamScore,
+    required int opponentScore,
+  }) => _client
+      .from('games')
+      .update({'team_score': teamScore, 'opponent_score': opponentScore})
+      .eq('id', gameId);
+
   /// O adversário aceita o amistoso pendente.
   Future<void> accept(String gameId) =>
       _setStatus(gameId, GameStatus.scheduled);

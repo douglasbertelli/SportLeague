@@ -5,12 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../profile/domain/profile.dart';
 import '../../teams/data/team_repository.dart';
+import 'team_dashboard.dart';
 
-/// Boas-vindas com o resumo do perfil e as ações de cada tipo de perfil.
+/// Boas-vindas e as ações de cada tipo de perfil (o administrador vê também o
+/// painel do time ativo).
 class HomeOverview extends ConsumerWidget {
-  const HomeOverview({super.key, required this.profile});
+  const HomeOverview({super.key, required this.profile, this.onOpenGames});
 
   final Profile profile;
+
+  /// Leva à aba Jogos (pendências do dashboard).
+  final VoidCallback? onOpenGames;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,19 +64,16 @@ class HomeOverview extends ConsumerWidget {
           'Olá, ${profile.fullName.split(' ').first}!',
           style: theme.textTheme.headlineSmall,
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            if (profile.role case final role?) Chip(label: Text(role.label)),
-            Chip(label: Text('Plano ${profile.plan.label}')),
-            const Chip(
-              avatar: Icon(Icons.sports_soccer, size: 18),
-              label: Text('Futebol'),
-            ),
-          ],
-        ),
         const SizedBox(height: 24),
+        // O administrador vê o painel do time ativo antes dos atalhos.
+        if (profile.isAdmin) ...[
+          TeamDashboard(onOpenGames: onOpenGames),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('Atalhos', style: theme.textTheme.titleMedium),
+          ),
+        ],
         ...actions,
       ],
     );

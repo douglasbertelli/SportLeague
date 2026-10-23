@@ -6,6 +6,7 @@ import '../../../core/storage/preferences_provider.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../domain/team.dart';
+import '../domain/team_stats.dart';
 
 /// Colunas do time com o local (home_venue) junto.
 const teamColumns = '*, home_venue:venues!teams_home_venue_id_fkey(*)';
@@ -24,6 +25,53 @@ class TeamRepository {
         .order('name');
     return rows.map(Team.fromMap).toList();
   }
+
+  /// Times da plataforma pelo nome, em ordem alfabética (vazio lista os
+  /// primeiros).
+  Future<List<Team>> search(String query) async {
+    // %, _ e \ são curingas do ilike: procurados como texto.
+    final term = query.trim().replaceAllMapped(
+      RegExp(r'[%_\\]'),
+      (match) => '\\${match[0]}',
+    );
+    final rows = await _client
+        .from('teams')
+        .select(teamColumns)
+        .ilike('name', '%$term%')
+        .order('name')
+        .limit(30);
+    return rows.map(Team.fromMap).toList();
+  }
+
+  /// Números e últimos resultados do time (função do banco).
+  Future<TeamStats> stats(String teamId) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'team_profile_stats',
+      params: {'p_team': teamId},
+    );
+    return TeamStats.fromMap(data);
+  }
+
+  /// Se o time [followerId] segue o time [followedId].
+  Future<bool> isFollowing(String followerId, String followedId) async {
+    final row = await _client
+        .from('team_follows')
+        .select('follower_team_id')
+        .eq('follower_team_id', followerId)
+        .eq('followed_team_id', followedId)
+        .maybeSingle();
+    return row != null;
+  }
+
+  Future<void> follow(String followerId, String followedId) => _client
+      .from('team_follows')
+      .insert({'follower_team_id': followerId, 'followed_team_id': followedId});
+
+  Future<void> unfollow(String followerId, String followedId) => _client
+      .from('team_follows')
+      .delete()
+      .eq('follower_team_id', followerId)
+      .eq('followed_team_id', followedId);
 
   /// Qualquer time da plataforma (para o perfil); nulo se não existir mais.
   Future<Team?> fetchById(String teamId) async {
@@ -149,6 +197,19 @@ final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
 final teamByIdProvider = FutureProvider.family<Team?, String>(
   (ref, teamId) => ref.watch(teamRepositoryProvider).fetchById(teamId),
 );
+
+/// Números do perfil de um time.
+final teamStatsProvider = FutureProvider.family<TeamStats, String>(
+  (ref, teamId) => ref.watch(teamRepositoryProvider).stats(teamId),
+);
+
+/// Se o time ativo segue o time do perfil.
+final isFollowingProvider =
+    FutureProvider.family<bool, ({String follower, String followed})>(
+      (ref, pair) => ref
+          .watch(teamRepositoryProvider)
+          .isFollowing(pair.follower, pair.followed),
+    );
 
 final selectedTeamIdProvider =
     NotifierProvider<SelectedTeamIdNotifier, String?>(

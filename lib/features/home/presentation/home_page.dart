@@ -6,6 +6,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../teams/presentation/team_search_page.dart';
 import 'admin_home_page.dart';
 import 'home_overview.dart';
 
@@ -25,6 +26,7 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('SportLeague'),
         actions: [
+          const TeamSearchButton(),
           const ThemeModeButton(),
           IconButton(
             tooltip: 'Editar endereço',

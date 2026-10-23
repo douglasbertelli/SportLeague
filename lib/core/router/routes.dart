@@ -14,6 +14,9 @@ abstract final class Routes {
 
   /// Perfil de um time (capa, contatos e uniformes); recebe o id em `extra`.
   static const teamProfile = '/home/teams/profile';
+
+  /// Pesquisa de times da plataforma.
+  static const teamSearch = '/home/teams/search';
   static const newAthlete = '/home/athletes/new';
 
   /// Recebe o `Athlete` em `extra`.

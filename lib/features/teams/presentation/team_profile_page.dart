@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../games/presentation/game_card.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import 'team_logo.dart';
+import 'team_stats_widgets.dart';
 
-/// Perfil de um time da plataforma, para o adversário: capa, dados, mando,
+/// Perfil público de um time: capa, seguidores (com o botão Seguir),
+/// estatísticas, últimos resultados, próximos jogos, dados, mando,
 /// contatos e as fotos dos uniformes (para saber as cores da camisa).
 class TeamProfilePage extends ConsumerWidget {
   const TeamProfilePage({super.key, required this.teamId});
@@ -129,6 +134,8 @@ class _Profile extends StatelessWidget {
             ],
           ),
         ),
+        _FollowBar(team: team),
+        _StatsSection(teamId: team.id!),
         const SizedBox(height: 8),
         ListTile(
           leading: const Icon(Icons.stadium_outlined),
@@ -139,6 +146,12 @@ class _Profile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.location_city_outlined),
             title: Text(location),
+          ),
+        if (team.homeVenue case final venue?)
+          ListTile(
+            leading: const Icon(Icons.place_outlined),
+            title: Text(venue.name),
+            subtitle: Text(venue.address),
           ),
         if (foundedOn != null)
           ListTile(
@@ -214,6 +227,199 @@ class _Profile extends StatelessWidget {
         ],
       ],
     );
+  }
+}
+
+/// Seguidores, seguindo e o botão Seguir (pelo time ativo). Sem time ativo,
+/// ou no perfil do próprio time ativo, o botão não aparece.
+class _FollowBar extends ConsumerStatefulWidget {
+  const _FollowBar({required this.team});
+
+  final Team team;
+
+  @override
+  ConsumerState<_FollowBar> createState() => _FollowBarState();
+}
+
+class _FollowBarState extends ConsumerState<_FollowBar> {
+  bool _saving = false;
+
+  Future<void> _toggle(Team mine, bool following) async {
+    final pair = (follower: mine.id!, followed: widget.team.id!);
+    final repository = ref.read(teamRepositoryProvider);
+    setState(() => _saving = true);
+    try {
+      await (following
+          ? repository.unfollow(pair.follower, pair.followed)
+          : repository.follow(pair.follower, pair.followed));
+      ref
+        ..invalidate(isFollowingProvider(pair))
+        ..invalidate(teamStatsProvider(widget.team.id!))
+        ..invalidate(teamStatsProvider(mine.id!));
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final stats = ref.watch(teamStatsProvider(widget.team.id!)).value;
+    final mine = ref.watch(selectedTeamProvider).value;
+    final canFollow = mine != null && mine.id != widget.team.id;
+    final following = canFollow
+        ? ref
+              .watch(
+                isFollowingProvider((
+                  follower: mine.id!,
+                  followed: widget.team.id!,
+                )),
+              )
+              .value
+        : null;
+
+    Widget count(int? value, String label) => Semantics(
+      container: true,
+      child: Column(
+        children: [
+          Text(
+            value?.toString() ?? '–',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          // Em tela estreita, os números quebram a linha em vez de empurrar
+          // o botão para fora.
+          Expanded(
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 8,
+              children: [
+                count(stats?.followers, 'Seguidores'),
+                count(stats?.following, 'Seguindo'),
+              ],
+            ),
+          ),
+          if (canFollow)
+            switch (following) {
+              true => OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(120, 44),
+                ),
+                onPressed: _saving ? null : () => _toggle(mine, true),
+                icon: const Icon(Icons.check),
+                label: const Text('Seguindo'),
+              ),
+              false => FilledButton.icon(
+                style: FilledButton.styleFrom(minimumSize: const Size(120, 44)),
+                onPressed: _saving ? null : () => _toggle(mine, false),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Seguir'),
+              ),
+              null => const SizedBox.square(
+                dimension: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            },
+        ],
+      ),
+    );
+  }
+}
+
+/// Estatísticas, últimos resultados e próximos jogos do time.
+class _StatsSection extends ConsumerWidget {
+  const _StatsSection({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return ref
+        .watch(teamStatsProvider(teamId))
+        .when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, _) => TextButton.icon(
+            onPressed: () => ref.invalidate(teamStatsProvider(teamId)),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar os números. Tentar novamente'),
+          ),
+          data: (stats) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _SectionTitle('Estatísticas'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: StatsGrid(stats: stats),
+                ),
+                const _SectionTitle('Últimos resultados'),
+                if (stats.recent.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Nenhum amistoso realizado ainda.'),
+                  ),
+                for (final game in stats.recent)
+                  ListTile(
+                    leading: OutcomeBadge(game: game),
+                    title: Text('${game.isHome ? 'x' : '@'} ${game.opponent}'),
+                    subtitle: Text(
+                      '${formatGameDay(game.scheduledAt)} · '
+                      '${game.isHome ? 'Mandante' : 'Visitante'}',
+                    ),
+                    trailing: Text(
+                      game.hasScore
+                          ? '${game.goalsFor} × ${game.goalsAgainst}'
+                          : 'Sem placar',
+                      style: game.hasScore
+                          ? theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            )
+                          : theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                    ),
+                  ),
+                if (stats.upcoming.isNotEmpty) ...[
+                  const _SectionTitle('Próximos jogos'),
+                  for (final game in stats.upcoming)
+                    ListTile(
+                      leading: const Icon(Icons.event),
+                      title: Text(
+                        '${game.isHome ? 'x' : '@'} ${game.opponent}',
+                      ),
+                      subtitle: Text(
+                        '${formatGameDay(game.scheduledAt)} às '
+                        '${formatGameTime(game.scheduledAt)} · '
+                        '${game.isHome ? 'Mandante' : 'Visitante'}',
+                      ),
+                    ),
+                ],
+              ],
+            );
+          },
+        );
   }
 }
 
