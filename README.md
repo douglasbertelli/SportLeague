@@ -136,6 +136,11 @@ configurado.
      Se quem marcou muda a data ou o
      adversário, volta a ficar pendente.
 
+   - **Perfil → Cor do app**: 28 cores, entre elas dois cinzas e o preto (a do
+     time, por exemplo); o app inteiro,
+     claro e escuro, muda na hora. A escolha fica salva no aparelho, como o
+     modo claro/escuro.
+
    Convites e a home do jogador: próxima etapa.
 
 ## Estrutura

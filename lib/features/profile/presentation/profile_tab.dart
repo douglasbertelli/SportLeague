@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_color_picker.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
@@ -48,6 +49,8 @@ class ProfileTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
+        const Card(child: AppColorTile()),
+        const SizedBox(height: 8),
         Card(
           child: Column(
             children: [

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
-abstract final class AppTheme {
-  static const _seed = Color(0xFF1B8A3A);
+import 'app_colors.dart';
 
+abstract final class AppTheme {
   /// Fonte do app, nos assets (pubspec.yaml).
   static const fontFamily = 'DM Sans';
 
-  static ThemeData light() => _build(Brightness.light);
+  /// Tema claro na cor escolhida pelo usuário (o verde por padrão).
+  static ThemeData light({AppColor? color}) =>
+      _build(Brightness.light, color ?? appColors.first);
 
-  static ThemeData dark() => _build(Brightness.dark);
+  /// Tema escuro na cor escolhida pelo usuário (o verde por padrão).
+  static ThemeData dark({AppColor? color}) =>
+      _build(Brightness.dark, color ?? appColors.first);
 
   /// Cinza dos textos secundários: legível no fundo (contraste AA), mas mais
   /// fraco que os títulos.
@@ -17,13 +21,12 @@ abstract final class AppTheme {
       ? const Color(0xFFA8A8A8)
       : const Color(0xFF616161);
 
-  static ThemeData _build(Brightness brightness) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: _seed,
-      brightness: brightness,
-      // Textos secundários (subtítulos, detalhes) em cinza neutro, sem o tom
-      // verde do tema, para contrastar com os títulos.
-    ).copyWith(onSurfaceVariant: _secondaryText(brightness));
+  static ThemeData _build(Brightness brightness, AppColor color) {
+    // Textos secundários (subtítulos, detalhes) em cinza neutro, sem o tom da
+    // cor do tema, para contrastar com os títulos.
+    final colorScheme = color
+        .scheme(brightness)
+        .copyWith(onSurfaceVariant: _secondaryText(brightness));
     final textTheme = ThemeData(
       brightness: brightness,
       fontFamily: fontFamily,
