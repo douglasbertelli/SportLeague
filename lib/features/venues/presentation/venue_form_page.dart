@@ -8,6 +8,7 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
@@ -155,9 +156,9 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
         if (similar.isNotEmpty) {
           // O botão não fica carregando enquanto o usuário decide.
           setState(() => _loading = false);
-          final choice = await showDialog<_SimilarChoice>(
-            context: context,
-            builder: (_) => _SimilarVenuesDialog(venues: similar),
+          final choice = await showAppSheet<_SimilarChoice>(
+            context,
+            builder: (_) => _SimilarVenuesSheet(venues: similar),
           );
           if (!mounted) return;
           switch (choice) {
@@ -429,49 +430,39 @@ class _CreateAnyway extends _SimilarChoice {
 
 /// "Esse local já existe?": lista os parecidos para usar um deles ou cadastrar
 /// mesmo assim.
-class _SimilarVenuesDialog extends StatelessWidget {
-  const _SimilarVenuesDialog({required this.venues});
+class _SimilarVenuesSheet extends StatelessWidget {
+  const _SimilarVenuesSheet({required this.venues});
 
   final List<Venue> venues;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Esse local já existe?'),
-      contentPadding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Encontramos locais parecidos. Toque em um para usá-lo em vez '
-                'de cadastrar outro.',
-              ),
+    return AppSheet(
+      title: 'Esse local já existe?',
+      message:
+          'Encontramos locais parecidos. Toque em um para usá-lo em vez de '
+          'cadastrar outro.',
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final venue in venues)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: VenuePhoto(venue: venue),
+              title: Text(venue.name),
+              subtitle: Text(venue.address),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).pop(_UseExisting(venue)),
             ),
-            const SizedBox(height: 8),
-            for (final venue in venues)
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                leading: VenuePhoto(venue: venue),
-                title: Text(venue.name),
-                subtitle: Text(venue.address),
-                onTap: () => Navigator.of(context).pop(_UseExisting(venue)),
-              ),
-          ],
-        ),
+        ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Voltar'),
-        ),
-        TextButton(
+        OutlinedButton.icon(
           onPressed: () => Navigator.of(context).pop(const _CreateAnyway()),
-          child: const Text('Cadastrar mesmo assim'),
+          icon: const Icon(Icons.add_location_alt_outlined),
+          label: const Text('Cadastrar mesmo assim'),
         ),
+        const SheetBackButton(label: 'Voltar'),
       ],
     );
   }

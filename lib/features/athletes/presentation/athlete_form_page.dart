@@ -8,6 +8,7 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
@@ -55,6 +56,38 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     _nameController.dispose();
     _numberController.dispose();
     super.dispose();
+  }
+
+  /// Escolha da posição num bottom sheet; "Sem posição" limpa.
+  Future<void> _pickPosition(List<String> positions) async {
+    final choice = await showAppSheet<({String? position})>(
+      context,
+      builder: (context) => AppSheet(
+        title: 'Posição',
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final position in [...positions, null])
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  position == null
+                      ? Icons.remove_circle_outline
+                      : Icons.sports_soccer,
+                ),
+                title: Text(position ?? 'Sem posição'),
+                trailing: position == _position
+                    ? const Icon(Icons.check)
+                    : null,
+                selected: position == _position,
+                onTap: () => Navigator.of(context).pop((position: position)),
+              ),
+          ],
+        ),
+        actions: const [SheetBackButton()],
+      ),
+    );
+    if (choice != null) setState(() => _position = choice.position);
   }
 
   Future<void> _save() async {
@@ -205,19 +238,16 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _position,
-                      decoration: const InputDecoration(
-                        labelText: 'Posição (opcional)',
+                    child: InkWell(
+                      onTap: _loading ? null : () => _pickPosition(positions),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Posição (opcional)',
+                          suffixIcon: Icon(Icons.expand_more),
+                        ),
+                        isEmpty: _position == null,
+                        child: Text(_position ?? ''),
                       ),
-                      items: [
-                        for (final position in positions)
-                          DropdownMenuItem(
-                            value: position,
-                            child: Text(position),
-                          ),
-                      ],
-                      onChanged: (value) => setState(() => _position = value),
                     ),
                   ),
                   const SizedBox(width: 12),

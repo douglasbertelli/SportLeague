@@ -124,9 +124,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: _loading ? null : _forgotPassword,
-            child: const Text('Esqueci minha senha'),
+            icon: const Icon(Icons.lock_reset),
+            label: const Text('Esqueci minha senha'),
           ),
         ),
         const SizedBox(height: 8),

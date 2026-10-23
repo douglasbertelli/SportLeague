@@ -276,6 +276,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
           'O amistoso contra ${game.opponent} irá para Cancelados'
           '${game.opponentTeamId != null ? ' para os dois times' : ''}.',
       confirmLabel: 'Cancelar amistoso',
+      confirmIcon: Icons.event_busy,
       cancelLabel: 'Voltar',
     );
     if (!confirmed) return;
@@ -479,10 +480,11 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       if (widget.game case final game?
           when game.status != GameStatus.canceled) ...[
         const SizedBox(height: 8),
-        TextButton(
+        TextButton.icon(
           style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
           onPressed: _loading ? null : _cancelGame,
-          child: const Text('Cancelar amistoso'),
+          icon: const Icon(Icons.event_busy),
+          label: const Text('Cancelar amistoso'),
         ),
       ],
     ];

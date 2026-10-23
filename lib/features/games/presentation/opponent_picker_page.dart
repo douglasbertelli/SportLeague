@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
@@ -114,9 +115,9 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
       context.pop<PickedOpponent>((opponent: opponent, modality: _modality));
 
   Future<void> _createGuest() async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _GuestTeamDialog(
+    final name = await showAppSheet<String>(
+      context,
+      builder: (_) => _GuestTeamSheet(
         initialName: _searchController.text.trim(),
         modality: _modality,
       ),
@@ -198,9 +199,10 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
               const SizedBox(height: 8),
               if (snapshot.hasError)
                 Center(
-                  child: TextButton(
+                  child: TextButton.icon(
                     onPressed: () => _refresh(_searchController.text),
-                    child: const Text('Erro ao pesquisar. Tentar novamente'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Erro ao pesquisar. Tentar novamente'),
                   ),
                 )
               else if (results == null)
@@ -293,17 +295,17 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// Pede o nome do time fictício. Devolve o nome ou nulo se cancelar.
-class _GuestTeamDialog extends StatefulWidget {
-  const _GuestTeamDialog({required this.initialName, required this.modality});
+class _GuestTeamSheet extends StatefulWidget {
+  const _GuestTeamSheet({required this.initialName, required this.modality});
 
   final String initialName;
   final Modality modality;
 
   @override
-  State<_GuestTeamDialog> createState() => _GuestTeamDialogState();
+  State<_GuestTeamSheet> createState() => _GuestTeamSheetState();
 }
 
-class _GuestTeamDialogState extends State<_GuestTeamDialog> {
+class _GuestTeamSheetState extends State<_GuestTeamSheet> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(text: widget.initialName);
 
@@ -321,38 +323,34 @@ class _GuestTeamDialogState extends State<_GuestTeamDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Criar time fictício'),
-      content: Form(
+    return AppSheet(
+      title: 'Criar time fictício',
+      message:
+          'Para adversários que não estão no SportLeague. Ele fica salvo para '
+          'os próximos jogos de ${widget.modality.label} e só você vê.',
+      body: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Para adversários que não estão no SportLeague. Ele fica salvo '
-              'para os próximos jogos de ${widget.modality.label} e só você vê.',
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nameController,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Nome do time'),
-              textCapitalization: TextCapitalization.words,
-              maxLength: 80,
-              onFieldSubmitted: (_) => _submit(),
-              validator: (value) =>
-                  Validators.name(value, message: 'Informe o nome do time'),
-            ),
-          ],
+        child: TextFormField(
+          controller: _nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nome do time',
+            prefixIcon: Icon(Icons.shield_outlined),
+          ),
+          textCapitalization: TextCapitalization.words,
+          maxLength: 80,
+          onFieldSubmitted: (_) => _submit(),
+          validator: (value) =>
+              Validators.name(value, message: 'Informe o nome do time'),
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.add),
+          label: const Text('Criar'),
         ),
-        TextButton(onPressed: _submit, child: const Text('Criar')),
+        const SheetBackButton(),
       ],
     );
   }

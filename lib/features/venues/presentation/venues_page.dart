@@ -114,9 +114,10 @@ class _VenuesPageState extends ConsumerState<VenuesPage> {
             children: [
               if (snapshot.hasError)
                 Center(
-                  child: TextButton(
+                  child: TextButton.icon(
                     onPressed: _refresh,
-                    child: const Text('Erro ao pesquisar. Tentar novamente'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Erro ao pesquisar. Tentar novamente'),
                   ),
                 )
               else if (venues == null)

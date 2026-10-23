@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/app_sheet.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import 'team_logo.dart';
@@ -20,9 +21,10 @@ class TeamProfilePage extends ConsumerWidget {
       body: team.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(teamByIdProvider(teamId)),
-            child: const Text('Erro ao carregar o time. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar o time. Tentar novamente'),
           ),
         ),
         data: (team) => team == null
@@ -39,15 +41,26 @@ class _Profile extends StatelessWidget {
   final Team team;
 
   void _showImage(BuildContext context, String url, String label) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        clipBehavior: Clip.antiAlias,
-        child: Semantics(
-          label: label,
-          image: true,
-          child: InteractiveViewer(child: Image.network(url)),
+    showAppSheet<void>(
+      context,
+      builder: (context) => AppSheet(
+        title: label,
+        body: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Semantics(
+            label: label,
+            image: true,
+            // Pinça para ampliar.
+            child: InteractiveViewer(
+              child: Image.network(
+                url,
+                errorBuilder: (_, _, _) =>
+                    const Icon(Icons.broken_image_outlined, size: 64),
+              ),
+            ),
+          ),
         ),
+        actions: const [SheetBackButton(label: 'Fechar')],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/utils/error_messages.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
@@ -34,9 +35,9 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
   bool _saving = false;
 
   Future<void> _add(Team team) async {
-    final result = await showDialog<({TimeOfDay time, bool weekly})>(
-      context: context,
-      builder: (_) => _AddSlotDialog(day: _selectedDay),
+    final result = await showAppSheet<({TimeOfDay time, bool weekly})>(
+      context,
+      builder: (_) => _AddSlotSheet(day: _selectedDay),
     );
     if (result == null) return;
 
@@ -89,34 +90,37 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
     DateTime day, {
     required String title,
     bool destructive = false,
-  }) => showDialog<_Scope>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(
-        '${everyWeekday(availability.weekday!)} às '
-        '${_time(availability.startTime!)}. Amistosos já marcados continuam.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(_Scope.allWeeks),
-          child: const Text('Todas as semanas'),
-        ),
-        TextButton(
-          style: destructive
-              ? TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                )
-              : null,
-          onPressed: () => Navigator.of(context).pop(_Scope.thisDay),
-          child: Text('Só em ${formatGameDay(day)}'),
-        ),
-      ],
-    ),
+  }) => showAppSheet<_Scope>(
+    context,
+    builder: (context) {
+      final colors = Theme.of(context).colorScheme;
+      return AppSheet(
+        title: title,
+        message:
+            '${everyWeekday(availability.weekday!)} às '
+            '${_time(availability.startTime!)}. Amistosos já marcados '
+            'continuam.',
+        actions: [
+          FilledButton.icon(
+            style: destructive
+                ? FilledButton.styleFrom(
+                    backgroundColor: colors.error,
+                    foregroundColor: colors.onError,
+                  )
+                : null,
+            onPressed: () => Navigator.of(context).pop(_Scope.thisDay),
+            icon: const Icon(Icons.today),
+            label: Text('Só em ${formatGameDay(day)}'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pop(_Scope.allWeeks),
+            icon: const Icon(Icons.repeat),
+            label: const Text('Todas as semanas'),
+          ),
+          const SheetBackButton(),
+        ],
+      );
+    },
   );
 
   /// Remover um horário no dia selecionado: o avulso sai de vez; o recorrente
@@ -145,11 +149,10 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
   Future<void> _editOnDay(Team team, Availability availability) async {
     final day = _selectedDay;
     final current = availability.at(day);
-    final time = await _showTimePicker24h(
+    final time = await pickTimeSheet(
       context,
-      TimeOfDay.fromDateTime(current),
-      // Curto: o modo digitado tem altura fixa e o texto não pode quebrar.
-      helpText: 'Novo horário',
+      initialTime: TimeOfDay.fromDateTime(current),
+      title: 'Novo horário em ${formatGameDay(day)}',
     );
     if (time == null || !mounted) return;
     final moved = DateTime(
@@ -248,9 +251,10 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
       body: availability.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(teamAvailabilityProvider(team.id!)),
-            child: const Text('Erro ao carregar os horários. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar os horários. Tentar novamente'),
           ),
         ),
         data: (slots) => _content(context, team, slots),
@@ -483,22 +487,6 @@ String _gameLine(Game game, Team team) {
       : 'Jogo contra $opponent';
 }
 
-/// Seletor de horário sempre em 24 horas, como os horários do app. Sem isso,
-/// com o aparelho em 12 horas, digitar "19" seria recusado.
-Future<TimeOfDay?> _showTimePicker24h(
-  BuildContext context,
-  TimeOfDay initialTime, {
-  String? helpText,
-}) => showTimePicker(
-  context: context,
-  initialTime: initialTime,
-  helpText: helpText,
-  builder: (context, child) => MediaQuery(
-    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-    child: child!,
-  ),
-);
-
 /// "A partir de 24/10/2026 · Sem jogo em 31/10/2026", só com os dias pulados
 /// que ainda vão acontecer.
 Widget? _weeklyDetails(Availability slot) {
@@ -535,29 +523,33 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// Escolhe o horário do dia e se ele se repete toda semana.
-class _AddSlotDialog extends StatefulWidget {
-  const _AddSlotDialog({required this.day});
+class _AddSlotSheet extends StatefulWidget {
+  const _AddSlotSheet({required this.day});
 
   final DateTime day;
 
   @override
-  State<_AddSlotDialog> createState() => _AddSlotDialogState();
+  State<_AddSlotSheet> createState() => _AddSlotSheetState();
 }
 
-class _AddSlotDialogState extends State<_AddSlotDialog> {
+class _AddSlotSheetState extends State<_AddSlotSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 15, minute: 0);
   bool _weekly = false;
 
   Future<void> _pickTime() async {
-    final time = await _showTimePicker24h(context, _time);
+    final time = await pickTimeSheet(
+      context,
+      initialTime: _time,
+      title: 'Horário do jogo',
+    );
     if (time != null) setState(() => _time = time);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Adicionar horário · ${formatGameDay(widget.day)}'),
-      content: Column(
+    return AppSheet(
+      title: 'Adicionar horário · ${formatGameDay(widget.day)}',
+      body: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -565,13 +557,16 @@ class _AddSlotDialogState extends State<_AddSlotDialog> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.schedule),
             title: const Text('Horário do jogo'),
-            trailing: TextButton(
+            trailing: TextButton.icon(
               onPressed: _pickTime,
-              child: Text(_time.format(context)),
+              icon: const Icon(Icons.edit_outlined),
+              label: Text(_time.format(context)),
             ),
+            onTap: _pickTime,
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.repeat),
             value: _weekly,
             onChanged: (value) => setState(() => _weekly = value),
             title: const Text('Repetir toda semana'),
@@ -580,15 +575,13 @@ class _AddSlotDialogState extends State<_AddSlotDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
+        FilledButton.icon(
           onPressed: () =>
               Navigator.of(context).pop((time: _time, weekly: _weekly)),
-          child: const Text('Adicionar'),
+          icon: const Icon(Icons.add),
+          label: const Text('Adicionar'),
         ),
+        const SheetBackButton(),
       ],
     );
   }

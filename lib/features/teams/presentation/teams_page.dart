@@ -26,9 +26,10 @@ class TeamsPage extends ConsumerWidget {
       body: teams.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(myTeamsProvider),
-            child: const Text('Erro ao carregar os times. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar os times. Tentar novamente'),
           ),
         ),
         data: (teams) => teams.isEmpty
