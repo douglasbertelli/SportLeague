@@ -7,6 +7,9 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../domain/team.dart';
 
+/// Colunas do time com o local (home_venue) junto.
+const teamColumns = '*, home_venue:venues!teams_home_venue_id_fkey(*)';
+
 class TeamRepository {
   TeamRepository(this._client);
 
@@ -16,17 +19,27 @@ class TeamRepository {
   Future<List<Team>> fetchByOwner(String ownerId) async {
     final rows = await _client
         .from('teams')
-        .select()
+        .select(teamColumns)
         .eq('owner_id', ownerId)
         .order('name');
     return rows.map(Team.fromMap).toList();
+  }
+
+  /// Qualquer time da plataforma (para o perfil); nulo se não existir mais.
+  Future<Team?> fetchById(String teamId) async {
+    final row = await _client
+        .from('teams')
+        .select(teamColumns)
+        .eq('id', teamId)
+        .maybeSingle();
+    return row == null ? null : Team.fromMap(row);
   }
 
   Future<Team> create(Team team) async {
     final row = await _client
         .from('teams')
         .insert(team.toMap())
-        .select()
+        .select(teamColumns)
         .single();
     return Team.fromMap(row);
   }
@@ -51,6 +64,7 @@ class TeamRepository {
       await _client.storage.from(athletePhotosBucket).remove(photoPaths);
     }
     if (team.logoUrl != null) await removeLogo(team);
+    await removeImages([?team.coverUrl, ...team.kitUrls]);
   }
 
   static const _logoBucket = 'team-logos';
@@ -76,6 +90,48 @@ class TeamRepository {
 
   Future<void> removeLogo(Team team) =>
       _client.storage.from(_logoBucket).remove([_logoPath(team)]);
+
+  /// Envia a capa (substituindo a anterior) e retorna a URL pública.
+  Future<String> uploadCover(Team team, PickedImage image) =>
+      _upload('${_logoPath(team)}-cover', image);
+
+  /// Envia uma foto de uniforme num arquivo novo e retorna a URL pública.
+  Future<String> uploadKit(Team team, PickedImage image) => _upload(
+    '${_logoPath(team)}-kit-${DateTime.now().microsecondsSinceEpoch}',
+    image,
+  );
+
+  Future<String> _upload(String path, PickedImage image) async {
+    final storage = _client.storage.from(_logoBucket);
+    await storage.uploadBinary(
+      path,
+      image.bytes,
+      fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+    );
+    return storage.getPublicUrl(
+      path,
+      cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+
+  /// Remove do Storage as imagens das [urls] públicas (capa, uniformes).
+  Future<void> removeImages(List<String> urls) async {
+    final paths = [for (final url in urls) ?_pathOf(url)];
+    if (paths.isNotEmpty) {
+      await _client.storage.from(_logoBucket).remove(paths);
+    }
+  }
+
+  /// Caminho no bucket a partir da URL pública: `.../team-logos/dono/arquivo?t=1`
+  /// vira `dono/arquivo`.
+  static String? _pathOf(String url) {
+    const marker = '/$_logoBucket/';
+    final start = url.indexOf(marker);
+    if (start < 0) return null;
+    return Uri.decodeComponent(
+      url.substring(start + marker.length).split('?').first,
+    );
+  }
 }
 
 final teamRepositoryProvider = Provider<TeamRepository>(
@@ -88,6 +144,11 @@ final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
   if (userId == null) return const [];
   return ref.watch(teamRepositoryProvider).fetchByOwner(userId);
 });
+
+/// Um time pelo id, para o perfil.
+final teamByIdProvider = FutureProvider.family<Team?, String>(
+  (ref, teamId) => ref.watch(teamRepositoryProvider).fetchById(teamId),
+);
 
 final selectedTeamIdProvider =
     NotifierProvider<SelectedTeamIdNotifier, String?>(

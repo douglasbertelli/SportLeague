@@ -163,6 +163,11 @@ class Game {
   String? opponentLogoFor(String viewerTeamId) =>
       isHostedBy(viewerTeamId) ? opponentLogoUrl : hostLogoUrl;
 
+  /// Id do outro time, do ponto de vista de [viewerTeamId] (nulo para time
+  /// fictício ou excluído).
+  String? opponentTeamIdFor(String viewerTeamId) =>
+      isHostedBy(viewerTeamId) ? opponentTeamId : teamId;
+
   /// Cidade do outro time, do ponto de vista de [viewerTeamId].
   String? opponentCityFor(String viewerTeamId) =>
       isHostedBy(viewerTeamId) ? opponentCity : hostCity;

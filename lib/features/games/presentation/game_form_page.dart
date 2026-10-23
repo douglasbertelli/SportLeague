@@ -32,6 +32,9 @@ class GameFormPage extends ConsumerStatefulWidget {
 class _GameFormPageState extends ConsumerState<GameFormPage> {
   final _formKey = GlobalKey<FormState>();
   late Venue? _venue = widget.game?.venue;
+
+  /// Se o local foi escolhido (ou o jogo já existia): aí não muda sozinho.
+  late bool _venueChosen = widget.game != null;
   late DateTime? _scheduledAt = widget.game?.scheduledAt;
   late Modality? _modality = widget.game?.modality;
 
@@ -52,9 +55,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
 
   bool get _isEditing => widget.game != null;
 
+  /// Local que vale: o escolhido ou, num amistoso novo, o local de quem joga
+  /// em casa — o do próprio time como mandante, o do adversário da
+  /// plataforma como visitante.
+  Venue? _effectiveVenue(Team team) {
+    if (_venueChosen) return _venue;
+    return switch ((_effectiveHostIsHome(team), _opponent)) {
+      (true, _) => team.homeVenue,
+      (false, RegisteredOpponent(team: final rival)) => rival.homeVenue,
+      _ => null,
+    };
+  }
+
   Future<void> _pickVenue() async {
     final venue = await context.push<Venue>(Routes.pickVenue);
-    if (venue != null) setState(() => _venue = venue);
+    if (venue != null) {
+      setState(() {
+        _venue = venue;
+        _venueChosen = true;
+      });
+    }
   }
 
   /// Time do jogo: o do jogo em edição ou o time ativo.
@@ -74,6 +94,51 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       _modality ??
       (team.modalities.length == 1 ? team.modalities.single : null);
 
+  /// Se o time pode jogar como mandante ([home]) ou visitante: ele aceita esse
+  /// lado e o adversário da plataforma aceita o oposto. Contra time fictício
+  /// ou de jogo antigo (sem os dados do adversário), só o time conta; o banco
+  /// confere o resto.
+  bool _canPlay(Team team, {required bool home}) =>
+      team.playsAs.accepts(home: home) &&
+      switch (_opponent) {
+        RegisteredOpponent(team: final rival) => rival.playsAs.accepts(
+          home: !home,
+        ),
+        _ => true,
+      };
+
+  /// Mando que vale: o escolhido ou, se ele não é possível, o outro. Nulo se
+  /// nenhum é possível (os dois times só mandantes ou só visitantes).
+  bool? _effectiveHostIsHome(Team team) => switch ((
+    _canPlay(team, home: _hostIsHome),
+    _canPlay(team, home: !_hostIsHome),
+  )) {
+    (true, _) => _hostIsHome,
+    (false, true) => !_hostIsHome,
+    _ => null,
+  };
+
+  /// Por que o mando está limitado (ou impossível, com [hostIsHome] nulo).
+  String? _sidesHint(Team team, bool? hostIsHome) {
+    final rival = switch (_opponent) {
+      RegisteredOpponent(team: final rival) => rival,
+      _ => null,
+    };
+    if (hostIsHome == null) {
+      return 'Os dois times só jogam como '
+          '${team.playsAs == PlaysAs.home ? 'mandante' : 'visitante'}. '
+          'Escolha outro adversário.';
+    }
+    if (team.playsAs != PlaysAs.both) {
+      return 'O ${team.name} só joga como ${team.playsAs.label.toLowerCase()}.';
+    }
+    if (rival != null && rival.playsAs != PlaysAs.both) {
+      return 'O ${rival.name} só joga como '
+          '${rival.playsAs.label.toLowerCase()}.';
+    }
+    return null;
+  }
+
   Future<void> _pickOpponent(Team team) async {
     final picked = await context.push<PickedOpponent>(
       Routes.pickOpponent,
@@ -81,6 +146,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
         teamId: team.id!,
         modalities: team.modalities,
         modality: _effectiveModality(team),
+        playsAs: team.playsAs,
       ),
     );
     if (picked != null) {
@@ -134,13 +200,15 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
-    final venue = _venue;
+    final venue = _effectiveVenue(team);
+    final hostIsHome = _effectiveHostIsHome(team);
     if (_loading ||
         !valid ||
         modality == null ||
         opponent == null ||
         scheduledAt == null ||
-        venue == null) {
+        venue == null ||
+        hostIsHome == null) {
       return;
     }
 
@@ -159,7 +227,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
         RegisteredOpponent() => null,
       },
       modality: modality,
-      hostIsHome: _hostIsHome,
+      hostIsHome: hostIsHome,
       scheduledAt: scheduledAt,
       venueId: venue.id,
       // O texto antigo do local dá lugar ao local cadastrado.
@@ -264,7 +332,8 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
     final modality = _effectiveModality(team);
     final opponent = _opponent;
     final scheduledAt = _scheduledAt;
-    final venue = _venue;
+    final venue = _effectiveVenue(team);
+    final hostIsHome = _effectiveHostIsHome(team);
 
     return [
       Form(
@@ -275,22 +344,39 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
             Text('Jogar como', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: true,
-                  label: Text('Mandante'),
-                  icon: Icon(Icons.stadium_outlined),
+                  label: const Text('Mandante'),
+                  icon: const Icon(Icons.stadium_outlined),
+                  enabled: _canPlay(team, home: true),
                 ),
                 ButtonSegment(
                   value: false,
-                  label: Text('Visitante'),
-                  icon: Icon(Icons.directions_bus_outlined),
+                  label: const Text('Visitante'),
+                  icon: const Icon(Icons.directions_bus_outlined),
+                  enabled: _canPlay(team, home: false),
                 ),
               ],
-              selected: {_hostIsHome},
-              onSelectionChanged: (selection) =>
-                  setState(() => _hostIsHome = selection.first),
+              selected: {?hostIsHome},
+              emptySelectionAllowed: true,
+              onSelectionChanged: (selection) {
+                if (selection.firstOrNull case final home?) {
+                  setState(() => _hostIsHome = home);
+                }
+              },
             ),
+            if (_sidesHint(team, hostIsHome) case final hint?) ...[
+              const SizedBox(height: 4),
+              Text(
+                hint,
+                style: hostIsHome == null
+                    ? errorStyle
+                    : theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+              ),
+            ],
             const SizedBox(height: 16),
             InkWell(
               onTap: _loading ? null : () => _pickOpponent(team),
@@ -349,6 +435,10 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
                 decoration: InputDecoration(
                   labelText: 'Local',
                   helperText: switch ((venue, widget.game?.location)) {
+                    // Preenchido sozinho: diz de quem é o local.
+                    (final venue?, _) when !_venueChosen =>
+                      '${venue.address} · local do '
+                          '${venue == team.homeVenue ? team.name : opponent?.name}',
                     (final venue?, _) => venue.address,
                     // Jogo antigo: mostra o texto digitado antes.
                     (null, final old?) => 'Antes: $old',

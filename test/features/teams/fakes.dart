@@ -63,6 +63,31 @@ class FakeTeamRepository implements TeamRepository {
     return 'https://storage.test/team-logos/${team.ownerId}/${team.id}';
   }
 
+  final uploadedCovers = <String, PickedImage>{};
+  final uploadedKits = <PickedImage>[];
+  final removedImages = <String>[];
+
+  @override
+  Future<String> uploadCover(Team team, PickedImage image) async {
+    uploadedCovers[team.id!] = image;
+    return 'https://storage.test/team-logos/${team.ownerId}/${team.id}-cover';
+  }
+
+  @override
+  Future<String> uploadKit(Team team, PickedImage image) async {
+    uploadedKits.add(image);
+    return 'https://storage.test/team-logos/${team.ownerId}/${team.id}-kit-'
+        '${uploadedKits.length}';
+  }
+
+  @override
+  Future<void> removeImages(List<String> urls) async =>
+      removedImages.addAll(urls);
+
+  @override
+  Future<Team?> fetchById(String teamId) async =>
+      teams.where((team) => team.id == teamId).firstOrNull;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

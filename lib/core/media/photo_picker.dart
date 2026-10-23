@@ -5,6 +5,79 @@ import 'package:image_picker/image_picker.dart';
 import '../widgets/confirm_dialog.dart';
 import 'picked_image.dart';
 
+/// Resposta de [chooseImage].
+sealed class ImageChoice {
+  const ImageChoice();
+}
+
+class ImagePicked extends ImageChoice {
+  const ImagePicked(this.image);
+
+  final PickedImage image;
+}
+
+class ImageRemoved extends ImageChoice {
+  const ImageRemoved();
+}
+
+/// Pergunta de onde vem a imagem (galeria, câmera ou, com [canRemove],
+/// remover a atual) e a abre. Nulo se o usuário desistir ou a imagem não
+/// abrir (nesse caso avisa).
+Future<ImageChoice?> chooseImage(
+  BuildContext context,
+  WidgetRef ref, {
+  required String noun,
+  required bool canRemove,
+  double maxSize = smallImageSize,
+}) async {
+  final choice = await showModalBottomSheet<Object>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Escolher da galeria'),
+            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Tirar foto'),
+            onTap: () => Navigator.of(context).pop(ImageSource.camera),
+          ),
+          if (canRemove)
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text('Remover $noun'),
+              onTap: () => Navigator.of(context).pop(const ImageRemoved()),
+            ),
+        ],
+      ),
+    ),
+  );
+  switch (choice) {
+    case final ImageRemoved removed:
+      return removed;
+    case final ImageSource source:
+      try {
+        final picked = await ref.read(pickImageProvider)(
+          source,
+          maxSize: maxSize,
+        );
+        return picked == null ? null : ImagePicked(picked);
+      } catch (_) {
+        if (context.mounted) {
+          showErrorSnackBar(context, 'Não foi possível abrir a imagem.');
+        }
+        return null;
+      }
+    default:
+      return null;
+  }
+}
+
 /// Foto em destaque no topo de um formulário (logo do time, foto do atleta).
 /// Ao tocar, escolhe da galeria, tira uma foto ou remove a atual.
 class PhotoPicker extends ConsumerWidget {
@@ -18,6 +91,7 @@ class PhotoPicker extends ConsumerWidget {
     required this.onRemoved,
     this.enabled = true,
     this.errorText,
+    this.maxSize = smallImageSize,
   });
 
   /// "logo", "foto": usado nos textos ("Adicionar logo", "Remover foto").
@@ -32,47 +106,23 @@ class PhotoPicker extends ConsumerWidget {
   final bool enabled;
   final String? errorText;
 
-  Future<void> _choose(BuildContext context, WidgetRef ref) async {
-    final hasPhoto = image != null || url != null;
-    final source = await showModalBottomSheet<ImageSource?>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher da galeria'),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Tirar foto'),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
-            ),
-            if (hasPhoto)
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: Text('Remover $noun'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onRemoved();
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
+  /// Lado maior da imagem enviada.
+  final double maxSize;
 
-    try {
-      final picked = await ref.read(pickImageProvider)(source);
-      if (picked != null) onPicked(picked);
-    } catch (_) {
-      if (context.mounted) {
-        showErrorSnackBar(context, 'Não foi possível abrir a imagem.');
-      }
+  Future<void> _choose(BuildContext context, WidgetRef ref) async {
+    switch (await chooseImage(
+      context,
+      ref,
+      noun: noun,
+      canRemove: image != null || url != null,
+      maxSize: maxSize,
+    )) {
+      case ImagePicked(:final image):
+        onPicked(image);
+      case ImageRemoved():
+        onRemoved();
+      case null:
+        break;
     }
   }
 

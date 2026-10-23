@@ -12,20 +12,33 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../address/data/zip_code_service.dart';
+import '../../teams/data/team_repository.dart';
+import '../../teams/domain/team.dart';
 import '../data/venue_repository.dart';
 import '../domain/venue.dart';
 import 'venue_photo.dart';
+
+/// O que a rota do cadastro de local recebe em `extra`.
+typedef NewVenueArgs = ({String name, bool offerTeamLink});
 
 /// Cadastra um local ou edita um que o usuário cadastrou. Antes de cadastrar,
 /// sugere os locais parecidos que já existem. Fecha devolvendo o [Venue]
 /// salvo ou o existente escolhido.
 class VenueFormPage extends ConsumerStatefulWidget {
-  const VenueFormPage({super.key, this.venue, this.initialName});
+  const VenueFormPage({
+    super.key,
+    this.venue,
+    this.initialName,
+    this.offerTeamLink = true,
+  });
 
   final Venue? venue;
 
   /// Nome digitado na pesquisa, para não precisar digitar de novo.
   final String? initialName;
+
+  /// Mostra "Local do time" no cadastro.
+  final bool offerTeamLink;
 
   @override
   ConsumerState<VenueFormPage> createState() => _VenueFormPageState();
@@ -63,6 +76,9 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
   bool _removePhoto = false;
   bool _loading = false;
   bool _searchingZipCode = false;
+
+  /// Escolha do usuário em "Local do time"; nulo segue o padrão.
+  bool? _linkTeamChoice;
 
   bool get _isEditing => widget.venue != null;
 
@@ -148,7 +164,8 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
             case null:
               return;
             case _UseExisting(:final venue):
-              context.pop(venue);
+              await _linkToTeam(venue);
+              if (mounted) context.pop(venue);
               return;
             case _CreateAnyway():
               setState(() => _loading = true);
@@ -177,6 +194,7 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
           // órfão no Storage.
         }
       }
+      if (!_isEditing) await _linkToTeam(_saved!);
       if (mounted) context.pop(_saved);
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
@@ -184,6 +202,20 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  /// Com a opção marcada, o local passa a ser o do time ativo e vem
+  /// preenchido nos próximos amistosos.
+  Future<void> _linkToTeam(Venue venue) async {
+    final team = ref.read(selectedTeamProvider).value;
+    if (!widget.offerTeamLink || team == null || !_linkTeam(team)) return;
+    await ref
+        .read(teamRepositoryProvider)
+        .update(team.copyWith(homeVenue: venue));
+    ref.invalidate(myTeamsProvider);
+  }
+
+  /// Marcado por padrão quando o time ainda não tem local.
+  bool _linkTeam(Team team) => _linkTeamChoice ?? team.homeVenue == null;
 
   Future<void> _delete() async {
     final venue = widget.venue!;
@@ -227,6 +259,7 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
             image: _newPhoto,
             url: _removePhoto ? null : _saved?.photoUrl,
             placeholderIcon: Icons.place_outlined,
+            maxSize: largeImageSize,
             enabled: !_loading,
             onPicked: (image) => setState(() {
               _newPhoto = image;
@@ -349,6 +382,22 @@ class _VenueFormPageState extends ConsumerState<VenueFormPage> {
                   ),
                 ],
               ),
+              // Só no cadastro: o local passa a ser o do time ativo.
+              if (!_isEditing && widget.offerTeamLink)
+                if (ref.watch(selectedTeamProvider).value case final team?)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _linkTeam(team),
+                    onChanged: _loading
+                        ? null
+                        : (value) => setState(() => _linkTeamChoice = value),
+                    title: Text('Local do ${team.name}'),
+                    subtitle: Text(
+                      team.homeVenue == null
+                          ? 'Vem preenchido ao marcar amistoso como mandante'
+                          : 'Substitui ${team.homeVenue!.name}',
+                    ),
+                  ),
             ],
           ),
         ),
