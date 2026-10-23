@@ -41,9 +41,10 @@ class HomePage extends ConsumerWidget {
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(currentProfileProvider),
-            child: const Text('Erro ao carregar o perfil. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar o perfil. Tentar novamente'),
           ),
         ),
         data: (profile) => profile == null

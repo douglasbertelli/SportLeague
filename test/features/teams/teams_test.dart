@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -440,7 +441,7 @@ void main() {
       await tapVisible(tester, 'Visitante');
       expect(find.text(PlaysAs.away.description), findsOneWidget);
       await tapVisible(tester, 'Data de fundação');
-      await tester.tap(find.text('OK'));
+      await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       await tester.enterText(field('Cidade'), 'Campinas');
       await tester.enterText(field('UF'), 'sp');
@@ -702,9 +703,12 @@ void main() {
         find.textContaining('Aguardando Vila Nova aceitar'),
         findsOneWidget,
       );
-      // Quem marcou não aceita o próprio amistoso: edita ou cancela.
+      // Quem marcou não aceita o próprio amistoso: edita ou cancela. O menu
+      // abre num bottom sheet, com ícones.
       await tester.tap(find.byTooltip('Ações do amistoso'));
       await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
       expect(find.text('Aceitar'), findsNothing);
       expect(find.text('Editar'), findsOneWidget);
       expect(find.text('Cancelar amistoso'), findsOneWidget);
@@ -774,7 +778,12 @@ void main() {
       await tester.tap(find.widgetWithText(OutlinedButton, 'Recusar').last);
       await tester.pumpAndSettle();
       expect(find.text('Recusar amistoso?'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Recusar'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Recusar'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(games.canceled, ['g2']);
     });
@@ -820,7 +829,12 @@ void main() {
       expect(find.text('Editar'), findsNothing);
       await tester.tap(find.text('Cancelar amistoso'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Cancelar amistoso'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Cancelar amistoso'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(games.canceled, ['g1']);
     });
@@ -1590,25 +1604,22 @@ void main() {
       await tester.drag(find.text('15:00'), const Offset(0, -300));
       await tester.pumpAndSettle();
 
+      // O horário vem de um bottom sheet com rolagem (24 horas).
       Future<void> pickTime(String hour, String minute) async {
-        await tester.tap(find.byIcon(Icons.keyboard_outlined));
-        await tester.pumpAndSettle();
-        final fields = find.descendant(
-          of: find.byType(Dialog),
-          matching: find.byType(TextField),
-        );
-        await tester.enterText(fields.at(0), hour);
-        await tester.pump();
-        await tester.enterText(fields.at(1), minute);
-        await tester.pump();
-        await tester.tap(find.text('OK'));
+        expect(find.byType(BottomSheet), findsOneWidget);
+        tester
+            .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
+            .onDateTimeChanged(
+              DateTime(2000, 1, 1, int.parse(hour), int.parse(minute)),
+            );
+        await tester.tap(find.text('Confirmar'));
         await tester.pumpAndSettle();
       }
 
       // Avulso: muda o horário direto.
       await tester.tap(find.byTooltip('Editar horário').last);
       await tester.pumpAndSettle();
-      expect(find.text('Novo horário'), findsOneWidget);
+      expect(find.text('Novo horário em 24/10/2026'), findsOneWidget);
       await pickTime('19', '30');
       expect(availability.updated.single.id, 's1');
       expect(
@@ -1908,7 +1919,7 @@ void main() {
       await tapVisible(
         tester,
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(BottomSheet),
           matching: find.text('Arena Society Central'),
         ),
       );

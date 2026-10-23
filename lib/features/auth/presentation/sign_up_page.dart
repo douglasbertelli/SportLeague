@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../data/auth_repository.dart';
@@ -46,7 +47,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           );
       if (!mounted) return;
       if (needsConfirmation) {
-        await _showConfirmEmailDialog();
+        await _showConfirmEmailSheet();
         if (mounted) context.pop();
       }
       // Com sessão ativa, o router leva à escolha do tipo de perfil.
@@ -59,18 +60,24 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     }
   }
 
-  Future<void> _showConfirmEmailDialog() => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Confirme seu e-mail'),
-      content: Text(
-        'Enviamos um link de confirmação para ${_emailController.text.trim()}. '
-        'Depois de confirmar, faça login para continuar.',
+  Future<void> _showConfirmEmailSheet() => showAppSheet<void>(
+    context,
+    builder: (context) => AppSheet(
+      title: 'Confirme seu e-mail',
+      message:
+          'Enviamos um link de confirmação para '
+          '${_emailController.text.trim()}. Depois de confirmar, faça login '
+          'para continuar.',
+      body: Icon(
+        Icons.mark_email_read_outlined,
+        size: 64,
+        color: Theme.of(context).colorScheme.primary,
       ),
       actions: [
-        TextButton(
+        FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('OK'),
+          icon: const Icon(Icons.check),
+          label: const Text('Entendi'),
         ),
       ],
     ),

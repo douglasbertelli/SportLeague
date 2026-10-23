@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_sheet.dart';
+
 /// Pede confirmação antes de uma exclusão. Retorna `true` se confirmada.
 Future<bool> confirmDelete(
   BuildContext context, {
@@ -10,36 +12,44 @@ Future<bool> confirmDelete(
   title: title,
   message: message,
   confirmLabel: 'Excluir',
+  confirmIcon: Icons.delete_outline,
 );
 
-/// Pede confirmação antes de uma ação que não dá para desfazer. Retorna `true`
-/// se confirmada.
+/// Pede confirmação (num bottom sheet) antes de uma ação que não dá para
+/// desfazer. Retorna `true` se confirmada.
 Future<bool> confirmAction(
   BuildContext context, {
   required String title,
   required String message,
   required String confirmLabel,
+  IconData confirmIcon = Icons.check,
   String cancelLabel = 'Cancelar',
 }) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(cancelLabel),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.error,
+  final confirmed = await showAppSheet<bool>(
+    context,
+    builder: (context) {
+      final colors = Theme.of(context).colorScheme;
+      return AppSheet(
+        title: title,
+        message: message,
+        actions: [
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.error,
+              foregroundColor: colors.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: Icon(confirmIcon),
+            label: Text(confirmLabel),
           ),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(confirmLabel),
-        ),
-      ],
-    ),
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pop(false),
+            icon: const Icon(Icons.arrow_back),
+            label: Text(cancelLabel),
+          ),
+        ],
+      );
+    },
   );
   return confirmed ?? false;
 }

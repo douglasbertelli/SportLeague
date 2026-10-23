@@ -83,11 +83,12 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
       appBar: AppBar(
         title: const Text('Escolha seu perfil'),
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: _loading
                 ? null
                 : () => ref.read(authRepositoryProvider).signOut(),
-            child: const Text('Sair'),
+            icon: const Icon(Icons.logout),
+            label: const Text('Sair'),
           ),
         ],
       ),

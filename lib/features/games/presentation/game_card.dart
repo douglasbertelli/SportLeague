@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/team_logo.dart';
@@ -66,6 +67,49 @@ class _GameCardState extends ConsumerState<GameCard> {
     };
   }
 
+  /// Ações do ⋮ num bottom sheet, cada uma com ícone.
+  Future<void> _showActions(List<_GameAction> actions) async {
+    final opponentName = _game.opponentNameFor(widget.viewerTeamId);
+    final action = await showAppSheet<_GameAction>(
+      context,
+      builder: (context) {
+        final colors = Theme.of(context).colorScheme;
+        return AppSheet(
+          title: 'Amistoso contra $opponentName',
+          message:
+              '${formatGameDay(_game.scheduledAt)} às '
+              '${formatGameTime(_game.scheduledAt)}',
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final action in actions)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(switch (action) {
+                    _GameAction.edit => Icons.edit_outlined,
+                    _GameAction.accept => Icons.check_circle_outline,
+                    _GameAction.decline => Icons.close,
+                    _GameAction.cancel => Icons.event_busy,
+                  }),
+                  iconColor: action == _GameAction.cancel ? colors.error : null,
+                  textColor: action == _GameAction.cancel ? colors.error : null,
+                  title: Text(switch (action) {
+                    _GameAction.edit => 'Editar',
+                    _GameAction.accept => 'Aceitar',
+                    _GameAction.decline => 'Recusar',
+                    _GameAction.cancel => 'Cancelar amistoso',
+                  }),
+                  onTap: () => Navigator.of(context).pop(action),
+                ),
+            ],
+          ),
+          actions: const [SheetBackButton(label: 'Fechar')],
+        );
+      },
+    );
+    if (action != null && mounted) await _run(action);
+  }
+
   Future<void> _run(_GameAction action) async {
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
@@ -84,6 +128,7 @@ class _GameCardState extends ConsumerState<GameCard> {
             : 'O amistoso contra $opponentName será cancelado'
                   '${_game.opponentTeamId != null ? ' para os dois times' : ''}.',
         confirmLabel: decline ? 'Recusar' : 'Cancelar amistoso',
+        confirmIcon: decline ? Icons.close : Icons.event_busy,
         cancelLabel: 'Voltar',
       );
       if (!confirmed) return;
@@ -317,22 +362,10 @@ class _GameCardState extends ConsumerState<GameCard> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : PopupMenuButton<_GameAction>(
+                    : IconButton(
                         tooltip: 'Ações do amistoso',
                         icon: Icon(Icons.more_vert, color: colors.primary),
-                        onSelected: _run,
-                        itemBuilder: (_) => [
-                          for (final action in actions)
-                            PopupMenuItem(
-                              value: action,
-                              child: Text(switch (action) {
-                                _GameAction.edit => 'Editar',
-                                _GameAction.accept => 'Aceitar',
-                                _GameAction.decline => 'Recusar',
-                                _GameAction.cancel => 'Cancelar amistoso',
-                              }),
-                            ),
-                        ],
+                        onPressed: () => _showActions(actions),
                       ),
               ),
             ),

@@ -8,6 +8,7 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
@@ -133,12 +134,12 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
 
   Future<void> _pickFoundedOn() async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final date = await showDatePicker(
-      context: context,
+    final date = await pickDateSheet(
+      context,
       initialDate: _foundedOn ?? today,
       firstDate: DateTime(1900),
       lastDate: today,
-      helpText: 'Data de fundação',
+      title: 'Data de fundação',
     );
     if (date != null) setState(() => _foundedOn = date);
   }
@@ -426,9 +427,10 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
         // Na edição dá para salvar de qualquer etapa.
         if (_isEditing && !isLast) ...[
           const SizedBox(height: 8),
-          TextButton(
+          TextButton.icon(
             onPressed: _loading ? null : _save,
-            child: const Text('Salvar'),
+            icon: const Icon(Icons.save_outlined),
+            label: const Text('Salvar'),
           ),
         ],
       ],

@@ -36,16 +36,18 @@ class SplashPage extends ConsumerWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                FilledButton(
+                FilledButton.icon(
                   onPressed: () => ref
                     ..invalidate(currentProfileProvider)
                     ..invalidate(myAddressProvider),
-                  child: const Text('Tentar novamente'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Tentar novamente'),
                 ),
                 const SizedBox(height: 8),
-                TextButton(
+                TextButton.icon(
                   onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                  child: const Text('Sair'),
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sair'),
                 ),
               ],
             ],

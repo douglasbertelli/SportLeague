@@ -28,9 +28,10 @@ class GamesTab extends ConsumerWidget {
       ),
       AsyncValue(hasValue: true) => const NoTeamPlaceholder(),
       AsyncValue(hasError: true) => Center(
-        child: TextButton(
+        child: TextButton.icon(
           onPressed: () => ref.invalidate(myTeamsProvider),
-          child: const Text('Erro ao carregar os times. Tentar novamente'),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Erro ao carregar os times. Tentar novamente'),
         ),
       ),
       _ => const Center(child: CircularProgressIndicator()),
@@ -58,9 +59,10 @@ class _GameList extends ConsumerWidget {
       body: games.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(teamGamesProvider(teamId)),
-            child: const Text('Erro ao carregar os jogos. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar os jogos. Tentar novamente'),
           ),
         ),
         data: (games) {

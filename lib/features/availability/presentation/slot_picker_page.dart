@@ -43,9 +43,10 @@ class _SlotPickerPageState extends ConsumerState<SlotPickerPage> {
       body: slots.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () => ref.invalidate(freeSlotsProvider(widget.teamId)),
-            child: const Text('Erro ao carregar os horários. Tentar novamente'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Erro ao carregar os horários. Tentar novamente'),
           ),
         ),
         data: (slots) => slots.isEmpty
