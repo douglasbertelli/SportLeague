@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,7 +20,7 @@ String teamCode(String name) {
 }
 
 /// Ações do menu ⋮ do card.
-enum _GameAction { edit, accept, decline, cancel }
+enum _GameAction { edit, accept, decline, cancel, score }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
 /// ativo à esquerda, o adversário à direita, e abaixo data, hora, mando e
@@ -55,6 +56,9 @@ class _GameCardState extends ConsumerState<GameCard> {
       ],
       // Aceitar e Recusar ficam à vista no card (_canRespond).
       GameStatus.pending => const [],
+      // Depois do jogo, quem marcou lança (ou corrige) o placar.
+      GameStatus.scheduled when isHost && widget.stage == GameStage.played =>
+        const [_GameAction.score],
       GameStatus.scheduled when isHost => const [
         _GameAction.edit,
         _GameAction.cancel,
@@ -90,6 +94,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.accept => Icons.check_circle_outline,
                     _GameAction.decline => Icons.close,
                     _GameAction.cancel => Icons.event_busy,
+                    _GameAction.score => Icons.scoreboard_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -98,6 +103,8 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.accept => 'Aceitar',
                     _GameAction.decline => 'Recusar',
                     _GameAction.cancel => 'Cancelar amistoso',
+                    _GameAction.score =>
+                      _game.hasScore ? 'Corrigir placar' : 'Lançar placar',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -110,7 +117,39 @@ class _GameCardState extends ConsumerState<GameCard> {
     if (action != null && mounted) await _run(action);
   }
 
+  /// Placar do ponto de vista de quem marcou (o único que lança).
+  Future<void> _enterScore() async {
+    final score = await showAppSheet<(int, int)>(
+      context,
+      builder: (_) => _ScoreSheet(
+        myTeam:
+            _game.hostTeamName ??
+            ref.read(selectedTeamProvider).value?.name ??
+            'Seu time',
+        opponent: _game.opponent,
+        initial: _game.hasScore
+            ? (_game.teamScore!, _game.opponentScore!)
+            : null,
+      ),
+    );
+    if (score == null || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(gameRepositoryProvider)
+          .setScore(_game.id!, teamScore: score.$1, opponentScore: score.$2);
+      ref
+        ..invalidate(teamGamesProvider(widget.viewerTeamId))
+        ..invalidate(teamStatsProvider(widget.viewerTeamId));
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _run(_GameAction action) async {
+    if (action == _GameAction.score) return _enterScore();
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
       return;
@@ -480,4 +519,89 @@ String _two(int value) => value.toString().padLeft(2, '0');
 Color _darker(Color color) {
   final hsl = HSLColor.fromColor(color);
   return hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+}
+
+/// Lança o placar: gols do time que marcou e do adversário.
+class _ScoreSheet extends StatefulWidget {
+  const _ScoreSheet({
+    required this.myTeam,
+    required this.opponent,
+    required this.initial,
+  });
+
+  final String myTeam;
+  final String opponent;
+  final (int, int)? initial;
+
+  @override
+  State<_ScoreSheet> createState() => _ScoreSheetState();
+}
+
+class _ScoreSheetState extends State<_ScoreSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final _mine = TextEditingController(text: widget.initial?.$1.toString());
+  late final _theirs = TextEditingController(
+    text: widget.initial?.$2.toString(),
+  );
+
+  @override
+  void dispose() {
+    _mine.dispose();
+    _theirs.dispose();
+    super.dispose();
+  }
+
+  String? _validate(String? value) =>
+      int.tryParse(value ?? '') == null ? 'Informe os gols' : null;
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop((int.parse(_mine.text), int.parse(_theirs.text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget field(TextEditingController controller, String team) => Expanded(
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(labelText: team, counterText: ''),
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.headlineMedium,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        maxLength: 2,
+        validator: _validate,
+      ),
+    );
+
+    return AppSheet(
+      title: 'Placar',
+      message: 'Gols de cada time. Ele aparece no card e no perfil dos times.',
+      body: Form(
+        key: _formKey,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            field(_mine, widget.myTeam),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              child: Text(
+                '×',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            field(_theirs, widget.opponent),
+          ],
+        ),
+      ),
+      actions: [
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.save_outlined),
+          label: const Text('Salvar placar'),
+        ),
+        const SheetBackButton(),
+      ],
+    );
+  }
 }

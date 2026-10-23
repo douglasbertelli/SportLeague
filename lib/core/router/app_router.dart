@@ -20,6 +20,7 @@ import '../../features/splash/presentation/splash_page.dart';
 import '../../features/teams/domain/team.dart';
 import '../../features/teams/presentation/team_form_page.dart';
 import '../../features/teams/presentation/team_profile_page.dart';
+import '../../features/teams/presentation/team_search_page.dart';
 import '../../features/teams/presentation/teams_page.dart';
 import '../../features/venues/domain/venue.dart';
 import '../../features/venues/presentation/venue_form_page.dart';
@@ -80,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'venue',
                 builder: (_, _) =>
                     const VenuesPage(picking: true, offerTeamLink: false),
+              ),
+              GoRoute(
+                path: 'search',
+                builder: (_, _) => const TeamSearchPage(),
               ),
             ],
           ),

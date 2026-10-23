@@ -29,10 +29,13 @@ import 'package:sport_league/features/games/presentation/game_card.dart';
 import 'package:sport_league/features/games/presentation/game_form_page.dart';
 import 'package:sport_league/features/games/presentation/opponent_picker_page.dart';
 import 'package:sport_league/features/games/presentation/games_tab.dart';
+import 'package:sport_league/features/home/presentation/team_dashboard.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
+import 'package:sport_league/features/teams/domain/team_stats.dart';
 import 'package:sport_league/features/teams/presentation/team_profile_page.dart';
+import 'package:sport_league/features/teams/presentation/team_search_page.dart';
 import 'package:sport_league/features/venues/data/venue_repository.dart';
 import 'package:sport_league/features/venues/domain/venue.dart';
 import 'package:sport_league/features/venues/presentation/venue_form_page.dart';
@@ -112,6 +115,10 @@ Future<void> _pumpPage(
             playsAs: playsAs,
           );
         },
+      ),
+      GoRoute(
+        path: Routes.teamProfile,
+        builder: (_, state) => TeamProfilePage(teamId: state.extra as String),
       ),
       GoRoute(
         path: Routes.pickVenue,
@@ -560,20 +567,138 @@ void main() {
         instagram: 'realbairro',
         kitUrls: ['https://storage.test/kit-1'],
       );
-      final container = await _container(
-        teams: FakeTeamRepository([teamA, rival]),
+      final teams = FakeTeamRepository([teamA, rival]);
+      teams.statsByTeam['team-rival'] = TeamStats(
+        played: 3,
+        wins: 1,
+        draws: 1,
+        losses: 0,
+        goalsFor: 4,
+        goalsAgainst: 2,
+        recent: [
+          ProfileGame(
+            scheduledAt: DateTime(2026, 10, 18, 15),
+            opponent: 'Vila Nova',
+            isHome: false,
+            goalsFor: 3,
+            goalsAgainst: 1,
+          ),
+          ProfileGame(
+            scheduledAt: DateTime(2026, 10, 11, 15),
+            opponent: 'Bola Murcha',
+            isHome: true,
+          ),
+        ],
       );
+      teams.follows.add((follower: 'team-b', followed: 'team-rival'));
+      final container = await _container(teams: teams);
       await _pumpPage(
         tester,
         container,
         const TeamProfilePage(teamId: 'team-rival'),
       );
+      final list = find.byType(Scrollable).first;
+      Future<void> scrollTo(Finder finder) =>
+          tester.scrollUntilVisible(finder, 200, scrollable: list);
 
-      expect(find.text('Joga como: Visitante'), findsOneWidget);
-      expect(find.text('Uniformes'), findsOneWidget);
+      // Seguidores (1: o Bola Murcha) e o botão Seguir pelo time ativo.
+      expect(find.text('Seguidores'), findsOneWidget);
+      expect(find.text('1'), findsWidgets);
+      await tester.tap(find.text('Seguir'));
+      await tester.pumpAndSettle();
+      expect(
+        teams.follows,
+        contains((follower: 'team-a', followed: 'team-rival')),
+      );
+      expect(find.text('Seguindo'), findsWidgets);
+      expect(find.text('2'), findsWidgets);
+
+      // Estatísticas e últimos resultados (V, e sem placar).
+      await scrollTo(find.text('Últimos resultados'));
+      expect(find.text('Vitórias'), findsOneWidget);
+      expect(find.text('+2'), findsOneWidget);
+      expect(find.text('3 × 1'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Text && widget.semanticsLabel == 'Vitória',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Sem placar'), findsOneWidget);
+
+      await scrollTo(find.text('Joga como: Visitante'));
+      await scrollTo(find.text('Uniformes'));
       expect(find.bySemanticsLabel('Uniforme 1'), findsOneWidget);
+      await scrollTo(find.text('@realbairro'));
       expect(find.text('(19) 99999-8888'), findsOneWidget);
-      expect(find.text('@realbairro'), findsOneWidget);
+    });
+
+    testWidgets('no perfil do próprio time ativo não há Seguir', (
+      tester,
+    ) async {
+      final container = await _container(teams: FakeTeamRepository([teamA]));
+      await _pumpPage(
+        tester,
+        container,
+        const TeamProfilePage(teamId: 'team-a'),
+      );
+      expect(find.text('Seguidores'), findsOneWidget);
+      expect(find.text('Seguir'), findsNothing);
+    });
+
+    testWidgets('a pesquisa lista os times e abre o perfil', (tester) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA, teamB]),
+      );
+      await _pumpPage(tester, container, const TeamSearchPage());
+      expect(find.text('Amigos FC'), findsOneWidget);
+      expect(find.text('Bola Murcha'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'bola');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Amigos FC'), findsNothing);
+      // Card como o da escolha de adversário: resumo e cidade.
+      expect(find.text('Society · Livre\nCampinas/SP'), findsOneWidget);
+
+      await tester.tap(find.text('Bola Murcha'));
+      await tester.pumpAndSettle();
+      expect(find.text('Seguidores'), findsOneWidget);
+    });
+
+    test('números do perfil vêm do banco', () {
+      final stats = TeamStats.fromMap({
+        'played': 4,
+        'wins': 2,
+        'draws': 1,
+        'losses': 1,
+        'goals_for': 7,
+        'goals_against': 5,
+        'followers': 3,
+        'following': 1,
+        'recent': [
+          {
+            'scheduled_at': '2026-10-18T18:00:00+00:00',
+            'opponent': 'Vila Nova',
+            'is_home': true,
+            'goals_for': 1,
+            'goals_against': 1,
+          },
+        ],
+        'upcoming': <Object>[],
+      });
+      expect(stats.goalDifference, 2);
+      expect(stats.recent.single.outcome, 'E');
+      expect(stats.followers, 3);
+      // Sem placar, sem resultado.
+      expect(
+        ProfileGame(
+          scheduledAt: DateTime(2026, 10, 1),
+          opponent: 'X',
+          isHome: true,
+        ).outcome,
+        isNull,
+      );
     });
   });
 
@@ -786,6 +911,156 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(games.canceled, ['g2']);
+    });
+
+    testWidgets('o painel do Início mostra próximo jogo, pendências e forma', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      Game game(
+        String id, {
+        required String teamId,
+        String? opponentTeamId,
+        required GameStatus status,
+        required DateTime at,
+        String opponent = 'Real Bairro',
+      }) => Game(
+        id: id,
+        teamId: teamId,
+        opponent: opponent,
+        opponentTeamId: opponentTeamId,
+        status: status,
+        modality: Modality.society,
+        scheduledAt: at,
+      );
+      final games = FakeGameRepository({
+        'team-a': [
+          game(
+            'g1',
+            teamId: 'team-a',
+            opponentTeamId: 'team-rival',
+            status: GameStatus.scheduled,
+            at: DateTime(2026, 10, 31, 15),
+          ),
+          game(
+            'g2',
+            teamId: 'team-a',
+            opponentTeamId: 'team-vila',
+            status: GameStatus.pending,
+            at: DateTime(2026, 11, 7, 15),
+            opponent: 'Vila Nova',
+          ),
+        ],
+        'team-rival': [
+          game(
+            'g3',
+            teamId: 'team-rival',
+            opponentTeamId: 'team-a',
+            status: GameStatus.pending,
+            at: DateTime(2026, 11, 14, 15),
+            opponent: 'Amigos FC',
+          ),
+        ],
+      });
+      final teams = FakeTeamRepository([teamA]);
+      teams.statsByTeam['team-a'] = TeamStats(
+        played: 2,
+        wins: 1,
+        losses: 1,
+        recent: [
+          ProfileGame(
+            scheduledAt: DateTime(2026, 10, 18),
+            opponent: 'Vila Nova',
+            isHome: true,
+            goalsFor: 2,
+            goalsAgainst: 0,
+          ),
+          ProfileGame(
+            scheduledAt: DateTime(2026, 10, 11),
+            opponent: 'Bola Murcha',
+            isHome: false,
+            goalsFor: 0,
+            goalsAgainst: 1,
+          ),
+        ],
+      );
+      var openedGames = false;
+      final container = await _container(teams: teams, games: games);
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(
+            now: DateTime(2026, 10, 22, 12),
+            onOpenGames: () => openedGames = true,
+          ),
+        ),
+      );
+
+      expect(find.text('Amigos FC'), findsOneWidget);
+      expect(find.text('0 seguidores · 0 seguindo'), findsOneWidget);
+      // Próximo jogo: o marcado, não os pendentes.
+      expect(find.text('x Real Bairro'), findsOneWidget);
+      expect(find.text('31/10/2026 às 15:00 · Mandante'), findsOneWidget);
+      // Um convite para responder (g3) e um aguardando o adversário (g2).
+      expect(find.text('1 convite para responder'), findsOneWidget);
+      expect(find.text('1 amistoso aguardando o adversário'), findsOneWidget);
+      await tester.tap(find.text('1 convite para responder'));
+      expect(openedGames, isTrue);
+      // Estatísticas e forma (V e D).
+      expect(find.text('Vitórias'), findsOneWidget);
+      Finder badge(String label) => find.byWidgetPredicate(
+        (widget) => widget is Text && widget.semanticsLabel == label,
+      );
+      expect(badge('Vitória'), findsOneWidget);
+      expect(badge('Derrota'), findsOneWidget);
+    });
+
+    testWidgets('quem marcou lança o placar depois do jogo', (tester) async {
+      final games = FakeGameRepository({
+        'team-a': [
+          Game(
+            id: 'g1',
+            teamId: 'team-a',
+            opponent: 'Real Bairro',
+            opponentTeamId: 'team-rival',
+            status: GameStatus.scheduled,
+            modality: Modality.society,
+            scheduledAt: DateTime(2026, 10, 18, 15),
+          ),
+        ],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: games,
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      await tester.tap(find.text('Realizados (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Ações do amistoso'));
+      await tester.pumpAndSettle();
+      // Depois do jogo, a única ação é o placar.
+      expect(find.text('Editar'), findsNothing);
+      await tester.tap(find.text('Lançar placar'));
+      await tester.pumpAndSettle();
+
+      final fields = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextFormField),
+      );
+      await tester.tap(find.text('Salvar placar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Informe os gols'), findsNWidgets(2));
+      await tester.enterText(fields.at(0), '3');
+      await tester.enterText(fields.at(1), '1');
+      await tester.tap(find.text('Salvar placar'));
+      await tester.pumpAndSettle();
+      expect(games.scores['g1'], (3, 1));
     });
 
     testWidgets('o adversário pode cancelar um amistoso marcado', (

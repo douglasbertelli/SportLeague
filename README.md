@@ -85,7 +85,9 @@ configurado.
    - **Jogador**: entra em times por busca ou convite.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
-   **Início, Jogos, Atletas e Perfil**:
+   **Início, Jogos, Atletas e Perfil**. O Início mostra o **painel do time
+   ativo** (seguidores, próximo jogo, convites pendentes, estatísticas e a
+   forma nos últimos jogos) e os atalhos:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
      O cadastro tem quatro abas:
      **Time** (logo, nome, uma modalidade — Futsal, Society, Campo, Areia ou
@@ -94,7 +96,11 @@ configurado.
      visitante ou ambos, data de fundação e cidade/UF obrigatórias), **Contato** (telefone,
      Instagram, Facebook, YouTube e site, opcionais) e **Mídia** (capa e até 3
      fotos de uniforme, no Storage `team-logos`). Tocar no adversário no card
-     do jogo abre o perfil dele, com os uniformes para não confundir as cores;
+     do jogo abre o perfil dele, com os uniformes para não confundir as cores.
+     A **lupa** no topo pesquisa os times da plataforma; o **perfil** mostra
+     seguidores e seguindo (o time ativo pode **Seguir**), estatísticas
+     (jogos, vitórias, empates, derrotas, gols e saldo), últimos resultados e
+     próximos jogos;
    - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
      cada time tem os seus;
    - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
@@ -126,7 +132,8 @@ configurado.
      (roláveis na horizontal). Contra time da plataforma, o amistoso fica
      pendente até o adversário **aceitar** ou **recusar**; contra time
      fictício já nasce marcado. Os dois times podem cancelar; marcado com a
-     data passada vai para Realizados. Se quem marcou muda a data ou o
+     data passada vai para Realizados, onde quem marcou **lança o placar** (⋮).
+     Se quem marcou muda a data ou o
      adversário, volta a ficar pendente.
 
    Convites e a home do jogador: próxima etapa.
@@ -161,6 +168,7 @@ supabase/
 | `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
 | `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |
 | `team_availability_skips` | Dias pulados de um horário recorrente (imprevistos); só o dono altera |
+| `team_follows`  | Time segue time (o dono do time que segue altera); todos veem. A função `team_profile_stats` devolve seguidores, estatísticas, últimos resultados e próximos jogos de qualquer time |
 | `venues`        | Locais das partidas (nome, endereço com CEP e foto no Storage `venue-photos`); todos veem, só quem cadastrou altera. A função `similar_venues` sugere os parecidos antes de cadastrar |
 | `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Convites do administrador e solicitações do jogador              |

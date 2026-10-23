@@ -5,6 +5,7 @@ import '../../athletes/presentation/athletes_tab.dart';
 import '../../games/presentation/games_tab.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
+import '../../teams/presentation/team_search_page.dart';
 import '../../teams/presentation/team_switcher.dart';
 import 'home_overview.dart';
 
@@ -43,12 +44,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
         title: _index == _profileIndex
             ? const Text('Perfil')
             : const TeamSwitcher(),
-        actions: const [ThemeModeButton()],
+        actions: const [TeamSearchButton(), ThemeModeButton()],
       ),
       body: IndexedStack(
         index: _index,
         children: [
-          HomeOverview(profile: widget.profile),
+          HomeOverview(
+            profile: widget.profile,
+            onOpenGames: () => setState(() => _index = 1),
+          ),
           const GamesTab(),
           const AthletesTab(),
           ProfileTab(profile: widget.profile),
