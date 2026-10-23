@@ -1733,6 +1733,60 @@ void main() {
       expect(find.text('Início'), findsOneWidget);
     });
 
+    testWidgets('o calendário é o de quem joga em casa', (tester) async {
+      final soon = DateTime.now().add(const Duration(days: 2));
+      final mySlot = DateTime(soon.year, soon.month, soon.day, 20);
+      final rivalSlot = DateTime(soon.year, soon.month, soon.day, 15);
+      final availability = FakeAvailabilityRepository(
+        freeByTeam: {
+          'team-b': [mySlot],
+          'team-rival': [rivalSlot],
+        },
+      );
+      const rival = Team(
+        id: 'team-rival',
+        ownerId: 'u2',
+        name: 'Real Bairro',
+        modalities: {Modality.society},
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamB]),
+        availability: availability,
+        opponents: FakeOpponentRepository(registered: [rival]),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+      Future<void> tapVisible(Finder finder) async {
+        await tester.ensureVisible(finder);
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+      }
+
+      // Mandante: o calendário do próprio time, já antes do adversário.
+      expect(
+        find.text('Horários livres no calendário do Bola Murcha'),
+        findsOneWidget,
+      );
+      await tapVisible(find.widgetWithText(InputDecorator, 'Data e hora'));
+      expect(availability.freeSlotRequests.last, 'team-b');
+      await tapVisible(find.text('20:00'));
+      await tapVisible(find.widgetWithText(InputDecorator, 'Adversário'));
+      await tapVisible(find.text('Real Bairro'));
+      // Mesmo calendário: a data continua.
+      expect(find.textContaining('20:00'), findsOneWidget);
+
+      // Visitante: o calendário do adversário; a data de antes sai.
+      await tapVisible(find.text('Visitante'));
+      expect(
+        find.text('Horários livres no calendário do Real Bairro'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('20:00'), findsNothing);
+      await tapVisible(find.widgetWithText(InputDecorator, 'Data e hora'));
+      expect(availability.freeSlotRequests.last, 'team-rival');
+      await tapVisible(find.text('15:00'));
+      expect(find.textContaining('15:00'), findsOneWidget);
+    });
+
     testWidgets('contra time fictício vale o calendário do próprio time', (
       tester,
     ) async {
@@ -1762,7 +1816,10 @@ void main() {
       );
       await _pumpPage(tester, container, const GameFormPage());
 
-      // Sem adversário, o horário ainda não pode ser escolhido.
+      // Visitante sem adversário: o horário ainda não pode ser escolhido.
+      await tester.ensureVisible(find.text('Visitante'));
+      await tester.tap(find.text('Visitante'));
+      await tester.pumpAndSettle();
       expect(find.text('Escolha o adversário primeiro'), findsOneWidget);
       await tester.ensureVisible(find.text('Data e hora'));
       await tester.tap(find.text('Data e hora'));
@@ -1794,6 +1851,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(games.created.single.scheduledAt, mySlot);
       expect(games.created.single.opponentGuestId, 'guest-1');
+      expect(games.created.single.hostIsHome, isFalse);
       expect(games.created.single.venueId, 'venue-1');
     });
   });

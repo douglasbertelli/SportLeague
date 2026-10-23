@@ -150,31 +150,44 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       ),
     );
     if (picked != null) {
-      final previousCalendar = _calendarFor(team)?.teamId;
-      setState(() {
+      _changeKeepingCalendar(team, () {
         _modality = picked.modality;
         _opponent = picked.opponent;
-        // O horário escolhido era do calendário de outro time.
-        if (_calendarFor(team)?.teamId != previousCalendar) _scheduledAt = null;
       });
     }
   }
 
-  /// Calendário que vale para o jogo: o do adversário da plataforma ou, contra
-  /// time fictício, o do próprio time. Nulo enquanto não há adversário.
-  ({String teamId, String owner})? _calendarFor(Team team) =>
-      switch (_opponent) {
-        null => null,
-        RegisteredOpponent(team: final rival) => (
-          teamId: rival.id!,
-          owner: 'do ${rival.name}',
-        ),
-        SavedOpponent(teamId: final rivalId?, :final name) => (
-          teamId: rivalId,
-          owner: 'do $name',
-        ),
-        _ => (teamId: team.id!, owner: 'do seu time'),
-      };
+  /// Calendário que vale para o jogo: o de quem joga em casa. Como mandante,
+  /// o do próprio time; como visitante, o do adversário da plataforma (time
+  /// fictício não tem calendário: vale o do próprio time). Nulo enquanto não
+  /// dá para saber (visitante sem adversário, ou nenhum mando possível).
+  ({String teamId, String owner})? _calendarFor(Team team) {
+    final own = (teamId: team.id!, owner: 'do ${team.name}');
+    return switch ((_effectiveHostIsHome(team), _opponent)) {
+      (null, _) => null,
+      (true, _) => own,
+      (false, null) => null,
+      (false, RegisteredOpponent(team: final rival)) => (
+        teamId: rival.id!,
+        owner: 'do ${rival.name}',
+      ),
+      (false, SavedOpponent(teamId: final rivalId?, :final name)) => (
+        teamId: rivalId,
+        owner: 'do $name',
+      ),
+      (false, _) => own,
+    };
+  }
+
+  /// Aplica [change] e, se o calendário que vale mudou (outro adversário ou
+  /// outro mando), tira a data escolhida, que era de outro calendário.
+  void _changeKeepingCalendar(Team team, VoidCallback change) {
+    final previous = _calendarFor(team)?.teamId;
+    setState(() {
+      change();
+      if (_calendarFor(team)?.teamId != previous) _scheduledAt = null;
+    });
+  }
 
   /// Só dá para escolher entre os horários livres do calendário que vale.
   Future<void> _pickDateTime(Team team) async {
@@ -362,7 +375,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
               emptySelectionAllowed: true,
               onSelectionChanged: (selection) {
                 if (selection.firstOrNull case final home?) {
-                  setState(() => _hostIsHome = home);
+                  _changeKeepingCalendar(team, () => _hostIsHome = home);
                 }
               },
             ),
