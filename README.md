@@ -117,8 +117,9 @@ configurado.
      time joga, avulsos ou recorrentes ("todo sábado às 15:00"). Dá para mudar o
      horário de um dia ou de todas as semanas e, num imprevisto, o
      recorrente pode sair só de um dia, sem apagar as outras semanas. O amistoso só
-     pode ser marcado num horário livre do **adversário** (time da plataforma)
-     ou do **próprio time** (adversário fictício); horário com amistoso
+     pode ser marcado num horário livre de **quem joga em casa**: do próprio
+     time como mandante, do adversário da plataforma como visitante (contra
+     time fictício, sempre do próprio time); horário com amistoso
      pendente ou marcado fica ocupado. Horários recorrentes são no fuso de
      Brasília.
    - a aba Jogos tem as abas **Marcados, Pendentes, Cancelados e Realizados**
