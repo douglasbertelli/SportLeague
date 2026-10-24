@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
@@ -37,6 +38,38 @@ void main() {
     expect(container.read(appColorProvider).id, 'blue');
     container = await _container({'app_color': 'nao-existe'});
     expect(container.read(appColorProvider).id, 'green');
+  });
+
+  test('cada time tem a sua cor', () async {
+    SharedPreferences.setMockInitialValues({'app_color': 'blue'});
+    final preferences = await SharedPreferences.getInstance();
+    final team = StateProvider<({String id, String name})?>((ref) => null);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        colorTeamProvider.overrideWith((ref) => ref.watch(team)),
+      ],
+    );
+    addTearDown(container.dispose);
+    AppColor byId(String id) => appColors.firstWhere((c) => c.id == id);
+    String current() => container.read(appColorProvider).id;
+
+    // Time sem cor própria usa a cor geral escolhida antes.
+    container.read(team.notifier).state = (id: 'a', name: 'Time A');
+    expect(current(), 'blue');
+    await container.read(appColorProvider.notifier).select(byId('red'));
+
+    container.read(team.notifier).state = (id: 'b', name: 'Time B');
+    expect(current(), 'blue');
+    await container.read(appColorProvider.notifier).select(byId('wine'));
+
+    // Voltando ao A, a cor dele continua; a geral não mudou.
+    container.read(team.notifier).state = (id: 'a', name: 'Time A');
+    expect(current(), 'red');
+    container.read(team.notifier).state = (id: 'b', name: 'Time B');
+    expect(current(), 'wine');
+    expect(preferences.getString('app_color'), 'blue');
+    expect(preferences.getString('app_color.a'), 'red');
   });
 
   test('o tema claro e o escuro seguem a cor escolhida', () {
