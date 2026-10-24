@@ -620,7 +620,7 @@ void main() {
           tester.scrollUntilVisible(finder, 200, scrollable: list);
 
       // Seguidores (1: o Bola Murcha) e o botão Seguir pelo time ativo.
-      expect(find.text('Seguidores'), findsOneWidget);
+      expect(find.text('Seguidor'), findsOneWidget);
       expect(find.text('1'), findsWidgets);
       await tester.tap(find.text('Seguir'));
       await tester.pumpAndSettle();
@@ -630,6 +630,7 @@ void main() {
       );
       expect(find.text('Seguindo'), findsWidgets);
       expect(find.text('2'), findsWidgets);
+      expect(find.text('Seguidores'), findsOneWidget);
 
       // Estatísticas e últimos resultados (V, e sem placar).
       await scrollTo(find.text('Últimos resultados'));
