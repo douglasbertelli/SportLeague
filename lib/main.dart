@@ -7,7 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/config/env.dart';
 import 'core/storage/preferences_provider.dart';
+import 'core/theme/app_color_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'features/teams/data/team_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +30,14 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        // Cada time tem a sua cor.
+        colorTeamProvider.overrideWith((ref) {
+          final team = ref.watch(selectedTeamProvider).value;
+          return team?.id == null ? null : (id: team!.id!, name: team.name);
+        }),
+      ],
       child: const SportLeagueApp(),
     ),
   );

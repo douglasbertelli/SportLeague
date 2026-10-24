@@ -137,10 +137,11 @@ configurado.
      Se quem marcou muda a data ou o
      adversário, volta a ficar pendente.
 
-   - **Perfil → Cor do app**: 28 cores, entre elas dois cinzas e o preto (a do
-     time, por exemplo); o app inteiro,
-     claro e escuro, muda na hora. A escolha fica salva no aparelho, como o
-     modo claro/escuro.
+   - **Perfil → Cor do time**: 28 cores, entre elas dois cinzas e o preto; o
+     app inteiro, claro e escuro, muda na hora. **Cada time tem a sua**:
+     trocar o time ativo troca a cor (time sem cor própria usa a geral). A
+     escolha fica salva no aparelho, como o modo claro/escuro; sem time, é a
+     **Cor do app**.
 
    - **Convites** (Início do administrador): o código do time para mandar aos
      jogadores (Compartilhar, Copiar, Gerar outro), **Convidar jogador do app**

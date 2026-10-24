@@ -4,17 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/app_sheet.dart';
 import 'app_color_provider.dart';
 
-/// Item do Perfil com a cor atual; abre a escolha das 20 cores.
+/// Item do Perfil com a cor atual (do time ativo, se houver); abre a escolha
+/// das cores.
 class AppColorTile extends ConsumerWidget {
   const AppColorTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final team = ref.watch(colorTeamProvider);
     final current = ref.watch(appColorProvider);
     return ListTile(
       leading: const Icon(Icons.palette_outlined),
-      title: const Text('Cor do app'),
-      subtitle: Text(current.name),
+      title: Text(team == null ? 'Cor do app' : 'Cor do time'),
+      subtitle: Text(
+        team == null ? current.name : '${current.name} · ${team.name}',
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -30,18 +34,20 @@ class AppColorTile extends ConsumerWidget {
 }
 
 /// As cores; tocar já aplica no app inteiro (a própria folha muda de cor),
-/// para comparar antes de fechar.
+/// para comparar antes de fechar, e salva no time ativo.
 class _AppColorSheet extends ConsumerWidget {
   const _AppColorSheet();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(appColorProvider);
+    final team = ref.watch(colorTeamProvider);
     return AppSheet(
-      title: 'Cor do app',
-      message:
-          'Escolha a cor do seu time. Ela muda o app inteiro, no modo claro e '
-          'no escuro.',
+      title: team == null ? 'Cor do app' : 'Cor do ${team.name}',
+      message: team == null
+          ? 'Ela muda o app inteiro, no modo claro e no escuro.'
+          : 'Cada time tem a sua cor: o app fica com ela enquanto este time '
+                'estiver ativo, no modo claro e no escuro.',
       body: Wrap(
         spacing: 12,
         runSpacing: 12,
