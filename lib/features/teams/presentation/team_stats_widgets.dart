@@ -126,3 +126,65 @@ class OutcomeBadge extends StatelessWidget {
     );
   }
 }
+
+/// Selo "Casa" (o time é mandante) ou "Fora" (visitante), ao lado do
+/// adversário.
+class HomeAwayBadge extends StatelessWidget {
+  const HomeAwayBadge({super.key, required this.isHome});
+
+  final bool isHome;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final (background, foreground) = isHome
+        ? (colors.primaryContainer, colors.onPrimaryContainer)
+        : (colors.surfaceContainerHighest, colors.onSurfaceVariant);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isHome ? 'Casa' : 'Fora',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// "x Adversário" com o selo Casa/Fora logo depois.
+class OpponentWithSide extends StatelessWidget {
+  const OpponentWithSide({
+    super.key,
+    required this.opponent,
+    required this.isHome,
+    this.style,
+  });
+
+  final String opponent;
+  final bool isHome;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            'x $opponent',
+            style: style,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        HomeAwayBadge(isHome: isHome),
+      ],
+    );
+  }
+}

@@ -29,7 +29,7 @@ class AppColorTile extends ConsumerWidget {
   }
 }
 
-/// As 20 cores; tocar já aplica no app inteiro (a própria folha muda de cor),
+/// As cores; tocar já aplica no app inteiro (a própria folha muda de cor),
 /// para comparar antes de fechar.
 class _AppColorSheet extends ConsumerWidget {
   const _AppColorSheet();

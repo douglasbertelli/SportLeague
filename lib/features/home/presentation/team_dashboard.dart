@@ -12,7 +12,7 @@ import '../../teams/presentation/team_logo.dart';
 import '../../teams/presentation/team_stats_widgets.dart';
 
 /// Dashboard do time ativo no Início: o time (com seguidores), o próximo
-/// jogo, o que está pendente, as estatísticas e a forma recente.
+/// jogo, o que está pendente, as estatísticas e os últimos jogos.
 class TeamDashboard extends ConsumerWidget {
   const TeamDashboard({super.key, this.onOpenGames, this.now});
 
@@ -110,7 +110,10 @@ class TeamDashboard extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Text('Forma', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Últ. jogos',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(width: 16),
                   if (stats.recent.isEmpty)
                     const Expanded(child: Text('Nenhum amistoso realizado'))
@@ -239,15 +242,14 @@ class _NextGameCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${game.isHomeFor(team.id!) ? 'x' : '@'} '
-                              '${game.opponentNameFor(team.id!)}',
+                            OpponentWithSide(
+                              opponent: game.opponentNameFor(team.id!),
+                              isHome: game.isHomeFor(team.id!),
                               style: theme.textTheme.titleMedium,
                             ),
                             Text(
                               '${formatGameDay(game.scheduledAt)} às '
-                              '${formatGameTime(game.scheduledAt)} · '
-                              '${game.isHomeFor(team.id!) ? 'Mandante' : 'Visitante'}',
+                              '${formatGameTime(game.scheduledAt)}',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),

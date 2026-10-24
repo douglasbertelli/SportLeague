@@ -383,11 +383,11 @@ class _StatsSection extends ConsumerWidget {
                 for (final game in stats.recent)
                   ListTile(
                     leading: OutcomeBadge(game: game),
-                    title: Text('${game.isHome ? 'x' : '@'} ${game.opponent}'),
-                    subtitle: Text(
-                      '${formatGameDay(game.scheduledAt)} · '
-                      '${game.isHome ? 'Mandante' : 'Visitante'}',
+                    title: OpponentWithSide(
+                      opponent: game.opponent,
+                      isHome: game.isHome,
                     ),
+                    subtitle: Text(formatGameDay(game.scheduledAt)),
                     trailing: Text(
                       game.hasScore
                           ? '${game.goalsFor} × ${game.goalsAgainst}'
@@ -406,13 +406,13 @@ class _StatsSection extends ConsumerWidget {
                   for (final game in stats.upcoming)
                     ListTile(
                       leading: const Icon(Icons.event),
-                      title: Text(
-                        '${game.isHome ? 'x' : '@'} ${game.opponent}',
+                      title: OpponentWithSide(
+                        opponent: game.opponent,
+                        isHome: game.isHome,
                       ),
                       subtitle: Text(
                         '${formatGameDay(game.scheduledAt)} às '
-                        '${formatGameTime(game.scheduledAt)} · '
-                        '${game.isHome ? 'Mandante' : 'Visitante'}',
+                        '${formatGameTime(game.scheduledAt)}',
                       ),
                     ),
                 ],
