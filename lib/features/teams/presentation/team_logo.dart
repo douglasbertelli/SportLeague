@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/circle_image.dart';
 import '../domain/team.dart';
 
-/// Logo do time em círculo; sem logo (ou se a imagem falhar), mostra um escudo.
+/// Logo do time inteiro, sem fundo; sem logo (ou se a imagem falhar),
+/// mostra um escudo.
 class TeamLogo extends StatelessWidget {
   TeamLogo({super.key, required Team team, this.radius = 20})
     : logoUrl = team.logoUrl;
@@ -16,11 +18,11 @@ class TeamLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final logoUrl = this.logoUrl;
-    return CircleAvatar(
+    return CircleImage(
+      image: logoUrl == null ? null : NetworkImage(logoUrl),
       radius: radius,
-      foregroundImage: logoUrl == null ? null : NetworkImage(logoUrl),
-      onForegroundImageError: logoUrl == null ? null : (_, _) {},
-      child: Icon(Icons.shield_outlined, size: radius),
+      placeholder: Icon(Icons.shield_outlined, size: radius),
+      whole: true,
     );
   }
 }
