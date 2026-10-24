@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../widgets/circle_image.dart';
 import '../widgets/confirm_dialog.dart';
 import 'picked_image.dart';
+import 'square_crop_page.dart';
 
 /// Resposta de [chooseImage].
 sealed class ImageChoice {
@@ -21,14 +23,16 @@ class ImageRemoved extends ImageChoice {
 }
 
 /// Pergunta de onde vem a imagem (galeria, câmera ou, com [canRemove],
-/// remover a atual) e a abre. Nulo se o usuário desistir ou a imagem não
-/// abrir (nesse caso avisa).
+/// remover a atual) e a abre; com [cropSquare], abre o recorte em quadrado
+/// em seguida. Nulo se o usuário desistir ou a imagem não abrir (nesse caso
+/// avisa).
 Future<ImageChoice?> chooseImage(
   BuildContext context,
   WidgetRef ref, {
   required String noun,
   required bool canRemove,
   double maxSize = smallImageSize,
+  bool cropSquare = false,
 }) async {
   final choice = await showModalBottomSheet<Object>(
     context: context,
@@ -61,18 +65,20 @@ Future<ImageChoice?> chooseImage(
     case final ImageRemoved removed:
       return removed;
     case final ImageSource source:
+      final PickedImage? picked;
       try {
-        final picked = await ref.read(pickImageProvider)(
-          source,
-          maxSize: maxSize,
-        );
-        return picked == null ? null : ImagePicked(picked);
+        picked = await ref.read(pickImageProvider)(source, maxSize: maxSize);
       } catch (_) {
         if (context.mounted) {
           showErrorSnackBar(context, 'Não foi possível abrir a imagem.');
         }
         return null;
       }
+      if (picked == null) return null;
+      if (!cropSquare) return ImagePicked(picked);
+      if (!context.mounted) return null;
+      final cropped = await ref.read(cropSquareProvider)(context, picked);
+      return cropped == null ? null : ImagePicked(cropped);
     default:
       return null;
   }
@@ -92,6 +98,7 @@ class PhotoPicker extends ConsumerWidget {
     this.enabled = true,
     this.errorText,
     this.maxSize = smallImageSize,
+    this.cropSquare = false,
   });
 
   /// "logo", "foto": usado nos textos ("Adicionar logo", "Remover foto").
@@ -109,6 +116,9 @@ class PhotoPicker extends ConsumerWidget {
   /// Lado maior da imagem enviada.
   final double maxSize;
 
+  /// Recorta em quadrado depois de escolher (logo).
+  final bool cropSquare;
+
   Future<void> _choose(BuildContext context, WidgetRef ref) async {
     switch (await chooseImage(
       context,
@@ -116,6 +126,7 @@ class PhotoPicker extends ConsumerWidget {
       noun: noun,
       canRemove: image != null || url != null,
       maxSize: maxSize,
+      cropSquare: cropSquare,
     )) {
       case ImagePicked(:final image):
         onPicked(image);
@@ -148,11 +159,11 @@ class PhotoPicker extends ConsumerWidget {
             onTap: enabled ? () => _choose(context, ref) : null,
             child: Stack(
               children: [
-                CircleAvatar(
+                CircleImage(
+                  image: provider,
                   radius: 48,
-                  foregroundImage: provider,
-                  onForegroundImageError: provider == null ? null : (_, _) {},
-                  child: Icon(placeholderIcon, size: 40),
+                  placeholder: Icon(placeholderIcon, size: 40),
+                  whole: cropSquare,
                 ),
                 Positioned(
                   right: 0,

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_league/core/media/picked_image.dart';
+import 'package:sport_league/core/media/square_crop_page.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
@@ -61,6 +62,7 @@ Future<ProviderContainer> _container({
   FakeAvailabilityRepository? availability,
   FakeVenueRepository? venues,
   PickImage? pickImage,
+  CropSquare? cropSquare,
   Map<String, Object> saved = const {},
 }) async {
   SharedPreferences.setMockInitialValues(saved);
@@ -84,6 +86,9 @@ Future<ProviderContainer> _container({
         venues ?? FakeVenueRepository(),
       ),
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
+      cropSquareProvider.overrideWithValue(
+        cropSquare ?? (context, image) async => image,
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -421,9 +426,15 @@ void main() {
         bytes: Uint8List.fromList(_transparentPng),
         contentType: 'image/png',
       );
+      final croppedLogo = PickedImage(
+        bytes: Uint8List.fromList(_transparentPng),
+        contentType: 'image/png',
+      );
       final container = await _container(
         teams: teams,
         pickImage: (source, {maxSize = smallImageSize}) async => logo,
+        // O logo passa pelo recorte em quadrado; a capa, não.
+        cropSquare: (context, image) async => croppedLogo,
       );
       await _pumpPage(tester, container, const TeamFormPage());
 
@@ -503,7 +514,7 @@ void main() {
       // Depois de criado, as imagens são enviadas e as URLs gravadas no time.
       final active = await container.read(selectedTeamProvider.future);
       expect(active?.name, 'Várzea United');
-      expect(teams.uploadedLogos[active!.id], same(logo));
+      expect(teams.uploadedLogos[active!.id], same(croppedLogo));
       expect(teams.uploadedCovers[active.id], same(logo));
       expect(teams.uploadedKits, hasLength(2));
       final saved = teams.updated.last;

@@ -453,6 +453,7 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
           image: _newLogo,
           url: _currentLogoUrl,
           placeholderIcon: Icons.shield_outlined,
+          cropSquare: true,
           enabled: !_loading,
           onPicked: (image) => setState(() {
             _newLogo = image;
