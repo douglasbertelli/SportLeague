@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/team_stats.dart';
 
-/// Card com jogos, vitórias, empates, derrotas, gols e saldo (perfil e
-/// dashboard).
+/// Card com jogos, vitórias, empates, derrotas, gols, saldo e aproveitamento
+/// (perfil e dashboard).
 class StatsGrid extends StatelessWidget {
   const StatsGrid({super.key, required this.stats});
 
@@ -43,6 +43,14 @@ class StatsGrid extends StatelessWidget {
                   value: difference > 0 ? '+$difference' : '$difference',
                   label: 'Saldo',
                 ),
+                StatTile(
+                  value: switch (stats.winRate) {
+                    final rate? => '$rate%',
+                    null => '–',
+                  },
+                  label: 'Aprov.',
+                  tooltip: 'Aproveitamento',
+                ),
               ],
             ),
           ],
@@ -59,36 +67,49 @@ class StatTile extends StatelessWidget {
     required this.value,
     required this.label,
     this.color,
+    this.tooltip,
   });
 
   final String value;
   final String label;
   final Color? color;
 
+  /// Nome completo quando o rótulo é abreviado (Aprov.).
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final column = Column(
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          semanticsLabel: tooltip,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
     return Expanded(
       child: Semantics(
         container: true,
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+        child: switch (tooltip) {
+          final message? => Tooltip(
+            message: message,
+            excludeFromSemantics: true,
+            child: column,
+          ),
+          null => column,
+        },
       ),
     );
   }

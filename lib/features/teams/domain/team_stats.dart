@@ -84,4 +84,12 @@ class TeamStats {
   final List<ProfileGame> upcoming;
 
   int get goalDifference => goalsFor - goalsAgainst;
+
+  /// Pontos ganhos sobre os disputados (vitória 3, empate 1), em %, só dos
+  /// jogos com placar; nulo sem nenhum.
+  int? get winRate {
+    final decided = wins + draws + losses;
+    if (decided == 0) return null;
+    return ((wins * 3 + draws) * 100 / (decided * 3)).round();
+  }
 }
