@@ -630,17 +630,37 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Sem placar'), findsOneWidget);
+      // As informações do time ficam na outra aba.
+      expect(find.text('Joga como: Visitante'), findsNothing);
 
-      await scrollTo(find.text('Joga como: Visitante'));
-      await scrollTo(find.text('Uniformes'));
+      await tester.tap(find.text('Sobre o time'));
+      await tester.pumpAndSettle();
+      expect(find.text('Joga como: Visitante'), findsOneWidget);
+      expect(find.text('Vitórias'), findsNothing);
+      final about = find
+          .descendant(
+            of: find.byType(TabBarView),
+            matching: find.byType(Scrollable),
+          )
+          .last;
+      await tester.scrollUntilVisible(
+        find.text('Uniformes'),
+        200,
+        scrollable: about,
+      );
       expect(find.bySemanticsLabel('Uniforme 1'), findsOneWidget);
-      await scrollTo(find.text('@realbairro'));
+      await tester.scrollUntilVisible(
+        find.text('@realbairro'),
+        200,
+        scrollable: about,
+      );
       expect(find.text('(19) 99999-8888'), findsOneWidget);
     });
 
     testWidgets('no perfil do próprio time ativo não há Seguir', (
       tester,
     ) async {
+      _usePhoneScreen(tester);
       final container = await _container(teams: FakeTeamRepository([teamA]));
       await _pumpPage(
         tester,
@@ -652,6 +672,7 @@ void main() {
     });
 
     testWidgets('a pesquisa lista os times e abre o perfil', (tester) async {
+      _usePhoneScreen(tester);
       final container = await _container(
         teams: FakeTeamRepository([teamA, teamB]),
       );
@@ -1007,6 +1028,15 @@ void main() {
       // Próximo jogo: o marcado, não os pendentes.
       expect(find.text('x Real Bairro'), findsOneWidget);
       expect(find.text('31/10/2026 às 15:00'), findsOneWidget);
+      // Contador: de 22/10 12:00 até 31/10 15:00.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == 'Faltam 9 dias, 3 horas e 0 minutos',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Casa'), findsOneWidget);
       // Um convite para responder (g3) e um aguardando o adversário (g2).
       expect(find.text('1 convite para responder'), findsOneWidget);

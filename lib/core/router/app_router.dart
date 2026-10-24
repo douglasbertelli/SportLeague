@@ -14,6 +14,9 @@ import '../../features/games/domain/game.dart';
 import '../../features/games/presentation/game_form_page.dart';
 import '../../features/games/presentation/opponent_picker_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/invites/presentation/invite_player_page.dart';
+import '../../features/invites/presentation/player_invites_page.dart';
+import '../../features/invites/presentation/team_invites_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
 import '../../features/splash/presentation/splash_page.dart';
@@ -143,6 +146,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'availability',
             builder: (_, _) => const AvailabilityPage(),
+          ),
+          GoRoute(
+            path: 'invites',
+            builder: (_, _) => const TeamInvitesPage(),
+            routes: [
+              GoRoute(
+                path: 'player',
+                builder: (_, _) => const InvitePlayerPage(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'my-invites',
+            builder: (_, _) => const PlayerInvitesPage(),
           ),
         ],
       ),
