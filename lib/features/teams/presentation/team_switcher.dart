@@ -27,9 +27,17 @@ class TeamSwitcher extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TeamLogo(team: team, radius: 14),
+            TeamLogo(team: team, radius: 17),
             const SizedBox(width: 8),
-            Flexible(child: Text(team.name, overflow: TextOverflow.ellipsis)),
+            Flexible(
+              child: Text(
+                team.name,
+                overflow: TextOverflow.ellipsis,
+                // Um pouco menor que o título padrão da barra (22).
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontSize: 18),
+              ),
+            ),
             const Icon(Icons.arrow_drop_down),
           ],
         ),
