@@ -185,6 +185,13 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   group('time', () {
+    test('aproveitamento conta só os jogos com placar', () {
+      expect(const TeamStats(played: 2).winRate, isNull);
+      // Jogo sem placar fica de fora: 1 vitória e 1 derrota = 3 de 6.
+      expect(const TeamStats(played: 3, wins: 1, losses: 1).winRate, 50);
+      expect(const TeamStats(wins: 2, draws: 1).winRate, 78);
+    });
+
     test('normaliza campos opcionais ao salvar', () {
       const team = Team(
         ownerId: 'u1',
@@ -617,6 +624,10 @@ void main() {
       await scrollTo(find.text('Últimos resultados'));
       expect(find.text('Vitórias'), findsOneWidget);
       expect(find.text('+2'), findsOneWidget);
+      // 1 vitória e 1 empate: 4 de 6 pontos.
+      expect(find.text('Aprov.'), findsOneWidget);
+      expect(find.byTooltip('Aproveitamento'), findsOneWidget);
+      expect(find.text('67%'), findsOneWidget);
       expect(find.text('3 × 1'), findsOneWidget);
       // "x Adversário" com o selo Casa ou Fora, sem o @.
       expect(find.text('x Vila Nova'), findsOneWidget);
