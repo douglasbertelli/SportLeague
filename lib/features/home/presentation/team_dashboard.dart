@@ -186,7 +186,8 @@ class _TeamHeader extends StatelessWidget {
                     Text(team.summary, style: muted),
                     const SizedBox(height: 4),
                     Text(
-                      '${followers ?? '–'} seguidores · '
+                      '${followers ?? '–'} '
+                      '${followers == 1 ? 'seguidor' : 'seguidores'} · '
                       '${following ?? '–'} seguindo',
                       style: muted,
                     ),

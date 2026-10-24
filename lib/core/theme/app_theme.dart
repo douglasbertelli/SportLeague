@@ -35,6 +35,8 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       useMaterial3: true,
       fontFamily: fontFamily,
+      // Cards planos: sem sombra, separados só pela cor do fundo.
+      cardTheme: const CardThemeData(elevation: 0),
       listTileTheme: ListTileThemeData(
         subtitleTextStyle: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant,

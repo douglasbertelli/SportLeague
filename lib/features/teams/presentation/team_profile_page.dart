@@ -336,7 +336,10 @@ class _FollowBarState extends ConsumerState<_FollowBar> {
               spacing: 24,
               runSpacing: 8,
               children: [
-                count(stats?.followers, 'Seguidores'),
+                count(
+                  stats?.followers,
+                  stats?.followers == 1 ? 'Seguidor' : 'Seguidores',
+                ),
                 count(stats?.following, 'Seguindo'),
               ],
             ),
