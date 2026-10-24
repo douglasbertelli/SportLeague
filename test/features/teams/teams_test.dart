@@ -618,6 +618,11 @@ void main() {
       expect(find.text('Vitórias'), findsOneWidget);
       expect(find.text('+2'), findsOneWidget);
       expect(find.text('3 × 1'), findsOneWidget);
+      // "x Adversário" com o selo Casa ou Fora, sem o @.
+      expect(find.text('x Vila Nova'), findsOneWidget);
+      expect(find.text('Fora'), findsOneWidget);
+      expect(find.text('Casa'), findsOneWidget);
+      expect(find.textContaining('@ '), findsNothing);
       expect(
         find.byWidgetPredicate(
           (widget) => widget is Text && widget.semanticsLabel == 'Vitória',
@@ -1001,7 +1006,8 @@ void main() {
       expect(find.text('0 seguidores · 0 seguindo'), findsOneWidget);
       // Próximo jogo: o marcado, não os pendentes.
       expect(find.text('x Real Bairro'), findsOneWidget);
-      expect(find.text('31/10/2026 às 15:00 · Mandante'), findsOneWidget);
+      expect(find.text('31/10/2026 às 15:00'), findsOneWidget);
+      expect(find.text('Casa'), findsOneWidget);
       // Um convite para responder (g3) e um aguardando o adversário (g2).
       expect(find.text('1 convite para responder'), findsOneWidget);
       expect(find.text('1 amistoso aguardando o adversário'), findsOneWidget);

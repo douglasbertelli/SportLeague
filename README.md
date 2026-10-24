@@ -86,8 +86,8 @@ configurado.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**. O Início mostra o **painel do time
-   ativo** (seguidores, próximo jogo, convites pendentes, estatísticas e a
-   forma nos últimos jogos) e os atalhos:
+   ativo** (seguidores, próximo jogo, convites pendentes, estatísticas e
+   **últ. jogos**, com vitória, empate ou derrota em cada um) e os atalhos:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
      O cadastro tem quatro abas:
      **Time** (logo, nome, uma modalidade — Futsal, Society, Campo, Areia ou
