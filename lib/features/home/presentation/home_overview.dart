@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../invites/data/invite_repository.dart';
 import '../../profile/domain/profile.dart';
 import '../../teams/data/team_repository.dart';
 import 'team_dashboard.dart';
@@ -47,14 +48,32 @@ class HomeOverview extends ConsumerWidget {
               subtitle: 'Quadras e campos onde as partidas acontecem',
               onTap: () => context.push(Routes.venues),
             ),
-            const _ActionTile(
+            _ActionTile(
               icon: Icons.mail_outline,
-              title: 'Convites enviados',
+              title: 'Convites',
+              subtitle: 'Código para os jogadores e pedidos para entrar',
+              onTap: () => context.push(Routes.teamInvites),
             ),
           ]
-        : const [
-            _ActionTile(icon: Icons.search, title: 'Buscar times'),
-            _ActionTile(icon: Icons.mail_outline, title: 'Meus convites'),
+        : [
+            _ActionTile(
+              icon: Icons.search,
+              title: 'Buscar times',
+              subtitle: 'Veja os times e peça para entrar',
+              onTap: () => context.push(Routes.teamSearch),
+            ),
+            _ActionTile(
+              icon: Icons.mail_outline,
+              title: 'Meus convites',
+              subtitle: switch ((ref.watch(myInvitesProvider).value ?? const [])
+                  .where((invite) => invite.isPending && !invite.isRequest)
+                  .length) {
+                0 => 'Entrar com código, seus times e pedidos',
+                1 => '1 convite para responder',
+                final count => '$count convites para responder',
+              },
+              onTap: () => context.push(Routes.playerInvites),
+            ),
           ];
 
     return ListView(

@@ -86,7 +86,7 @@ configurado.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**. O Início mostra o **painel do time
-   ativo** (seguidores, próximo jogo, convites pendentes, estatísticas e
+   ativo** (seguidores, próximo jogo com quanto falta para a partida, convites pendentes, estatísticas e
    **últ. jogos**, com vitória, empate ou derrota em cada um) e os atalhos:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
      O cadastro tem quatro abas:
@@ -97,10 +97,11 @@ configurado.
      Instagram, Facebook, YouTube e site, opcionais) e **Mídia** (capa e até 3
      fotos de uniforme, no Storage `team-logos`). Tocar no adversário no card
      do jogo abre o perfil dele, com os uniformes para não confundir as cores.
-     A **lupa** no topo pesquisa os times da plataforma; o **perfil** mostra
-     seguidores e seguindo (o time ativo pode **Seguir**), estatísticas
-     (jogos, vitórias, empates, derrotas, gols e saldo), últimos resultados e
-     próximos jogos;
+     A **lupa** no topo pesquisa os times da plataforma; o **perfil** tem duas
+     abas: **Visão geral** (seguidores e seguindo — o time ativo pode
+     **Seguir** —, estatísticas, últimos resultados e próximos jogos) e
+     **Sobre o time** (joga como, cidade, local, fundação, uniformes e
+     contatos);
    - **Atletas** e **Jogos** mostram e cadastram só os dados do time ativo —
      cada time tem os seus;
    - atleta: foto (obrigatória; Storage privado `athlete-photos`, visível só
@@ -141,7 +142,14 @@ configurado.
      claro e escuro, muda na hora. A escolha fica salva no aparelho, como o
      modo claro/escuro.
 
-   Convites e a home do jogador: próxima etapa.
+   - **Convites** (Início do administrador): o código do time para mandar aos
+     jogadores (Compartilhar, Copiar, Gerar outro), **Convidar jogador do app**
+     (pesquisa pelo nome; o jogador aceita ou recusa em Meus convites), os
+     convites enviados e os **pedidos para entrar**,
+     com Aceitar e Recusar.
+   - O **jogador** entra num time com o código (Início → Meus convites), ou pede
+     para entrar pelo perfil do time (Buscar times → **Pedir para entrar**).
+     Aceito, ele vira atleta do time, ligado à conta dele.
 
 ## Estrutura
 
@@ -176,7 +184,8 @@ supabase/
 | `team_follows`  | Time segue time (o dono do time que segue altera); todos veem. A função `team_profile_stats` devolve seguidores, estatísticas, últimos resultados e próximos jogos de qualquer time |
 | `venues`        | Locais das partidas (nome, endereço com CEP e foto no Storage `venue-photos`); todos veem, só quem cadastrou altera. A função `similar_venues` sugere os parecidos antes de cadastrar |
 | `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
-| `team_invites`  | Convites do administrador e solicitações do jogador              |
+| `team_invites`  | Pedidos do jogador para entrar no time (o dono aceita ou recusa; o jogador cancela) e convites; aceito, o jogador vira atleta do time. A entrada com código (`join_team_with_code`) fica registrada como pedido aceito |
+| `team_invite_codes` | Código de convite de cada time; só o dono vê e gera outro (`regenerate_invite_code`) |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda

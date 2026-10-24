@@ -10,6 +10,7 @@ import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
 import '../../teams/presentation/team_stats_widgets.dart';
+import 'game_countdown.dart';
 
 /// Dashboard do time ativo no Início: o time (com seguidores), o próximo
 /// jogo, o que está pendente, as estatísticas e os últimos jogos.
@@ -68,7 +69,11 @@ class TeamDashboard extends ConsumerWidget {
           following: stats?.following,
         ),
         const SizedBox(height: 8),
-        _NextGameCard(team: team, game: next.firstOrNull),
+        _NextGameCard(
+          team: team,
+          game: next.firstOrNull,
+          clock: this.now == null ? null : () => now,
+        ),
         if (pending.isNotEmpty) ...[
           const SizedBox(height: 8),
           Card(
@@ -199,10 +204,13 @@ class _TeamHeader extends StatelessWidget {
 
 /// Próximo amistoso marcado ou o atalho para marcar um.
 class _NextGameCard extends StatelessWidget {
-  const _NextGameCard({required this.team, required this.game});
+  const _NextGameCard({required this.team, required this.game, this.clock});
 
   final Team team;
   final Game? game;
+
+  /// Hora atual do contador (testes).
+  final DateTime Function()? clock;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +237,17 @@ class _NextGameCard extends StatelessWidget {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Próximo jogo', style: theme.textTheme.titleSmall),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Próximo jogo',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      GameCountdown(startsAt: game.scheduledAt, clock: clock),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [

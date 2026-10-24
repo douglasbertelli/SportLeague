@@ -17,6 +17,15 @@ abstract final class Routes {
 
   /// Pesquisa de times da plataforma.
   static const teamSearch = '/home/teams/search';
+
+  /// Convites do time ativo (administrador): código e pedidos.
+  static const teamInvites = '/home/invites';
+
+  /// Convites do jogador: entrar com código, times e pedidos.
+  static const playerInvites = '/home/my-invites';
+
+  /// Pesquisa de jogadores do app para convidar ao time ativo.
+  static const invitePlayer = '/home/invites/player';
   static const newAthlete = '/home/athletes/new';
 
   /// Recebe o `Athlete` em `extra`.

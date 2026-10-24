@@ -5,14 +5,17 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/presentation/game_card.dart';
+import '../../invites/data/invite_repository.dart';
+import '../../profile/data/profile_repository.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import 'team_logo.dart';
 import 'team_stats_widgets.dart';
 
-/// Perfil público de um time: capa, seguidores (com o botão Seguir),
-/// estatísticas, últimos resultados, próximos jogos, dados, mando,
-/// contatos e as fotos dos uniformes (para saber as cores da camisa).
+/// Perfil público de um time, em duas abas. Visão geral: capa, seguidores
+/// (com o botão Seguir), estatísticas, últimos resultados e próximos jogos.
+/// Sobre o time: mando, cidade, local, fundação, descrição, uniformes (para
+/// saber as cores da camisa) e contatos.
 class TeamProfilePage extends ConsumerWidget {
   const TeamProfilePage({super.key, required this.teamId});
 
@@ -90,7 +93,8 @@ class _Profile extends StatelessWidget {
       if (team.website case final website?) (Icons.language, 'Site', website),
     ];
 
-    return ListView(
+    // Aba "Visão geral": capa, seguidores, estatísticas e jogos.
+    final overview = ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
         AspectRatio(
@@ -136,7 +140,13 @@ class _Profile extends StatelessWidget {
         ),
         _FollowBar(team: team),
         _StatsSection(teamId: team.id!),
-        const SizedBox(height: 8),
+      ],
+    );
+
+    // Aba "Sobre o time": as informações cadastradas do time.
+    final about = ListView(
+      padding: const EdgeInsets.only(top: 8, bottom: 32),
+      children: [
         ListTile(
           leading: const Icon(Icons.stadium_outlined),
           title: Text('Joga como: ${team.playsAs.label}'),
@@ -227,6 +237,21 @@ class _Profile extends StatelessWidget {
         ],
       ],
     );
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.insights_outlined), text: 'Visão geral'),
+              Tab(icon: Icon(Icons.info_outline), text: 'Sobre o time'),
+            ],
+          ),
+          Expanded(child: TabBarView(children: [overview, about])),
+        ],
+      ),
+    );
   }
 }
 
@@ -316,7 +341,11 @@ class _FollowBarState extends ConsumerState<_FollowBar> {
               ],
             ),
           ),
-          if (canFollow)
+          // O jogador (sem time ativo) pede para entrar no time.
+          if (ref.watch(currentProfileProvider).value case final profile?
+              when !profile.isAdmin)
+            _JoinButton(team: widget.team, profileId: profile.id)
+          else if (canFollow)
             switch (following) {
               true => OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
@@ -339,6 +368,87 @@ class _FollowBarState extends ConsumerState<_FollowBar> {
             },
         ],
       ),
+    );
+  }
+}
+
+/// Botão do jogador: Pedir para entrar, Pedido enviado (toque cancela) ou
+/// Você é do time.
+class _JoinButton extends ConsumerStatefulWidget {
+  const _JoinButton({required this.team, required this.profileId});
+
+  final Team team;
+  final String profileId;
+
+  @override
+  ConsumerState<_JoinButton> createState() => _JoinButtonState();
+}
+
+class _JoinButtonState extends ConsumerState<_JoinButton> {
+  bool _saving = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _saving = true);
+    try {
+      await action();
+      ref
+        ..invalidate(myInvitesProvider)
+        ..invalidate(myPlayerTeamsProvider);
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = ref.read(inviteRepositoryProvider);
+    final isMember = (ref.watch(myPlayerTeamsProvider).value ?? const []).any(
+      (team) => team.id == widget.team.id,
+    );
+    final pending = (ref.watch(myInvitesProvider).value ?? const [])
+        .where((i) => i.teamId == widget.team.id && i.isRequest && i.isPending)
+        .firstOrNull;
+    const size = Size(120, 44);
+
+    if (isMember) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(minimumSize: size),
+        onPressed: null,
+        icon: const Icon(Icons.verified_outlined),
+        label: const Text('Você é do time'),
+      );
+    }
+    if (pending != null) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(minimumSize: size),
+        onPressed: _saving
+            ? null
+            : () async {
+                final confirmed = await confirmAction(
+                  context,
+                  title: 'Cancelar pedido?',
+                  message: 'O pedido para entrar no ${widget.team.name} sai.',
+                  confirmLabel: 'Cancelar pedido',
+                  confirmIcon: Icons.close,
+                  cancelLabel: 'Voltar',
+                );
+                if (confirmed) await _run(() => repository.cancel(pending.id));
+              },
+        icon: const Icon(Icons.hourglass_top),
+        label: const Text('Pedido enviado'),
+      );
+    }
+    return FilledButton.icon(
+      style: FilledButton.styleFrom(minimumSize: size),
+      onPressed: _saving
+          ? null
+          : () => _run(
+              () => repository.requestToJoin(widget.team.id!, widget.profileId),
+            ),
+      icon: const Icon(Icons.group_add_outlined),
+      label: const Text('Pedir para entrar'),
     );
   }
 }
