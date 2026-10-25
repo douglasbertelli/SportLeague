@@ -91,8 +91,9 @@ configurado.
    Quando a partida começa, o card vira **Jogo em andamento** (com
    confetes ao zerar a contagem): quem marcou o jogo controla o **relógio**
    (inicia o 1º tempo com a duração de cada tempo, pausa, encerra o tempo,
-   inicia o 2º e encerra o jogo; o app avisa ao fim do tempo regulamentar e
-   conta o acréscimo) e soma os gols no **placar ao vivo**; o adversário
+   inicia o 2º e encerra o jogo, com **apito** em cada mudança de tempo —
+   sons gerados por `tool/generate_whistles.dart`; o app avisa ao fim do
+   tempo regulamentar e conta o acréscimo) e soma os gols no **placar ao vivo**; o adversário
    acompanha os dois. O jogo fica em **Marcados** até terminar (relógio
    encerrado ou 2 horas sem relógio rodando) e depois vai para Realizados,
    onde o adversário pode **contestar o placar** (placar na visão dele e o
