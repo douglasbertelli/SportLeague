@@ -201,6 +201,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
         builder: (_) => SlotPickerPage(
           teamId: calendar.teamId,
           calendarOwner: calendar.owner,
+          ownCalendar: calendar.teamId == team.id,
         ),
       ),
     );

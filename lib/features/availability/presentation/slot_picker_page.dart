@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../core/router/routes.dart';
 import '../../games/presentation/game_card.dart';
 import '../data/availability_repository.dart';
 
@@ -13,6 +15,7 @@ class SlotPickerPage extends ConsumerStatefulWidget {
     super.key,
     required this.teamId,
     required this.calendarOwner,
+    this.ownCalendar = false,
     this.today,
   });
 
@@ -20,6 +23,10 @@ class SlotPickerPage extends ConsumerStatefulWidget {
 
   /// "do Real Madrid" / "do seu time", para os textos.
   final String calendarOwner;
+
+  /// O calendário é do time ativo (mandante): sem horários, oferece ir à
+  /// Disponibilidade.
+  final bool ownCalendar;
 
   /// Dia de hoje (testes).
   final DateTime? today;
@@ -53,10 +60,28 @@ class _SlotPickerPageState extends ConsumerState<SlotPickerPage> {
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Text(
-                    'Não há horários disponíveis ${widget.calendarOwner} nos '
-                    'próximos ${freeSlotsWindow.inDays} dias.',
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Não há horários disponíveis ${widget.calendarOwner} '
+                        'nos próximos ${freeSlotsWindow.inDays} dias.',
+                        textAlign: TextAlign.center,
+                      ),
+                      // No calendário do próprio time, dá para cadastrar os
+                      // horários e voltar para escolher.
+                      if (widget.ownCalendar) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () async {
+                            await context.push(Routes.availability);
+                            ref.invalidate(freeSlotsProvider(widget.teamId));
+                          },
+                          icon: const Icon(Icons.calendar_month_outlined),
+                          label: const Text('Cadastrar horários'),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               )

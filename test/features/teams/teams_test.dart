@@ -130,6 +130,11 @@ Future<void> _pumpPage(
         builder: (_, state) => TeamFormPage(team: state.extra as Team),
       ),
       GoRoute(
+        path: Routes.availability,
+        builder: (_, _) =>
+            const Scaffold(body: Text('Tela de disponibilidade')),
+      ),
+      GoRoute(
         path: Routes.pickVenue,
         builder: (_, _) => const VenuesPage(picking: true),
       ),
@@ -2088,6 +2093,62 @@ void main() {
       await tester.tap(find.text('15:00'));
       await tester.pumpAndSettle();
       expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('sem horários no próprio calendário, leva à disponibilidade', (
+      tester,
+    ) async {
+      final free = <String, List<DateTime>>{};
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: FakeAvailabilityRepository(freeByTeam: free),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        SlotPickerPage(
+          teamId: 'team-a',
+          calendarOwner: 'do Amigos FC',
+          ownCalendar: true,
+          today: DateTime(2026, 10, 22),
+        ),
+      );
+      expect(
+        find.textContaining('Não há horários disponíveis'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Cadastrar horários'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tela de disponibilidade'), findsOneWidget);
+
+      // Cadastrou um horário e voltou: o calendário já mostra.
+      free['team-a'] = [DateTime(2026, 10, 24, 15)];
+      tester.state<NavigatorState>(find.byType(Navigator).last).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Horários em 24/10/2026'), findsOneWidget);
+    });
+
+    testWidgets('sem horários do adversário, não oferece o cadastro', (
+      tester,
+    ) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: FakeAvailabilityRepository(),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        const SlotPickerPage(
+          teamId: 'team-rival',
+          calendarOwner: 'do Real Bairro',
+        ),
+      );
+      expect(
+        find.textContaining('Não há horários disponíveis'),
+        findsOneWidget,
+      );
+      expect(find.text('Cadastrar horários'), findsNothing);
     });
 
     testWidgets('o calendário é o de quem joga em casa', (tester) async {
