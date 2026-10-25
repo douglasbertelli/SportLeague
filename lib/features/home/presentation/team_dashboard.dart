@@ -8,12 +8,14 @@ import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
+import '../../games/domain/match_clock.dart';
 import '../../games/presentation/game_card.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
 import '../../teams/presentation/team_stats_widgets.dart';
 import 'game_countdown.dart';
+import 'match_clock_panel.dart';
 
 /// Dashboard do time ativo no Início: o time (com seguidores), o próximo
 /// jogo, o que está pendente, as estatísticas e os últimos jogos.
@@ -267,10 +269,11 @@ class _NextGameCardState extends State<_NextGameCard> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          live ? 'Jogo em andamento' : 'Próximo jogo',
-                          style: theme.textTheme.titleSmall,
-                        ),
+                        child: Text(switch ((live, game.clock?.phase)) {
+                          (true, MatchPhase.finished) => 'Fim de jogo',
+                          (true, _) => 'Jogo em andamento',
+                          (false, _) => 'Próximo jogo',
+                        }, style: theme.textTheme.titleSmall),
                       ),
                       GameCountdown(
                         startsAt: game.scheduledAt,
@@ -331,6 +334,12 @@ class _NextGameCardState extends State<_NextGameCard> {
                   ],
                   if (live) ...[
                     const Divider(height: 32),
+                    MatchClockPanel(
+                      game: game,
+                      viewerTeamId: team.id!,
+                      clock: clock,
+                    ),
+                    const SizedBox(height: 16),
                     _LiveScore(team: team, game: game),
                   ],
                 ],
