@@ -56,13 +56,18 @@ class TeamDashboard extends ConsumerWidget {
     final now = this.now ?? DateTime.now();
     final games = ref.watch(teamGamesProvider(team.id!)).value ?? const [];
     final stats = ref.watch(teamStatsProvider(team.id!)).value;
-    // O jogo em andamento continua no card até ganhar placar (ou passar o
-    // tempo de jogo); depois, o próximo marcado.
-    final next = [
+    // O card mostra o jogo em andamento ou o próximo marcado. O que acabou de
+    // terminar (Fim de jogo, para contestar ou corrigir o placar) só fica
+    // enquanto não houver outro jogo marcado.
+    final upcoming = [
       for (final game in games)
-        if (game.stageAt(now) == GameStage.scheduled || game.isLiveAt(now))
-          game,
+        if (game.stageAt(now) == GameStage.scheduled) game,
     ]..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    final justFinished = [
+      for (final game in games)
+        if (game.isLiveAt(now) && game.isFinishedAt(now)) game,
+    ]..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    final next = upcoming.isNotEmpty ? upcoming : justFinished.reversed;
     final pending = [
       for (final game in games)
         if (game.status == GameStatus.pending) game,
