@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../athletes/presentation/athletes_tab.dart';
+import '../../games/data/games_tab_request.dart';
 import '../../games/presentation/games_tab.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
@@ -12,16 +14,16 @@ import 'home_overview.dart';
 /// Home do administrador: Início, Jogos, Atletas e Perfil na barra inferior.
 /// Jogos e Atletas mostram só os dados do time ativo, escolhido no título.
 /// Cada aba mantém o próprio estado (rolagem etc.) ao trocar de aba.
-class AdminHomePage extends StatefulWidget {
+class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key, required this.profile});
 
   final Profile profile;
 
   @override
-  State<AdminHomePage> createState() => _AdminHomePageState();
+  ConsumerState<AdminHomePage> createState() => _AdminHomePageState();
 }
 
-class _AdminHomePageState extends State<AdminHomePage> {
+class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   static const _tabs = [
     (label: 'Início', icon: Icons.home_outlined, selectedIcon: Icons.home),
     (
@@ -51,7 +53,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
         children: [
           HomeOverview(
             profile: widget.profile,
-            onOpenGames: () => setState(() => _index = 1),
+            onOpenGames: (stage) {
+              ref.read(gamesTabRequestProvider.notifier).open(stage);
+              setState(() => _index = 1);
+            },
           ),
           const GamesTab(),
           const AthletesTab(),

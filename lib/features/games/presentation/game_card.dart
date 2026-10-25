@@ -9,8 +9,11 @@ import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/team_logo.dart';
+import '../data/dispute_repository.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
+import '../domain/score_dispute.dart';
+import 'contest_score.dart';
 
 /// "BAR" para "Barcelona": as 3 primeiras letras do nome, em maiúsculas.
 String teamCode(String name) {
@@ -20,7 +23,7 @@ String teamCode(String name) {
 }
 
 /// Ações do menu ⋮ do card.
-enum _GameAction { edit, accept, decline, cancel, score }
+enum _GameAction { edit, accept, decline, cancel, score, contest }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
 /// ativo à esquerda, o adversário à direita, e abaixo data, hora, mando e
@@ -46,7 +49,13 @@ class _GameCardState extends ConsumerState<GameCard> {
 
   Game get _game => widget.game;
 
-  List<_GameAction> _actions() {
+  /// Já começou, mas ainda não terminou (fica em Marcados).
+  bool get _inProgress =>
+      _game.status == GameStatus.scheduled &&
+      widget.stage == GameStage.scheduled &&
+      !_game.scheduledAt.isAfter(DateTime.now());
+
+  List<_GameAction> _actions(ScoreDispute? dispute) {
     final isHost = _game.isHostedBy(widget.viewerTeamId);
     return switch (_game.status) {
       GameStatus.canceled => const [],
@@ -56,16 +65,23 @@ class _GameCardState extends ConsumerState<GameCard> {
       ],
       // Aceitar e Recusar ficam à vista no card (_canRespond).
       GameStatus.pending => const [],
-      // Depois do jogo, quem marcou lança (ou corrige) o placar.
-      GameStatus.scheduled when isHost && widget.stage == GameStage.played =>
+      // Durante e depois do jogo, quem marcou lança (ou corrige) o placar.
+      GameStatus.scheduled
+          when isHost && (widget.stage == GameStage.played || _inProgress) =>
         const [_GameAction.score],
       GameStatus.scheduled when isHost => const [
         _GameAction.edit,
         _GameAction.cancel,
       ],
+      // Com o jogo rolando, o adversário só acompanha.
+      GameStatus.scheduled when _inProgress => const [],
       // O adversário cancela um marcado que ainda não aconteceu.
       GameStatus.scheduled when widget.stage == GameStage.scheduled => const [
         _GameAction.cancel,
+      ],
+      // Depois do jogo, o adversário contesta o placar (uma vez por vez).
+      GameStatus.scheduled when _game.hasScore && dispute == null => const [
+        _GameAction.contest,
       ],
       GameStatus.scheduled => const [],
     };
@@ -95,6 +111,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.decline => Icons.close,
                     _GameAction.cancel => Icons.event_busy,
                     _GameAction.score => Icons.scoreboard_outlined,
+                    _GameAction.contest => Icons.report_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -105,6 +122,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.cancel => 'Cancelar amistoso',
                     _GameAction.score =>
                       _game.hasScore ? 'Corrigir placar' : 'Lançar placar',
+                    _GameAction.contest => 'Contestar placar',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -148,8 +166,51 @@ class _GameCardState extends ConsumerState<GameCard> {
     }
   }
 
+  /// O adversário diz o placar na visão dele e o motivo; vai para quem
+  /// marcou responder.
+  Future<void> _contest() => contestScore(
+    context,
+    ref,
+    game: _game,
+    viewerTeamId: widget.viewerTeamId,
+    myTeamName: ref.read(selectedTeamProvider).value?.name ?? 'Seu time',
+  );
+
+  /// Quem marcou responde à contestação.
+  Future<void> _resolve(ScoreDispute dispute, {required bool accept}) async {
+    final viewer = widget.viewerTeamId;
+    if (!accept &&
+        !await confirmAction(
+          context,
+          title: 'Manter o seu placar?',
+          message:
+              'A contestação de ${_game.opponentNameFor(viewer)} será '
+              'recusada e o placar continua '
+              '${_game.teamScore} × ${_game.opponentScore}.',
+          confirmLabel: 'Manter',
+          cancelLabel: 'Voltar',
+        )) {
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(disputeRepositoryProvider)
+          .resolve(dispute.id!, accept: accept);
+      ref
+        ..invalidate(teamDisputesProvider(viewer))
+        ..invalidate(teamGamesProvider(viewer))
+        ..invalidate(teamStatsProvider(viewer));
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _run(_GameAction action) async {
     if (action == _GameAction.score) return _enterScore();
+    if (action == _GameAction.contest) return _contest();
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
       return;
@@ -216,7 +277,13 @@ class _GameCardState extends ConsumerState<GameCard> {
     final viewer = widget.viewerTeamId;
     final myTeam = ref.watch(selectedTeamProvider).value;
     final score = _game.scoreFor(viewer);
-    final actions = _actions();
+    // Contestação aberta deste jogo (feita pelo adversário).
+    final dispute = ref
+        .watch(teamDisputesProvider(viewer))
+        .value
+        ?.where((dispute) => dispute.gameId == _game.id)
+        .firstOrNull;
+    final actions = _actions(dispute);
     final statusLine = _statusLine();
     // Local cadastrado; jogos antigos só têm o texto digitado.
     final place = switch (_game.venue) {
@@ -335,6 +402,21 @@ class _GameCardState extends ConsumerState<GameCard> {
                     if (statusLine != null) ...[
                       const SizedBox(height: 12),
                       Text(statusLine, style: mutedStyle),
+                    ],
+                    if (dispute != null) ...[
+                      const SizedBox(height: 16),
+                      _DisputeBox(
+                        dispute: dispute,
+                        isHost: _game.isHostedBy(viewer),
+                        hostName: _game.isHostedBy(viewer)
+                            ? myTeam?.name ?? 'Seu time'
+                            : _game.opponentNameFor(viewer),
+                        opponentName: _game.isHostedBy(viewer)
+                            ? _game.opponentNameFor(viewer)
+                            : myTeam?.name ?? 'Seu time',
+                        loading: _loading,
+                        onAnswer: (accept) => _resolve(dispute, accept: accept),
+                      ),
                     ],
                     if (_canRespond) ...[
                       const SizedBox(height: 16),
@@ -519,6 +601,105 @@ String _two(int value) => value.toString().padLeft(2, '0');
 Color _darker(Color color) {
   final hsl = HSLColor.fromColor(color);
   return hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+}
+
+/// Contestação aberta no card. Quem marcou vê o placar proposto e a
+/// mensagem, e aceita ou mantém o dele; quem contestou vê que está
+/// aguardando.
+class _DisputeBox extends StatelessWidget {
+  const _DisputeBox({
+    required this.dispute,
+    required this.isHost,
+    required this.hostName,
+    required this.opponentName,
+    required this.loading,
+    required this.onAnswer,
+  });
+
+  final ScoreDispute dispute;
+  final bool isHost;
+  final String hostName;
+  final String opponentName;
+  final bool loading;
+  final ValueChanged<bool> onAnswer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.onSurfaceVariant,
+    );
+    // Do ponto de vista de quem marcou: "Amigos 1 × 2 Real".
+    final proposed =
+        '$hostName ${dispute.teamScore} × ${dispute.opponentScore} '
+        '$opponentName';
+
+    // Quem contestou: o destaque fica na mensagem; abaixo, o que ele mandou.
+    if (!isHost) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DisputeSentBadge(hostName: hostName),
+          const SizedBox(height: 8),
+          Text('Placar enviado: $proposed', style: muted),
+          const SizedBox(height: 4),
+          Text('"${dispute.message}"', style: muted),
+        ],
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.errorContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.report_outlined, size: 20, color: colors.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$opponentName contestou o placar',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('Placar para eles: $proposed', style: muted),
+            const SizedBox(height: 4),
+            Text('"${dispute.message}"', style: theme.textTheme.bodyMedium),
+            if (isHost) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: loading ? null : () => onAnswer(false),
+                      child: const Text('Manter o meu'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: loading ? null : () => onAnswer(true),
+                      child: const Text('Aceitar placar'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Lança o placar: gols do time que marcou e do adversário.

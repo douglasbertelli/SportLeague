@@ -3,10 +3,12 @@ import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
 import 'package:sport_league/features/availability/data/availability_repository.dart';
 import 'package:sport_league/features/availability/domain/availability.dart';
+import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
+import 'package:sport_league/features/games/domain/score_dispute.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
@@ -414,4 +416,45 @@ class FakeAvailabilityRepository implements AvailabilityRepository {
     freeSlotRequests.add(teamId);
     return freeByTeam[teamId] ?? const [];
   }
+}
+
+/// Contestações em memória; [hostByGame] diz quem marcou cada jogo.
+class FakeDisputeRepository implements DisputeRepository {
+  FakeDisputeRepository({
+    List<ScoreDispute> disputes = const [],
+    this.hostByGame = const {},
+  }) : disputes = [...disputes];
+
+  final List<ScoreDispute> disputes;
+  final Map<String, String> hostByGame;
+  final resolved = <(String, bool)>[];
+
+  @override
+  Future<List<ScoreDispute>> openForTeam(String teamId) async => [
+    for (final dispute in disputes)
+      if (dispute.isOpen &&
+          (dispute.teamId == teamId || hostByGame[dispute.gameId] == teamId))
+        dispute,
+  ];
+
+  @override
+  Future<void> create(ScoreDispute dispute) async => disputes.add(
+    ScoreDispute(
+      id: 'd${disputes.length + 1}',
+      gameId: dispute.gameId,
+      teamId: dispute.teamId,
+      teamScore: dispute.teamScore,
+      opponentScore: dispute.opponentScore,
+      message: dispute.message,
+    ),
+  );
+
+  @override
+  Future<void> resolve(String disputeId, {required bool accept}) async {
+    resolved.add((disputeId, accept));
+    disputes.removeWhere((dispute) => dispute.id == disputeId);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -6,9 +6,11 @@ import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../games/data/dispute_repository.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
 import '../../games/domain/match_clock.dart';
+import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -22,8 +24,8 @@ import 'match_clock_panel.dart';
 class TeamDashboard extends ConsumerWidget {
   const TeamDashboard({super.key, this.onOpenGames, this.now});
 
-  /// Leva à aba Jogos (pendências).
-  final VoidCallback? onOpenGames;
+  /// Leva à aba Jogos, já na aba de dentro do aviso (Pendentes, Realizados).
+  final ValueChanged<GameStage>? onOpenGames;
 
   /// Agora (testes).
   final DateTime? now;
@@ -67,6 +69,12 @@ class TeamDashboard extends ConsumerWidget {
     ];
     final toAnswer = pending.where((g) => !g.isHostedBy(team.id!)).length;
     final waiting = pending.length - toAnswer;
+    // Placares que o adversário contestou, para quem marcou responder.
+    final disputed = [
+      for (final dispute
+          in ref.watch(teamDisputesProvider(team.id!)).value ?? const [])
+        if (dispute.teamId != team.id) dispute,
+    ].length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -82,6 +90,25 @@ class TeamDashboard extends ConsumerWidget {
           game: next.firstOrNull,
           clock: this.now == null ? null : () => now,
         ),
+        if (disputed > 0) ...[
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: Badge(
+                label: Text('$disputed'),
+                child: const Icon(Icons.report_outlined),
+              ),
+              title: Text(
+                disputed == 1
+                    ? '1 placar contestado'
+                    : '$disputed placares contestados',
+              ),
+              subtitle: const Text('O adversário discorda do placar lançado'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => onOpenGames?.call(GameStage.played),
+            ),
+          ),
+        ],
         if (pending.isNotEmpty) ...[
           const SizedBox(height: 8),
           Card(
@@ -104,7 +131,7 @@ class TeamDashboard extends ConsumerWidget {
                     )
                   : null,
               trailing: const Icon(Icons.chevron_right),
-              onTap: onOpenGames,
+              onTap: () => onOpenGames?.call(GameStage.pending),
             ),
           ),
         ],
@@ -275,14 +302,17 @@ class _NextGameCardState extends State<_NextGameCard> {
                           (false, _) => 'Próximo jogo',
                         }, style: theme.textTheme.titleSmall),
                       ),
-                      GameCountdown(
-                        startsAt: game.scheduledAt,
-                        clock: clock,
-                        onStarted: () {
-                          setState(() => _startedNow = true);
-                          showConfettiBurst(context);
-                        },
-                      ),
+                      // Com o relógio da partida iniciado (e no fim de
+                      // jogo), quem mostra o tempo é ele; o "Começou" sai.
+                      if (game.clock == null)
+                        GameCountdown(
+                          startsAt: game.scheduledAt,
+                          clock: clock,
+                          onStarted: () {
+                            setState(() => _startedNow = true);
+                            showConfettiBurst(context);
+                          },
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -341,6 +371,12 @@ class _NextGameCardState extends State<_NextGameCard> {
                     ),
                     const SizedBox(height: 16),
                     _LiveScore(team: team, game: game),
+                    if (game.clock?.phase == MatchPhase.finished &&
+                        !game.isHostedBy(team.id!) &&
+                        game.hasScore) ...[
+                      const SizedBox(height: 16),
+                      _ContestButton(team: team, game: game),
+                    ],
                   ],
                 ],
               ),
@@ -455,6 +491,37 @@ class _DashboardTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+    );
+  }
+}
+
+/// No fim de jogo, o adversário contesta o placar direto do card; depois de
+/// enviar, fica o aviso de que espera a resposta.
+class _ContestButton extends ConsumerWidget {
+  const _ContestButton({required this.team, required this.game});
+
+  final Team team;
+  final Game game;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sent = (ref.watch(teamDisputesProvider(team.id!)).value ?? const [])
+        .any((dispute) => dispute.gameId == game.id);
+    if (sent) {
+      return Center(
+        child: DisputeSentBadge(hostName: game.opponentNameFor(team.id!)),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: () => contestScore(
+        context,
+        ref,
+        game: game,
+        viewerTeamId: team.id!,
+        myTeamName: team.name,
+      ),
+      icon: const Icon(Icons.report_outlined),
+      label: const Text('Contestar placar'),
     );
   }
 }
