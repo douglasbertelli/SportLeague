@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
@@ -12,6 +13,7 @@ import '../../invites/data/invite_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
+import '../domain/team_stats.dart';
 import 'team_logo.dart';
 import 'team_stats_widgets.dart';
 
@@ -160,7 +162,7 @@ class _Profile extends StatelessWidget {
           ),
         ),
         _FollowBar(team: team),
-        _StatsSection(teamId: team.id!),
+        _StatsSection(team: team),
       ],
     );
 
@@ -479,9 +481,11 @@ class _JoinButtonState extends ConsumerState<_JoinButton> {
 
 /// Estatísticas, últimos resultados e próximos jogos do time.
 class _StatsSection extends ConsumerWidget {
-  const _StatsSection({required this.teamId});
+  const _StatsSection({required this.team});
 
-  final String teamId;
+  final Team team;
+
+  String get teamId => team.id!;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -548,7 +552,7 @@ class _StatsSection extends ConsumerWidget {
                   const _SectionTitle('Próximos jogos'),
                   for (final game in stats.upcoming)
                     ListTile(
-                      leading: const Icon(Icons.event),
+                      leading: TeamLogo.url(logoUrl: game.opponentLogoUrl),
                       title: OpponentWithSide(
                         opponent: game.opponent,
                         isHome: game.isHome,
@@ -557,12 +561,140 @@ class _StatsSection extends ConsumerWidget {
                         '${formatGameDay(game.scheduledAt)} às '
                         '${formatGameTime(game.scheduledAt)}',
                       ),
+                      trailing: const Icon(Icons.chevron_right),
+                      // Resumo da partida.
+                      onTap: () => showAppSheet<void>(
+                        context,
+                        builder: (_) =>
+                            _UpcomingGameSheet(team: team, game: game),
+                      ),
                     ),
                 ],
               ],
             );
           },
         );
+  }
+}
+
+/// Resumo de um próximo jogo do perfil: os dois times, quando (e quanto
+/// falta), mando, modalidade e local; abre o perfil do adversário da
+/// plataforma.
+class _UpcomingGameSheet extends StatelessWidget {
+  const _UpcomingGameSheet({required this.team, required this.game});
+
+  final Team team;
+  final ProfileGame game;
+
+  /// "Hoje", "Amanhã" ou "Em 5 dias".
+  static String _whenLabel(DateTime day) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final days = DateUtils.dateOnly(day).difference(today).inDays;
+    return switch (days) {
+      <= 0 => 'Hoje',
+      1 => 'Amanhã',
+      _ => 'Em $days dias',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final weekday = DateFormat('EEEE', 'pt_BR').format(game.scheduledAt);
+    final opponentId = game.opponentTeamId;
+
+    Widget side(Widget logo, String name) => Expanded(
+      child: Column(
+        children: [
+          logo,
+          const SizedBox(height: 8),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall,
+          ),
+        ],
+      ),
+    );
+
+    Widget detail(IconData icon, String text, [String? extra]) => Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(text, style: theme.textTheme.bodyLarge),
+                if (extra != null) Text(extra, style: muted),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return AppSheet(
+      title: 'Resumo da partida',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              side(TeamLogo(team: team, radius: 28), team.name),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('×', style: theme.textTheme.headlineSmall),
+              ),
+              side(
+                TeamLogo.url(logoUrl: game.opponentLogoUrl, radius: 28),
+                game.opponent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          detail(
+            Icons.calendar_month_outlined,
+            '${weekday[0].toUpperCase()}${weekday.substring(1)}, '
+            '${formatGameDay(game.scheduledAt)} às '
+            '${formatGameTime(game.scheduledAt)}',
+            _whenLabel(game.scheduledAt),
+          ),
+          detail(
+            Icons.stadium_outlined,
+            game.isHome
+                ? '${team.name} joga em casa (mandante)'
+                : '${team.name} joga fora (visitante)',
+          ),
+          if (game.modality case final modality?)
+            detail(Icons.sports_soccer, modality.label),
+          if (game.venue case final venue?)
+            detail(Icons.location_on_outlined, venue.name, venue.address)
+          else if (game.location case final location?)
+            detail(Icons.location_on_outlined, location),
+        ],
+      ),
+      actions: [
+        if (opponentId != null)
+          FilledButton.tonalIcon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push(Routes.teamProfile, extra: opponentId);
+            },
+            icon: const Icon(Icons.shield_outlined),
+            label: Text('Ver perfil do ${game.opponent}'),
+          ),
+        const SheetBackButton(label: 'Fechar'),
+      ],
+    );
   }
 }
 

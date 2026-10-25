@@ -627,7 +627,8 @@ void main() {
         instagram: 'realbairro',
         kitUrls: ['https://storage.test/kit-1'],
       );
-      final teams = FakeTeamRepository([teamA, rival]);
+      final teams = FakeTeamRepository([teamA, teamB, rival]);
+      teams.statsByTeam['team-b'] = const TeamStats();
       teams.statsByTeam['team-rival'] = TeamStats(
         played: 3,
         wins: 1,
@@ -647,6 +648,17 @@ void main() {
           ProfileGame(
             scheduledAt: DateTime(2026, 10, 11, 15),
             opponent: 'Bola Murcha',
+            isHome: true,
+          ),
+        ],
+        upcoming: [
+          ProfileGame(
+            scheduledAt: DateTime(2026, 11, 8, 15),
+            opponent: 'Estrela',
+            opponentLogoUrl: 'https://storage.test/estrela',
+            opponentTeamId: 'team-b',
+            modality: Modality.society,
+            location: 'Quadra do Zé',
             isHome: true,
           ),
         ],
@@ -699,7 +711,8 @@ void main() {
       // "x Adversário" com o selo Casa ou Fora, sem o @.
       expect(find.text('x Vila Nova'), findsOneWidget);
       expect(find.text('Fora'), findsOneWidget);
-      expect(find.text('Casa'), findsOneWidget);
+      // Casa: o jogo contra o Bola Murcha e o próximo, contra o Estrela.
+      expect(find.text('Casa'), findsNWidgets(2));
       expect(find.textContaining('@ '), findsNothing);
       expect(
         find.byWidgetPredicate(
@@ -708,6 +721,36 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Sem placar'), findsOneWidget);
+
+      // Próximos jogos também com o símbolo do adversário.
+      await scrollTo(find.text('x Estrela'));
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is TeamLogo &&
+              widget.logoUrl == 'https://storage.test/estrela',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.event), findsNothing);
+
+      // Tocar abre o resumo da partida.
+      await tester.ensureVisible(find.text('x Estrela'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('x Estrela'));
+      await tester.pumpAndSettle();
+      expect(find.text('Resumo da partida'), findsOneWidget);
+      expect(find.text('Domingo, 08/11/2026 às 15:00'), findsOneWidget);
+      expect(find.text('Real Bairro joga em casa (mandante)'), findsOneWidget);
+      expect(find.text('Society'), findsOneWidget);
+      expect(find.text('Quadra do Zé'), findsOneWidget);
+      // Adversário da plataforma: abre o perfil dele.
+      await tester.tap(find.text('Ver perfil do Estrela'));
+      await tester.pumpAndSettle();
+      expect(find.text('Resumo da partida'), findsNothing);
+      expect(find.text('Bola Murcha'), findsWidgets);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       // As informações do time ficam na outra aba.
       expect(find.text('Joga como: Visitante'), findsNothing);
 
