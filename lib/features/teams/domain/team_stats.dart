@@ -1,3 +1,6 @@
+import '../../venues/domain/venue.dart';
+import 'team.dart';
+
 /// Jogo no perfil do time, do ponto de vista dele.
 class ProfileGame {
   const ProfileGame({
@@ -5,6 +8,10 @@ class ProfileGame {
     required this.opponent,
     required this.isHome,
     this.opponentLogoUrl,
+    this.opponentTeamId,
+    this.modality,
+    this.venue,
+    this.location,
     this.goalsFor,
     this.goalsAgainst,
   });
@@ -13,6 +20,16 @@ class ProfileGame {
     scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
     opponent: map['opponent'] as String,
     opponentLogoUrl: map['opponent_logo_url'] as String?,
+    opponentTeamId: map['opponent_team_id'] as String?,
+    modality: switch (map['modality']) {
+      final String name => Modality.fromName(name),
+      _ => null,
+    },
+    venue: switch (map['venue']) {
+      final Map<String, dynamic> venue => Venue.fromMap(venue),
+      _ => null,
+    },
+    location: map['location'] as String?,
     isHome: map['is_home'] as bool? ?? true,
     goalsFor: map['goals_for'] as int?,
     goalsAgainst: map['goals_against'] as int?,
@@ -23,6 +40,15 @@ class ProfileGame {
 
   /// Nulo para time fictício ou sem logo (mostra o escudo).
   final String? opponentLogoUrl;
+
+  /// Adversário da plataforma (abre o perfil); nulo para time fictício.
+  /// Só nos próximos jogos, como [modality], [venue] e [location].
+  final String? opponentTeamId;
+  final Modality? modality;
+
+  /// Local cadastrado; jogos antigos têm só o texto em [location].
+  final Venue? venue;
+  final String? location;
   final bool isHome;
 
   /// Nulos enquanto o placar não foi lançado.
