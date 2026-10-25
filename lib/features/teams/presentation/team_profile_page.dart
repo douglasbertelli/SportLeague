@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/routes.dart';
+import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -24,8 +27,26 @@ class TeamProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(teamByIdProvider(teamId));
+    final loaded = team.value;
+    final isOwner =
+        loaded != null && loaded.ownerId == ref.watch(currentUserIdProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(team.value?.name ?? 'Time')),
+      appBar: AppBar(
+        title: Text(loaded?.name ?? 'Time'),
+        actions: [
+          // Só o administrador do time vê; leva ao cadastro do time.
+          if (isOwner)
+            IconButton(
+              tooltip: 'Editar time',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () async {
+                await context.push(Routes.editTeam, extra: loaded);
+                // Volta com os dados que acabaram de ser salvos.
+                ref.invalidate(teamByIdProvider(teamId));
+              },
+            ),
+        ],
+      ),
       body: team.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(

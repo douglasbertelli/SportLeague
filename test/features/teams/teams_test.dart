@@ -126,6 +126,10 @@ Future<void> _pumpPage(
         builder: (_, state) => TeamProfilePage(teamId: state.extra as String),
       ),
       GoRoute(
+        path: Routes.editTeam,
+        builder: (_, state) => TeamFormPage(team: state.extra as Team),
+      ),
+      GoRoute(
         path: Routes.pickVenue,
         builder: (_, _) => const VenuesPage(picking: true),
       ),
@@ -619,6 +623,9 @@ void main() {
       Future<void> scrollTo(Finder finder) =>
           tester.scrollUntilVisible(finder, 200, scrollable: list);
 
+      // Time de outro administrador: sem o botão de editar.
+      expect(find.byTooltip('Editar time'), findsNothing);
+
       // Seguidores (1: o Bola Murcha) e o botão Seguir pelo time ativo.
       expect(find.text('Seguidor'), findsOneWidget);
       expect(find.text('1'), findsWidgets);
@@ -692,6 +699,11 @@ void main() {
       );
       expect(find.text('Seguidores'), findsOneWidget);
       expect(find.text('Seguir'), findsNothing);
+
+      // O administrador do time vai dali para a edição.
+      await tester.tap(find.byTooltip('Editar time'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TeamFormPage), findsOneWidget);
     });
 
     testWidgets('a pesquisa lista os times e abre o perfil', (tester) async {
