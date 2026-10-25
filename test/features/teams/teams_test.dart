@@ -1207,6 +1207,53 @@ void main() {
       expect(goals('Amigos FC'), 1);
     });
 
+    testWidgets('jogo terminado sai do card quando há outro marcado', (
+      tester,
+    ) async {
+      final finished = Game(
+        id: 'g1',
+        teamId: 'team-a',
+        opponent: 'Real Bairro',
+        modality: Modality.society,
+        scheduledAt: DateTime(2026, 10, 31, 15),
+        teamScore: 2,
+        opponentScore: 1,
+        clock: const MatchClock(phase: MatchPhase.finished),
+      );
+      final upcoming = Game(
+        id: 'g2',
+        teamId: 'team-a',
+        opponent: 'Vila Nova',
+        modality: Modality.society,
+        scheduledAt: DateTime(2026, 11, 7, 15),
+      );
+      for (final (games, expected) in [
+        ([finished], 'x Real Bairro'),
+        ([finished, upcoming], 'x Vila Nova'),
+      ]) {
+        final teams = FakeTeamRepository([teamA]);
+        teams.statsByTeam['team-a'] = const TeamStats();
+        final container = await _container(
+          teams: teams,
+          games: FakeGameRepository({'team-a': games}),
+        );
+        await _pumpTab(
+          tester,
+          container,
+          SingleChildScrollView(
+            child: TeamDashboard(now: DateTime(2026, 10, 31, 16, 30)),
+          ),
+        );
+        expect(find.text(expected), findsOneWidget);
+        expect(
+          find.text(games.length == 1 ? 'Fim de jogo' : 'Próximo jogo'),
+          findsOneWidget,
+        );
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      }
+    });
+
     testWidgets('com o relógio da partida, o "Começou" some do card', (
       tester,
     ) async {
