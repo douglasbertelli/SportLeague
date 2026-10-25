@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1090,6 +1091,112 @@ void main() {
       );
       expect(badge('Vitória'), findsOneWidget);
       expect(badge('Derrota'), findsOneWidget);
+      expect(find.text('Próximo jogo'), findsOneWidget);
+
+      // Meia hora depois do início, sem placar: o jogo continua no card,
+      // como em andamento (sem confete: já tinha começado ao abrir).
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 31, 15, 30)),
+        ),
+      );
+      expect(find.text('Jogo em andamento'), findsOneWidget);
+      expect(find.text('x Real Bairro'), findsOneWidget);
+      expect(find.text('Começou'), findsOneWidget);
+      expect(find.byType(ConfettiWidget), findsNothing);
+
+      // Placar ao vivo: começa 0 × 0 e quem marcou o jogo soma gol a gol.
+      expect(find.text('0'), findsWidgets);
+      final minus = find.widgetWithIcon(
+        IconButton,
+        Icons.remove_circle_outline,
+      );
+      expect(
+        tester.widget<IconButton>(minus.first).onPressed,
+        isNull,
+        reason: 'não dá para tirar gol de 0',
+      );
+      await tester.ensureVisible(find.byTooltip('Gol do Amigos FC'));
+      await tester.tap(find.byTooltip('Gol do Amigos FC'));
+      await tester.pumpAndSettle();
+      expect(games.scores['g1'], (1, 0));
+      // O fake não devolve o placar salvo: o card segue em 0 × 0.
+      await tester.tap(find.byTooltip('Gol do Real Bairro'));
+      await tester.pumpAndSettle();
+      expect(games.scores['g1'], (0, 1));
+
+      // Passado o tempo de jogo, volta a ser só o próximo marcado.
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 31, 17, 30)),
+        ),
+      );
+      expect(find.text('Jogo em andamento'), findsNothing);
+      expect(find.text('Nenhum amistoso marcado.'), findsOneWidget);
+    });
+
+    testWidgets('dois times do mesmo administrador: trocar de time atualiza o '
+        'card', (tester) async {
+      Game live({int? a, int? b}) => Game(
+        id: 'g1',
+        teamId: 'team-a',
+        opponent: 'Bola Murcha',
+        opponentTeamId: 'team-b',
+        hostTeamName: 'Amigos FC',
+        modality: Modality.society,
+        scheduledAt: DateTime(2026, 10, 31, 15),
+        teamScore: a,
+        opponentScore: b,
+      );
+      final games = FakeGameRepository({
+        'team-a': [live()],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([teamA, teamB]),
+        games: games,
+        saved: {'selected_team_id': 'team-b'},
+      );
+      Future<void> pump() => _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 31, 15, 30)),
+        ),
+      );
+      int goals(String team) => int.parse(
+        tester
+            .widget<Text>(
+              find.byWidgetPredicate(
+                (w) => w is Text && (w.semanticsLabel?.endsWith(team) ?? false),
+              ),
+            )
+            .data!,
+      );
+
+      // Primeiro pelo Bola Murcha (visitante): só acompanha o placar.
+      await pump();
+      expect(find.text('x Amigos FC'), findsOneWidget);
+      expect(find.byTooltip('Gol do Bola Murcha'), findsNothing);
+
+      // Troca para o Amigos FC, que marcou o jogo, e faz 1 × 0.
+      container.read(selectedTeamIdProvider.notifier).select('team-a');
+      await tester.pumpAndSettle();
+      expect(find.text('x Bola Murcha'), findsOneWidget);
+      games.byTeam['team-a'] = [live(a: 1, b: 0)];
+      await tester.tap(find.byTooltip('Gol do Amigos FC'));
+      await tester.pumpAndSettle();
+      expect(goals('Amigos FC'), 1);
+
+      // De volta ao Bola Murcha: o card mostra o placar novo, não o antigo.
+      container.read(selectedTeamIdProvider.notifier).select('team-b');
+      await tester.pumpAndSettle();
+      expect(find.text('x Amigos FC'), findsOneWidget);
+      expect(goals('Bola Murcha'), 0);
+      expect(goals('Amigos FC'), 1);
     });
 
     testWidgets('quem marcou lança o placar depois do jogo', (tester) async {

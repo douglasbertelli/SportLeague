@@ -5,9 +5,18 @@ import 'package:flutter/material.dart';
 /// Quanto falta para a partida, discreto: "6d 01h 28min" ou, no último dia,
 /// "01h 29min 50s". Atualiza sozinho a cada segundo.
 class GameCountdown extends StatefulWidget {
-  const GameCountdown({super.key, required this.startsAt, this.clock});
+  const GameCountdown({
+    super.key,
+    required this.startsAt,
+    this.clock,
+    this.onStarted,
+  });
 
   final DateTime startsAt;
+
+  /// Chamado uma vez quando a contagem chega a zero com a tela aberta (não
+  /// se o jogo já tinha começado ao abrir).
+  final VoidCallback? onStarted;
 
   /// Hora atual (testes); o padrão é o relógio do aparelho.
   final DateTime Function()? clock;
@@ -18,6 +27,7 @@ class GameCountdown extends StatefulWidget {
 
 class _GameCountdownState extends State<GameCountdown> {
   late final Timer _timer;
+  late bool _running = widget.startsAt.isAfter(_now());
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
 
@@ -25,7 +35,12 @@ class _GameCountdownState extends State<GameCountdown> {
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      if (_running && !widget.startsAt.isAfter(_now())) {
+        _running = false;
+        widget.onStarted?.call();
+      }
     });
   }
 

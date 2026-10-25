@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/widgets/confetti_burst.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
 import '../../games/presentation/game_card.dart';
@@ -49,9 +52,12 @@ class TeamDashboard extends ConsumerWidget {
     final now = this.now ?? DateTime.now();
     final games = ref.watch(teamGamesProvider(team.id!)).value ?? const [];
     final stats = ref.watch(teamStatsProvider(team.id!)).value;
+    // O jogo em andamento continua no card até ganhar placar (ou passar o
+    // tempo de jogo); depois, o próximo marcado.
     final next = [
       for (final game in games)
-        if (game.stageAt(now) == GameStage.scheduled) game,
+        if (game.stageAt(now) == GameStage.scheduled || game.isLiveAt(now))
+          game,
     ]..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     final pending = [
       for (final game in games)
@@ -203,8 +209,10 @@ class _TeamHeader extends StatelessWidget {
   }
 }
 
-/// Próximo amistoso marcado ou o atalho para marcar um.
-class _NextGameCard extends StatelessWidget {
+/// Próximo amistoso marcado (ou o em andamento) ou o atalho para marcar um.
+/// Quando a contagem chega a zero, o título vira "Jogo em andamento" e
+/// estouram confetes.
+class _NextGameCard extends StatefulWidget {
   const _NextGameCard({required this.team, required this.game, this.clock});
 
   final Team team;
@@ -214,9 +222,27 @@ class _NextGameCard extends StatelessWidget {
   final DateTime Function()? clock;
 
   @override
+  State<_NextGameCard> createState() => _NextGameCardState();
+}
+
+class _NextGameCardState extends State<_NextGameCard> {
+  bool _startedNow = false;
+
+  @override
+  void didUpdateWidget(_NextGameCard old) {
+    super.didUpdateWidget(old);
+    if (old.game?.id != widget.game?.id) _startedNow = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final game = this.game;
+    final team = widget.team;
+    final game = widget.game;
+    final clock = widget.clock;
+    final live =
+        game != null &&
+        (_startedNow || !game.scheduledAt.isAfter((clock ?? DateTime.now)()));
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -242,11 +268,18 @@ class _NextGameCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Próximo jogo',
+                          live ? 'Jogo em andamento' : 'Próximo jogo',
                           style: theme.textTheme.titleSmall,
                         ),
                       ),
-                      GameCountdown(startsAt: game.scheduledAt, clock: clock),
+                      GameCountdown(
+                        startsAt: game.scheduledAt,
+                        clock: clock,
+                        onStarted: () {
+                          setState(() => _startedNow = true);
+                          showConfettiBurst(context);
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -296,9 +329,109 @@ class _NextGameCard extends StatelessWidget {
                       ],
                     ),
                   ],
+                  if (live) ...[
+                    const Divider(height: 32),
+                    _LiveScore(team: team, game: game),
+                  ],
                 ],
               ),
       ),
+    );
+  }
+}
+
+/// Placar do jogo em andamento. Quem marcou o jogo (o único que lança o
+/// placar) atualiza gol a gol; o adversário só acompanha.
+class _LiveScore extends ConsumerStatefulWidget {
+  const _LiveScore({required this.team, required this.game});
+
+  final Team team;
+  final Game game;
+
+  @override
+  ConsumerState<_LiveScore> createState() => _LiveScoreState();
+}
+
+class _LiveScoreState extends ConsumerState<_LiveScore> {
+  bool _saving = false;
+
+  Future<void> _save(int mine, int theirs) async {
+    setState(() => _saving = true);
+    final teamId = widget.team.id!;
+    try {
+      await ref
+          .read(gameRepositoryProvider)
+          .setScore(widget.game.id!, teamScore: mine, opponentScore: theirs);
+      ref
+        ..invalidate(teamGamesProvider(teamId))
+        ..invalidate(teamStatsProvider(teamId));
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final team = widget.team;
+    final game = widget.game;
+    final canEdit = game.isHostedBy(team.id!);
+    final (mine, theirs) = game.scoreFor(team.id!) ?? (0, 0);
+    final enabled = canEdit && !_saving;
+
+    Widget side(String name, int goals, void Function(int) change) => Expanded(
+      child: Column(
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (canEdit)
+                IconButton(
+                  tooltip: 'Tirar gol do $name',
+                  onPressed: enabled && goals > 0
+                      ? () => change(goals - 1)
+                      : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              Text(
+                '$goals',
+                semanticsLabel: '$goals gols do $name',
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: 'Gol do $name',
+                  onPressed: enabled ? () => change(goals + 1) : null,
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return Row(
+      children: [
+        side(team.name, mine, (goals) => _save(goals, theirs)),
+        Text('×', style: theme.textTheme.headlineSmall),
+        side(
+          game.opponentNameFor(team.id!),
+          theirs,
+          (goals) => _save(mine, goals),
+        ),
+      ],
     );
   }
 }

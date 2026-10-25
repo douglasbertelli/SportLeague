@@ -194,12 +194,12 @@ final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
 });
 
 /// Um time pelo id, para o perfil.
-final teamByIdProvider = FutureProvider.family<Team?, String>(
+final teamByIdProvider = FutureProvider.autoDispose.family<Team?, String>(
   (ref, teamId) => ref.watch(teamRepositoryProvider).fetchById(teamId),
 );
 
-/// Números do perfil de um time.
-final teamStatsProvider = FutureProvider.family<TeamStats, String>(
+/// Números do perfil de um time (como os jogos, buscados de novo ao voltar).
+final teamStatsProvider = FutureProvider.autoDispose.family<TeamStats, String>(
   (ref, teamId) => ref.watch(teamRepositoryProvider).stats(teamId),
 );
 

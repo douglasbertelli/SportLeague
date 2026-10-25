@@ -136,6 +136,16 @@ class Game {
 
   bool get hasScore => teamScore != null && opponentScore != null;
 
+  /// Quanto tempo depois do início o jogo conta como em andamento.
+  static const liveWindow = Duration(hours: 2);
+
+  /// Marcado e já começou há menos de [liveWindow] (o placar vai sendo
+  /// atualizado durante o jogo).
+  bool isLiveAt(DateTime now) =>
+      status == GameStatus.scheduled &&
+      !scheduledAt.isAfter(now) &&
+      now.isBefore(scheduledAt.add(liveWindow));
+
   /// Aba em que o jogo aparece no momento [now].
   GameStage stageAt(DateTime now) => switch (status) {
     GameStatus.pending => GameStage.pending,

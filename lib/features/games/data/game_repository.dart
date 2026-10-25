@@ -59,7 +59,9 @@ final gameRepositoryProvider = Provider<GameRepository>(
   (ref) => GameRepository(ref.watch(supabaseClientProvider)),
 );
 
-/// Jogos de um time.
-final teamGamesProvider = FutureProvider.family<List<Game>, String>(
+/// Jogos de um time. Some quando ninguém mais olha: ao trocar de time (dois
+/// times do mesmo administrador jogando entre si, ou o adversário lançando o
+/// placar), o outro time busca de novo em vez de mostrar dados antigos.
+final teamGamesProvider = FutureProvider.autoDispose.family<List<Game>, String>(
   (ref, teamId) => ref.watch(gameRepositoryProvider).fetchByTeam(teamId),
 );
