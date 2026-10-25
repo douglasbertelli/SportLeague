@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.5
 
 dependencies:
+  confetti: ^0.8.0
   crop_your_image: ^2.0.1
   crypto: ^3.0.7
   flutter:
