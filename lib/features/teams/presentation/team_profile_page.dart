@@ -516,23 +516,32 @@ class _StatsSection extends ConsumerWidget {
                   ),
                 for (final game in stats.recent)
                   ListTile(
-                    leading: OutcomeBadge(game: game),
+                    // Símbolo do adversário; o resultado (V, E, D) vai junto
+                    // do placar.
+                    leading: TeamLogo.url(logoUrl: game.opponentLogoUrl),
                     title: OpponentWithSide(
                       opponent: game.opponent,
                       isHome: game.isHome,
                     ),
                     subtitle: Text(formatGameDay(game.scheduledAt)),
-                    trailing: Text(
-                      game.hasScore
-                          ? '${game.goalsFor} × ${game.goalsAgainst}'
-                          : 'Sem placar',
-                      style: game.hasScore
-                          ? theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            )
-                          : theme.textTheme.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                            ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          game.hasScore
+                              ? '${game.goalsFor} × ${game.goalsAgainst}'
+                              : 'Sem placar',
+                          style: game.hasScore
+                              ? theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                )
+                              : theme.textTheme.bodySmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutcomeBadge(game: game, radius: 14),
+                      ],
                     ),
                   ),
                 if (stats.upcoming.isNotEmpty) ...[

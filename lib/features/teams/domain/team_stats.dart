@@ -4,6 +4,7 @@ class ProfileGame {
     required this.scheduledAt,
     required this.opponent,
     required this.isHome,
+    this.opponentLogoUrl,
     this.goalsFor,
     this.goalsAgainst,
   });
@@ -11,6 +12,7 @@ class ProfileGame {
   factory ProfileGame.fromMap(Map<String, dynamic> map) => ProfileGame(
     scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
     opponent: map['opponent'] as String,
+    opponentLogoUrl: map['opponent_logo_url'] as String?,
     isHome: map['is_home'] as bool? ?? true,
     goalsFor: map['goals_for'] as int?,
     goalsAgainst: map['goals_against'] as int?,
@@ -18,6 +20,9 @@ class ProfileGame {
 
   final DateTime scheduledAt;
   final String opponent;
+
+  /// Nulo para time fictício ou sem logo (mostra o escudo).
+  final String? opponentLogoUrl;
   final bool isHome;
 
   /// Nulos enquanto o placar não foi lançado.

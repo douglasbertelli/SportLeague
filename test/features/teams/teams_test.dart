@@ -41,6 +41,7 @@ import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
 import 'package:sport_league/features/teams/domain/team_stats.dart';
+import 'package:sport_league/features/teams/presentation/team_logo.dart';
 import 'package:sport_league/features/teams/presentation/team_profile_page.dart';
 import 'package:sport_league/features/teams/presentation/team_search_page.dart';
 import 'package:sport_league/features/venues/data/venue_repository.dart';
@@ -211,6 +212,26 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   group('time', () {
+    test('últimos resultados trazem o logo do adversário', () {
+      final game = ProfileGame.fromMap({
+        'scheduled_at': '2026-10-18T18:00:00Z',
+        'opponent': 'Vila Nova',
+        'opponent_logo_url': 'https://storage.test/vila',
+        'is_home': true,
+        'goals_for': 2,
+        'goals_against': 0,
+      });
+      expect(game.opponentLogoUrl, 'https://storage.test/vila');
+      // Time fictício: sem logo (o card mostra o escudo).
+      expect(
+        ProfileGame.fromMap({
+          'scheduled_at': '2026-10-18T18:00:00Z',
+          'opponent': 'Fictício',
+        }).opponentLogoUrl,
+        isNull,
+      );
+    });
+
     test('aproveitamento conta só os jogos com placar', () {
       expect(const TeamStats(played: 2).winRate, isNull);
       // Jogo sem placar fica de fora: 1 vitória e 1 derrota = 3 de 6.
@@ -618,6 +639,7 @@ void main() {
           ProfileGame(
             scheduledAt: DateTime(2026, 10, 18, 15),
             opponent: 'Vila Nova',
+            opponentLogoUrl: 'https://storage.test/vila',
             isHome: false,
             goalsFor: 3,
             goalsAgainst: 1,
@@ -665,6 +687,15 @@ void main() {
       expect(find.byTooltip('Aproveitamento'), findsOneWidget);
       expect(find.text('67%'), findsOneWidget);
       expect(find.text('3 × 1'), findsOneWidget);
+      // Símbolo do adversário no lugar da letra; sem logo, o escudo.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is TeamLogo &&
+              widget.logoUrl == 'https://storage.test/vila',
+        ),
+        findsOneWidget,
+      );
       // "x Adversário" com o selo Casa ou Fora, sem o @.
       expect(find.text('x Vila Nova'), findsOneWidget);
       expect(find.text('Fora'), findsOneWidget);
