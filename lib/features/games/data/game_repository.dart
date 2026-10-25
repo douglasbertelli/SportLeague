@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../domain/game.dart';
+import '../domain/match_clock.dart';
 
 class GameRepository {
   GameRepository(this._client);
@@ -42,6 +43,26 @@ class GameRepository {
       .from('games')
       .update({'team_score': teamScore, 'opponent_score': opponentScore})
       .eq('id', gameId);
+
+  /// Relógio da partida, com a hora do servidor (só quem marcou).
+  /// [periodMinutes] é a duração de cada tempo, ao iniciar.
+  Future<void> clock(String gameId, ClockAction action, {int? periodMinutes}) =>
+      _client.rpc(
+        'game_clock',
+        params: {
+          'p_game': gameId,
+          'p_action': switch (action) {
+            ClockAction.start => 'start',
+            ClockAction.pause => 'pause',
+            ClockAction.resume => 'resume',
+            ClockAction.endHalf => 'end_half',
+            ClockAction.startSecond => 'start_second',
+            ClockAction.finish => 'finish',
+            ClockAction.reset => 'reset',
+          },
+          'p_period_minutes': periodMinutes,
+        },
+      );
 
   /// O adversário aceita o amistoso pendente.
   Future<void> accept(String gameId) =>

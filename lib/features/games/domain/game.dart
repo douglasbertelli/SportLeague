@@ -1,5 +1,6 @@
 import '../../teams/domain/team.dart';
 import '../../venues/domain/venue.dart';
+import 'match_clock.dart';
 
 /// Situação guardada no banco. "Realizado" é derivado: marcado com a data já
 /// passada (ver [Game.stageAt]).
@@ -53,6 +54,7 @@ class Game {
     this.location,
     this.teamScore,
     this.opponentScore,
+    this.clock,
   });
 
   factory Game.fromMap(Map<String, dynamic> map) {
@@ -86,6 +88,7 @@ class Game {
       location: map['location'] as String?,
       teamScore: map['team_score'] as int?,
       opponentScore: map['opponent_score'] as int?,
+      clock: MatchClock.fromMap(map),
     );
   }
 
@@ -134,17 +137,23 @@ class Game {
   final int? teamScore;
   final int? opponentScore;
 
+  /// Relógio da partida; nulo enquanto não foi iniciado. Controlado só pelas
+  /// ações do relógio (não é enviado pelo formulário).
+  final MatchClock? clock;
+
   bool get hasScore => teamScore != null && opponentScore != null;
 
   /// Quanto tempo depois do início o jogo conta como em andamento.
   static const liveWindow = Duration(hours: 2);
 
   /// Marcado e já começou há menos de [liveWindow] (o placar vai sendo
-  /// atualizado durante o jogo).
+  /// atualizado durante o jogo), ou com o relógio rodando (começou antes ou
+  /// passou do tempo).
   bool isLiveAt(DateTime now) =>
       status == GameStatus.scheduled &&
-      !scheduledAt.isAfter(now) &&
-      now.isBefore(scheduledAt.add(liveWindow));
+      ((clock?.inPlay ?? false) ||
+          (!scheduledAt.isAfter(now) &&
+              now.isBefore(scheduledAt.add(liveWindow))));
 
   /// Aba em que o jogo aparece no momento [now].
   GameStage stageAt(DateTime now) => switch (status) {

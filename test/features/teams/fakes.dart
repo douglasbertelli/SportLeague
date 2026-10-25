@@ -6,6 +6,7 @@ import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
+import 'package:sport_league/features/games/domain/match_clock.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
@@ -218,6 +219,15 @@ class FakeGameRepository implements GameRepository {
     required int teamScore,
     required int opponentScore,
   }) async => scores[gameId] = (teamScore, opponentScore);
+
+  final clockActions = <(String, ClockAction, int?)>[];
+
+  @override
+  Future<void> clock(
+    String gameId,
+    ClockAction action, {
+    int? periodMinutes,
+  }) async => clockActions.add((gameId, action, periodMinutes));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

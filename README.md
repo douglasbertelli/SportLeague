@@ -87,7 +87,13 @@ configurado.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**. O Início mostra o **painel do time
    ativo** (seguidores, próximo jogo com quanto falta para a partida, convites pendentes, estatísticas e
-   **últ. jogos**, com vitória, empate ou derrota em cada um) e os atalhos:
+   **últ. jogos**, com vitória, empate ou derrota em cada um) e os atalhos.
+   Quando a partida começa, o card vira **Jogo em andamento** (com
+   confetes ao zerar a contagem): quem marcou o jogo controla o **relógio**
+   (inicia o 1º tempo com a duração de cada tempo, pausa, encerra o tempo,
+   inicia o 2º e encerra o jogo; o app avisa ao fim do tempo regulamentar e
+   conta o acréscimo) e soma os gols no **placar ao vivo**; o adversário
+   acompanha os dois:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
      O cadastro tem quatro abas:
      **Time** (logo, nome, uma modalidade — Futsal, Society, Campo, Areia ou
@@ -179,7 +185,7 @@ supabase/
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
-| `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma) |
+| `games`         | Amistosos do time, com modalidade e adversário (time da plataforma ou fictício) da mesma modalidade, e situação (pendente, marcado, cancelado). Só o time que marcou altera os dados; o adversário só aceita, recusa ou cancela; o dono e os atletas dos dois times veem (contra time da plataforma). O relógio da partida (`match_phase`, `clock_started_at`, `clock_elapsed`, `period_minutes`) muda pela função `game_clock`, com a hora do servidor |
 | `team_availability` | Horários de jogo disponíveis de cada time (avulsos ou recorrentes por dia da semana); todos veem, só o dono altera. Os livres vêm da função `available_slots` |
 | `team_availability_skips` | Dias pulados de um horário recorrente (imprevistos); só o dono altera |
 | `team_follows`  | Time segue time (o dono do time que segue altera); todos veem. A função `team_profile_stats` devolve seguidores, estatísticas, últimos resultados e próximos jogos de qualquer time |
