@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sport_league/core/media/whistle_player.dart';
 import 'package:sport_league/core/theme/app_theme.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
@@ -22,6 +23,9 @@ Game _game([MatchClock? clock]) => Game(
   clock: clock,
 );
 
+/// Apitos tocados no teste atual.
+final _whistles = <Whistle>[];
+
 Future<FakeGameRepository> _pump(
   WidgetTester tester,
   Game game, {
@@ -33,7 +37,12 @@ Future<FakeGameRepository> _pump(
   });
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [gameRepositoryProvider.overrideWithValue(games)],
+      overrides: [
+        gameRepositoryProvider.overrideWithValue(games),
+        playWhistleProvider.overrideWithValue((whistle) async {
+          _whistles.add(whistle);
+        }),
+      ],
       child: MaterialApp(
         theme: AppTheme.dark(),
         home: Scaffold(
@@ -93,6 +102,7 @@ void main() {
   });
 
   group('painel do relógio', () {
+    setUp(_whistles.clear);
     testWidgets('quem marcou inicia com a duração de cada tempo', (
       tester,
     ) async {
@@ -108,6 +118,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(games.clockActions, [('g1', ClockAction.start, 24)]);
+      expect(_whistles, [Whistle.start]);
     });
 
     testWidgets('cronômetro corre, pausa e avisa no fim do tempo', (
@@ -148,6 +159,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(games.clockActions.last, ('g1', ClockAction.endHalf, null));
+      // Pausar não apita; encerrar o 1º tempo apita curto e longo.
+      expect(_whistles, [Whistle.halfTime]);
     });
 
     testWidgets('intervalo: só iniciar o 2º tempo', (tester) async {
@@ -161,6 +174,42 @@ void main() {
       await tester.tap(find.text('Iniciar 2º tempo'));
       await tester.pump();
       expect(games.clockActions.last, ('g1', ClockAction.startSecond, null));
+      expect(_whistles, [Whistle.start]);
+    });
+
+    testWidgets('o adversário ouve o apito quando o tempo muda', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
+          playWhistleProvider.overrideWithValue((whistle) async {
+            _whistles.add(whistle);
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      Future<void> show(MatchPhase phase) => tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: MatchClockPanel(
+                game: _game(MatchClock(phase: phase, periodMinutes: 20)),
+                viewerTeamId: 'team-rival',
+                clock: () => _kickoff,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Ao abrir, já no intervalo: sem apito.
+      await show(MatchPhase.interval);
+      expect(_whistles, isEmpty);
+      await show(MatchPhase.second);
+      await show(MatchPhase.finished);
+      expect(_whistles, [Whistle.start, Whistle.fullTime]);
     });
 
     testWidgets('o adversário só acompanha', (tester) async {

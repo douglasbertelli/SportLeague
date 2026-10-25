@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/media/whistle_player.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -60,10 +61,24 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
   @override
   void didUpdateWidget(MatchClockPanel old) {
     super.didUpdateWidget(old);
+    final from = old.game.clock?.phase;
+    final to = widget.game.clock?.phase;
     // Outro tempo ou o relógio zerado: o aviso vale de novo.
-    if (old.game.clock?.phase != widget.game.clock?.phase) {
+    if (from != to) {
       _wasOvertime = _overtime;
+      // O adversário ouve o apito quando o relógio dele atualiza (quem
+      // marcou já ouviu ao tocar no botão).
+      if (!_isHost && to != null) _whistleFor(to);
     }
+  }
+
+  /// Apito de cada mudança de tempo.
+  void _whistleFor(MatchPhase phase) {
+    ref.read(playWhistleProvider)(switch (phase) {
+      MatchPhase.first || MatchPhase.second => Whistle.start,
+      MatchPhase.interval => Whistle.halfTime,
+      MatchPhase.finished => Whistle.fullTime,
+    });
   }
 
   @override
@@ -97,6 +112,17 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
       await ref
           .read(gameRepositoryProvider)
           .clock(widget.game.id!, action, periodMinutes: periodMinutes);
+      // Apito na hora, mesmo que o card troque de jogo em seguida.
+      switch (action) {
+        case ClockAction.start || ClockAction.startSecond:
+          _whistleFor(MatchPhase.first);
+        case ClockAction.endHalf:
+          _whistleFor(MatchPhase.interval);
+        case ClockAction.finish:
+          _whistleFor(MatchPhase.finished);
+        case ClockAction.pause || ClockAction.resume || ClockAction.reset:
+          break;
+      }
       ref.invalidate(teamGamesProvider(widget.viewerTeamId));
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));

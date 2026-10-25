@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sport_league/core/media/picked_image.dart';
+import 'package:sport_league/core/media/whistle_player.dart';
 import 'package:sport_league/core/media/square_crop_page.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
@@ -82,6 +83,8 @@ Future<ProviderContainer> _container({
         athletes ?? FakeAthleteRepository({}),
       ),
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
+      // Sem áudio nos testes.
+      playWhistleProvider.overrideWithValue((_) async {}),
       disputeRepositoryProvider.overrideWithValue(
         disputes ?? FakeDisputeRepository(),
       ),
