@@ -166,7 +166,12 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
             Expanded(
               child: Text(
                 [
-                  clock.phase.label,
+                  // No fim de jogo, o título do card já diz; aqui fica o
+                  // tempo final do 2º tempo.
+                  if (clock.phase == MatchPhase.finished)
+                    '2º tempo encerrado'
+                  else
+                    clock.phase.label,
                   if (ticking && minutes != null) '$minutes min',
                   if (ticking && !clock.running) 'pausado',
                 ].join(' · '),

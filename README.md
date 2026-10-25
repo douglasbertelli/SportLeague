@@ -93,7 +93,11 @@ configurado.
    (inicia o 1º tempo com a duração de cada tempo, pausa, encerra o tempo,
    inicia o 2º e encerra o jogo; o app avisa ao fim do tempo regulamentar e
    conta o acréscimo) e soma os gols no **placar ao vivo**; o adversário
-   acompanha os dois:
+   acompanha os dois. O jogo fica em **Marcados** até terminar (relógio
+   encerrado ou 2 horas sem relógio rodando) e depois vai para Realizados,
+   onde o adversário pode **contestar o placar** (placar na visão dele e o
+   motivo); quem marcou vê o aviso no Início e no card e aceita ou mantém o
+   dele:
    - cria **um ou mais times** (Meus times) e escolhe o **time ativo** no título.
      O cadastro tem quatro abas:
      **Time** (logo, nome, uma modalidade — Futsal, Society, Campo, Areia ou
@@ -193,6 +197,7 @@ supabase/
 | `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
 | `team_invites`  | Pedidos do jogador para entrar no time (o dono aceita ou recusa; o jogador cancela) e convites; aceito, o jogador vira atleta do time. A entrada com código (`join_team_with_code`) fica registrada como pedido aceito |
 | `team_invite_codes` | Código de convite de cada time; só o dono vê e gera outro (`regenerate_invite_code`) |
+| `score_disputes` | Contestações do placar feitas pelo adversário depois do jogo (placar proposto e motivo); os dois times veem e quem marcou responde por `resolve_score_dispute` (aceitar muda o placar do jogo). Uma aberta por jogo |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda

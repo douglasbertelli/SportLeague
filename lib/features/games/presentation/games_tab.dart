@@ -7,6 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/no_team_placeholder.dart';
 import '../data/game_repository.dart';
+import '../data/games_tab_request.dart';
 import '../domain/game.dart';
 import 'game_card.dart';
 
@@ -87,8 +88,11 @@ class _GameList extends ConsumerWidget {
 
           return DefaultTabController(
             length: GameStage.values.length,
+            // Aberta por um aviso do Início: já na aba dele.
+            initialIndex: ref.read(gamesTabRequestProvider)?.stage.index ?? 0,
             child: Column(
               children: [
+                _FollowRequests(),
                 // Rola na horizontal quando as abas não cabem na tela.
                 TabBar(
                   isScrollable: true,
@@ -116,6 +120,19 @@ class _GameList extends ConsumerWidget {
         },
       ),
     );
+  }
+}
+
+/// Troca de aba quando um aviso do Início pede (com a aba Jogos já aberta).
+class _FollowRequests extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(gamesTabRequestProvider, (_, request) {
+      if (request != null) {
+        DefaultTabController.of(context).animateTo(request.stage.index);
+      }
+    });
+    return const SizedBox.shrink();
   }
 }
 

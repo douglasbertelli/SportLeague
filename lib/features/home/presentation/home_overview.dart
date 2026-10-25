@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../games/domain/game.dart';
 import '../../invites/data/invite_repository.dart';
 import '../../profile/domain/profile.dart';
 import '../../teams/data/team_repository.dart';
@@ -16,7 +17,7 @@ class HomeOverview extends ConsumerWidget {
   final Profile profile;
 
   /// Leva à aba Jogos (pendências do dashboard).
-  final VoidCallback? onOpenGames;
+  final ValueChanged<GameStage>? onOpenGames;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -155,11 +155,19 @@ class Game {
           (!scheduledAt.isAfter(now) &&
               now.isBefore(scheduledAt.add(liveWindow))));
 
-  /// Aba em que o jogo aparece no momento [now].
+  /// Terminou: o relógio foi encerrado ou, sem relógio rodando, já passou o
+  /// tempo de jogo ([liveWindow]).
+  bool isFinishedAt(DateTime now) =>
+      status == GameStatus.scheduled &&
+      !scheduledAt.isAfter(now) &&
+      (clock?.phase == MatchPhase.finished || !isLiveAt(now));
+
+  /// Aba em que o jogo aparece no momento [now]. O jogo em andamento continua
+  /// em Marcados; só vai para Realizados depois de terminar.
   GameStage stageAt(DateTime now) => switch (status) {
     GameStatus.pending => GameStage.pending,
     GameStatus.canceled => GameStage.canceled,
-    GameStatus.scheduled when scheduledAt.isBefore(now) => GameStage.played,
+    GameStatus.scheduled when isFinishedAt(now) => GameStage.played,
     GameStatus.scheduled => GameStage.scheduled,
   };
 

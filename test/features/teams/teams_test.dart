@@ -21,8 +21,12 @@ import 'package:sport_league/features/availability/data/availability_repository.
 import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/availability/presentation/availability_page.dart';
 import 'package:sport_league/features/availability/presentation/slot_picker_page.dart';
+import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/games_tab_request.dart';
 import 'package:sport_league/features/games/domain/game.dart';
+import 'package:sport_league/features/games/domain/match_clock.dart';
+import 'package:sport_league/features/games/domain/score_dispute.dart';
 import 'package:sport_league/core/router/routes.dart';
 import 'package:sport_league/core/theme/app_theme.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
@@ -63,6 +67,7 @@ Future<ProviderContainer> _container({
   FakeAvailabilityRepository? availability,
   FakeVenueRepository? venues,
   PickImage? pickImage,
+  FakeDisputeRepository? disputes,
   CropSquare? cropSquare,
   Map<String, Object> saved = const {},
 }) async {
@@ -77,6 +82,9 @@ Future<ProviderContainer> _container({
         athletes ?? FakeAthleteRepository({}),
       ),
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
+      disputeRepositoryProvider.overrideWithValue(
+        disputes ?? FakeDisputeRepository(),
+      ),
       opponentRepositoryProvider.overrideWithValue(
         opponents ?? FakeOpponentRepository(),
       ),
@@ -1051,7 +1059,7 @@ void main() {
           ),
         ],
       );
-      var openedGames = false;
+      GameStage? openedStage;
       final container = await _container(teams: teams, games: games);
       await _pumpTab(
         tester,
@@ -1059,7 +1067,7 @@ void main() {
         SingleChildScrollView(
           child: TeamDashboard(
             now: DateTime(2026, 10, 22, 12),
-            onOpenGames: () => openedGames = true,
+            onOpenGames: (stage) => openedStage = stage,
           ),
         ),
       );
@@ -1083,7 +1091,7 @@ void main() {
       expect(find.text('1 convite para responder'), findsOneWidget);
       expect(find.text('1 amistoso aguardando o adversário'), findsOneWidget);
       await tester.tap(find.text('1 convite para responder'));
-      expect(openedGames, isTrue);
+      expect(openedStage, GameStage.pending);
       // Estatísticas e forma (V e D).
       expect(find.text('Vitórias'), findsOneWidget);
       Finder badge(String label) => find.byWidgetPredicate(
@@ -1197,6 +1205,45 @@ void main() {
       expect(find.text('x Amigos FC'), findsOneWidget);
       expect(goals('Bola Murcha'), 0);
       expect(goals('Amigos FC'), 1);
+    });
+
+    testWidgets('com o relógio da partida, o "Começou" some do card', (
+      tester,
+    ) async {
+      Game game(MatchPhase phase) => Game(
+        id: 'g1',
+        teamId: 'team-a',
+        opponent: 'Real Bairro',
+        modality: Modality.society,
+        scheduledAt: DateTime(2026, 10, 31, 15),
+        clock: MatchClock(phase: phase, periodMinutes: 25),
+      );
+      for (final (phase, title) in [
+        (MatchPhase.interval, 'Jogo em andamento'),
+        (MatchPhase.finished, 'Fim de jogo'),
+      ]) {
+        final teams = FakeTeamRepository([teamA]);
+        teams.statsByTeam['team-a'] = const TeamStats();
+        final container = await _container(
+          teams: teams,
+          games: FakeGameRepository({
+            'team-a': [game(phase)],
+          }),
+        );
+        await _pumpTab(
+          tester,
+          container,
+          SingleChildScrollView(
+            child: TeamDashboard(now: DateTime(2026, 10, 31, 16)),
+          ),
+        );
+        expect(find.text(title), findsOneWidget);
+        expect(find.text('Começou'), findsNothing);
+        expect(find.byIcon(Icons.timer_outlined), findsNothing);
+        // Desmonta antes do próximo, para os providers saírem a tempo.
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      }
     });
 
     testWidgets('quem marcou lança o placar depois do jogo', (tester) async {
@@ -1775,11 +1822,13 @@ void main() {
       teamScore: 0,
       opponentScore: 2,
     );
+    final disputes = FakeDisputeRepository();
     final container = await _container(
       teams: FakeTeamRepository([rivalTeam]),
       games: FakeGameRepository({
         'team-a': [hosted],
       }),
+      disputes: disputes,
     );
     await _pumpTab(
       tester,
@@ -1800,8 +1849,236 @@ void main() {
     expect(find.text('Visitante'), findsOneWidget);
     // Placar invertido para o adversário.
     expect(find.text('2 × 0'), findsOneWidget);
-    // Jogo realizado: o adversário não tem ações.
+
+    // Jogo realizado: o adversário só pode contestar o placar.
+    await tester.tap(find.byTooltip('Ações do amistoso'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cancelar amistoso'), findsNothing);
+    await tester.tap(find.text('Contestar placar'));
+    await tester.pumpAndSettle();
+    // Na visão dele foi 2 × 1.
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Amigos FC'),
+      '1',
+    );
+    await tester.tap(find.text('Enviar contestação'));
+    await tester.pumpAndSettle();
+    expect(find.text('Explique o motivo da contestação'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Motivo'),
+      'Teve o gol de pênalti no fim',
+    );
+    await tester.tap(find.text('Enviar contestação'));
+    await tester.pumpAndSettle();
+
+    final dispute = disputes.disputes.single;
+    expect(dispute.teamId, 'team-rival');
+    // Guardado do ponto de vista de quem marcou: Amigos 1 × 2 Real.
+    expect((dispute.teamScore, dispute.opponentScore), (1, 2));
+    expect(find.text('Contestação enviada · aguardando Amigos FC'), findsOne);
+    // Uma contestação por vez: sem ações enquanto ela está aberta.
     expect(find.byTooltip('Ações do amistoso'), findsNothing);
+  });
+
+  testWidgets('no fim de jogo, o adversário contesta pelo card do Início', (
+    tester,
+  ) async {
+    const rivalTeam = Team(
+      id: 'team-rival',
+      ownerId: 'u1',
+      name: 'Real Bairro',
+      modalities: {Modality.society},
+    );
+    final finished = Game(
+      id: 'g1',
+      teamId: 'team-a',
+      hostTeamName: 'Amigos FC',
+      opponent: 'Real Bairro',
+      opponentTeamId: 'team-rival',
+      modality: Modality.society,
+      scheduledAt: DateTime(2026, 10, 31, 15),
+      teamScore: 0,
+      opponentScore: 2,
+      clock: const MatchClock(phase: MatchPhase.finished, periodMinutes: 25),
+    );
+    final teams = FakeTeamRepository([teamA, rivalTeam]);
+    teams.statsByTeam['team-rival'] = const TeamStats();
+    teams.statsByTeam['team-a'] = const TeamStats();
+    final disputes = FakeDisputeRepository(hostByGame: {'g1': 'team-a'});
+    final container = await _container(
+      teams: teams,
+      games: FakeGameRepository({
+        'team-a': [finished],
+      }),
+      disputes: disputes,
+      saved: {'selected_team_id': 'team-rival'},
+    );
+    Future<void> pump() => _pumpTab(
+      tester,
+      container,
+      SingleChildScrollView(
+        child: TeamDashboard(now: DateTime(2026, 10, 31, 16, 30)),
+      ),
+    );
+
+    await pump();
+    expect(find.text('Fim de jogo'), findsOneWidget);
+    await tester.ensureVisible(find.text('Contestar placar'));
+    await tester.tap(find.text('Contestar placar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Motivo'),
+      'Faltou um gol nosso',
+    );
+    await tester.tap(find.text('Enviar contestação'));
+    await tester.pumpAndSettle();
+    expect(disputes.disputes.single.teamId, 'team-rival');
+    expect(
+      find.text('Contestação enviada · aguardando Amigos FC'),
+      findsOneWidget,
+    );
+    expect(find.text('Contestar placar'), findsNothing);
+
+    // Quem marcou não tem o botão (ele responde à contestação).
+    container.read(selectedTeamIdProvider.notifier).select('team-a');
+    await tester.pumpAndSettle();
+    expect(find.text('Fim de jogo'), findsOneWidget);
+    expect(find.text('Contestar placar'), findsNothing);
+    expect(find.text('1 placar contestado'), findsOneWidget);
+  });
+
+  testWidgets('aviso do Início abre Jogos na aba dele', (tester) async {
+    final container = await _container(teams: FakeTeamRepository([teamA]));
+    // Pedido antes de abrir a aba Jogos: já abre em Realizados.
+    container.read(gamesTabRequestProvider.notifier).open(GameStage.played);
+    await _pumpTab(tester, container, const GamesTab());
+    expect(find.text('Nenhum amistoso realizado'), findsOneWidget);
+
+    // Com Jogos aberta, outro aviso troca para Pendentes.
+    container.read(gamesTabRequestProvider.notifier).open(GameStage.pending);
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum amistoso pendente'), findsOneWidget);
+
+    // O mesmo aviso de novo depois de trocar de aba à mão: volta.
+    await tester.tap(find.text('Marcados (0)'));
+    await tester.pumpAndSettle();
+    container.read(gamesTabRequestProvider.notifier).open(GameStage.pending);
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum amistoso pendente'), findsOneWidget);
+  });
+
+  testWidgets('quem marcou aceita ou mantém o placar contestado', (
+    tester,
+  ) async {
+    final played = Game(
+      id: 'g1',
+      teamId: 'team-a',
+      opponent: 'Real Bairro',
+      opponentTeamId: 'team-rival',
+      modality: Modality.society,
+      scheduledAt: DateTime(2026, 10, 18, 15),
+      teamScore: 0,
+      opponentScore: 2,
+    );
+    final disputes = FakeDisputeRepository(
+      disputes: const [
+        ScoreDispute(
+          id: 'd1',
+          gameId: 'g1',
+          teamId: 'team-rival',
+          teamScore: 1,
+          opponentScore: 2,
+          message: 'Teve o gol de pênalti no fim',
+        ),
+      ],
+      hostByGame: {'g1': 'team-a'},
+    );
+    final teams = FakeTeamRepository([teamA]);
+    teams.statsByTeam['team-a'] = const TeamStats();
+    final container = await _container(
+      teams: teams,
+      games: FakeGameRepository({
+        'team-a': [played],
+      }),
+      disputes: disputes,
+    );
+
+    // O Início avisa.
+    await _pumpTab(
+      tester,
+      container,
+      SingleChildScrollView(
+        child: TeamDashboard(now: DateTime(2026, 10, 22, 12)),
+      ),
+    );
+    expect(find.text('1 placar contestado'), findsOneWidget);
+
+    await _pumpTab(
+      tester,
+      container,
+      GamesTab(now: DateTime(2026, 10, 22, 12)),
+    );
+    await tester.tap(find.text('Realizados (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Real Bairro contestou o placar'), findsOneWidget);
+    expect(
+      find.text('Placar para eles: Amigos FC 1 × 2 Real Bairro'),
+      findsOneWidget,
+    );
+    expect(find.text('"Teve o gol de pênalti no fim"'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Aceitar placar'));
+    await tester.tap(find.text('Aceitar placar'));
+    await tester.pumpAndSettle();
+    expect(disputes.resolved, [('d1', true)]);
+    expect(find.text('Real Bairro contestou o placar'), findsNothing);
+  });
+
+  testWidgets('jogo em andamento fica em Marcados até terminar', (
+    tester,
+  ) async {
+    Game game(MatchClock? clock) => Game(
+      id: 'g1',
+      teamId: 'team-a',
+      opponent: 'Real Bairro',
+      modality: Modality.society,
+      scheduledAt: DateTime(2026, 10, 22, 11),
+      clock: clock,
+    );
+    final now = DateTime(2026, 10, 22, 12);
+    // Começou há 1 hora: em andamento, em Marcados.
+    expect(game(null).stageAt(now), GameStage.scheduled);
+    // Relógio encerrado: Realizados.
+    expect(
+      game(const MatchClock(phase: MatchPhase.finished)).stageAt(now),
+      GameStage.played,
+    );
+    // Sem relógio, depois das 2 horas: Realizados.
+    expect(
+      game(null).stageAt(now.add(const Duration(hours: 1))),
+      GameStage.played,
+    );
+    // Relógio ainda no 2º tempo depois das 2 horas: segue em Marcados.
+    expect(
+      game(const MatchClock(phase: MatchPhase.second))
+          .stageAt(now.add(const Duration(hours: 3))),
+      GameStage.scheduled,
+    );
+
+    // No card de Marcados, durante o jogo, quem marcou só lança o placar.
+    final container = await _container(
+      teams: FakeTeamRepository([teamA]),
+      games: FakeGameRepository({
+        'team-a': [game(null)],
+      }),
+    );
+    await _pumpTab(tester, container, GamesTab(now: now));
+    expect(find.text('Marcados (1)'), findsOneWidget);
+    await tester.tap(find.byTooltip('Ações do amistoso'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lançar placar'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
+    expect(find.text('Cancelar amistoso'), findsNothing);
   });
 
   test('sigla do time e formato de data e hora do card', () {
