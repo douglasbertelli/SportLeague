@@ -2193,8 +2193,11 @@ void main() {
         container,
         LineupPage(game: game(), teamId: 'team-x'),
       );
-      // Society: 7 titulares.
-      expect(find.text('Titulares: 0 de 7 · Reservas: 0'), findsOneWidget);
+      // Society: 7 titulares; todos começam fora.
+      expect(find.text('Titulares'), findsOneWidget);
+      expect(find.text('0 de 7'), findsOneWidget);
+      expect(find.text('Nenhum titular escalado.'), findsOneWidget);
+      expect(find.text('Nenhum reserva escalado.'), findsOneWidget);
       Future<void> pick(int athlete, String spot) async {
         final card = find.ancestor(
           of: find.text('$athlete · Atleta $athlete'),
@@ -2212,6 +2215,23 @@ void main() {
       await pick(8, 'Tit.');
       expect(find.textContaining('Já são 7 titulares'), findsOneWidget);
       await pick(8, 'Res.');
+      // O atleta vai para a seção da escala.
+      await tester.dragUntilVisible(
+        find.text('7 de 7'),
+        find.byType(ListView),
+        const Offset(0, 300),
+      );
+      expect(find.text('Nenhum titular escalado.'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('9 · Atleta 9'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      // 7º titular, cabeçalho Reservas, 8 (reserva), cabeçalho Fora, 9.
+      expect(top('Reservas'), greaterThan(top('7 · Atleta 7')));
+      expect(top('8 · Atleta 8'), greaterThan(top('Reservas')));
+      expect(top('9 · Atleta 9'), greaterThan(top('8 · Atleta 8')));
 
       await tester.tap(find.text('Salvar'));
       await tester.pumpAndSettle();

@@ -216,7 +216,7 @@ supabase/
 | `team_invite_codes` | Código de convite de cada time; só o dono vê e gera outro (`regenerate_invite_code`) |
 | `score_disputes` | Contestações do placar feitas pelo adversário depois do jogo (placar proposto e motivo); os dois times veem e quem marcou responde por `resolve_score_dispute` (aceitar muda o placar do jogo). Uma aberta por jogo |
 | `game_player_stats` | Súmula: o que cada atleta fez num jogo (estar na súmula é ter jogado; gols, assistências, cartões, craque — um por time). Cada time lança os seus atletas, a partir de 1 hora antes do jogo; quem vê o jogo vê a súmula. `add_player_goal` soma um gol pelo placar ao vivo e `team_player_totals` dá os totais dos atletas (perfil do atleta e artilharia) |
-| `team_coaches` | Técnicos de cada time (entram pelo convite aceito, com `kind = 'coach'` em `team_invites`); veem os jogos, as fotos dos atletas e lançam escalação e súmula (`private.is_team_staff`) |
+| `team_coaches` | Técnicos de cada time (entram pelo convite aceito, com `kind = 'coach'` em `team_invites`); veem os jogos, as fotos dos atletas e lançam escalação e súmula (`private.is_team_staff`). Todos veem os técnicos (foto e nome no perfil do time); só o técnico ou o dono removem |
 | `game_lineups` | Escalação: titulares e reservas de cada time no jogo; o dono ou o técnico montam antes e durante o jogo; quem vê o jogo vê a escalação |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
