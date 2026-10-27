@@ -44,6 +44,9 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
   /// envio da foto falhar, salvar de novo atualiza em vez de duplicar).
   late Athlete? _saved = widget.athlete;
   bool _photoMissing = false;
+
+  /// Tentou salvar sem a posição (obrigatória).
+  bool _positionMissing = false;
   bool _loading = false;
 
   bool get _isEditing => widget.athlete != null;
@@ -90,10 +93,20 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     if (choice != null) setState(() => _position = choice.position);
   }
 
+  /// Números dos outros atletas do time (atualizado a cada build).
+  Map<int, String> _takenNumbers = const {};
+
   Future<void> _save() async {
     final fieldsValid = _formKey.currentState!.validate();
-    setState(() => _photoMissing = !_hasPhoto);
-    if (_loading || !fieldsValid || !_hasPhoto) return;
+    // Número repetido: o campo só diz "Já usado"; o nome vem no aviso.
+    if (_takenNumbers[int.tryParse(_numberController.text)] case final name?) {
+      showErrorSnackBar(context, 'Número já usado por $name');
+    }
+    setState(() {
+      _photoMissing = !_hasPhoto;
+      _positionMissing = _position == null;
+    });
+    if (_loading || !fieldsValid || !_hasPhoto || _position == null) return;
     final teamId =
         widget.athlete?.teamId ?? ref.read(selectedTeamProvider).value?.id;
     final ownerId = ref.read(currentUserIdProvider);
@@ -170,6 +183,18 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
   @override
   Widget build(BuildContext context) {
     final teamName = ref.watch(selectedTeamProvider).value?.name;
+    final teamId =
+        widget.athlete?.teamId ?? ref.watch(selectedTeamProvider).value?.id;
+    // Números já usados por outros atletas do time: não pode repetir.
+    final takenNumbers = _takenNumbers = {
+      for (final other
+          in (teamId == null
+                  ? null
+                  : ref.watch(teamAthletesProvider(teamId)).value) ??
+              const <Athlete>[])
+        if (other.id != _saved?.id && other.jerseyNumber != null)
+          other.jerseyNumber!: other.name,
+    };
     final positions = [
       ...footballPositions,
       // Mantém uma posição antiga que não está mais na lista.
@@ -241,9 +266,12 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
                     child: InkWell(
                       onTap: _loading ? null : () => _pickPosition(positions),
                       child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Posição (opcional)',
-                          suffixIcon: Icon(Icons.expand_more),
+                        decoration: InputDecoration(
+                          labelText: 'Posição',
+                          suffixIcon: const Icon(Icons.expand_more),
+                          errorText: _positionMissing && _position == null
+                              ? 'Escolha a posição'
+                              : null,
                         ),
                         isEmpty: _position == null,
                         child: Text(_position ?? ''),
@@ -260,6 +288,12 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(3),
                       ],
+                      validator: (value) =>
+                          switch (takenNumbers[int.tryParse(value ?? '')]) {
+                            // A mensagem inteira vai no aviso ao salvar.
+                            _? => 'Já usado',
+                            null => null,
+                          },
                     ),
                   ),
                 ],

@@ -12,8 +12,10 @@ import '../../games/domain/game.dart';
 import '../../games/domain/match_clock.dart';
 import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
+import '../../games/presentation/game_sheet_page.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
+import '../../teams/presentation/season_button.dart';
 import '../../teams/presentation/team_logo.dart';
 import '../../teams/presentation/team_stats_widgets.dart';
 import 'game_countdown.dart';
@@ -141,7 +143,9 @@ class TeamDashboard extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 16),
-        const _DashboardTitle('Estatísticas'),
+        // Temporada: vale para as estatísticas abaixo e para os atletas.
+        const _DashboardTitle('Estatísticas', trailing: SeasonButton()),
+        const SizedBox(height: 8),
         if (stats == null)
           const Padding(
             padding: EdgeInsets.all(16),
@@ -405,7 +409,8 @@ class _LiveScore extends ConsumerStatefulWidget {
 class _LiveScoreState extends ConsumerState<_LiveScore> {
   bool _saving = false;
 
-  Future<void> _save(int mine, int theirs) async {
+  /// Salva o placar; diz se deu certo.
+  Future<bool> _save(int mine, int theirs) async {
     setState(() => _saving = true);
     final teamId = widget.team.id!;
     try {
@@ -415,11 +420,24 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
       ref
         ..invalidate(teamGamesProvider(teamId))
         ..invalidate(teamStatsProvider(teamId));
+      return true;
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Gol do próprio time: depois do placar, pergunta quem fez.
+  Future<void> _ownGoals(int goals, int mine, int theirs) async {
+    if (!await _save(goals, theirs) || goals <= mine || !mounted) return;
+    await askGoalScorer(
+      context,
+      ref,
+      game: widget.game,
+      teamId: widget.team.id!,
+    );
   }
 
   @override
@@ -472,14 +490,25 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
       ),
     );
 
-    return Row(
+    return Column(
       children: [
-        side(team.name, mine, (goals) => _save(goals, theirs)),
-        Text('×', style: theme.textTheme.headlineSmall),
-        side(
-          game.opponentNameFor(team.id!),
-          theirs,
-          (goals) => _save(mine, goals),
+        Row(
+          children: [
+            side(team.name, mine, (goals) => _ownGoals(goals, mine, theirs)),
+            Text('×', style: theme.textTheme.headlineSmall),
+            side(
+              game.opponentNameFor(team.id!),
+              theirs,
+              (goals) => _save(mine, goals),
+            ),
+          ],
+        ),
+        // Os dois times lançam a súmula dos seus atletas por aqui.
+        TextButton.icon(
+          onPressed: () =>
+              openGameSheet(context, game: game, viewerTeamId: team.id!),
+          icon: const Icon(Icons.assignment_outlined),
+          label: const Text('Súmula do jogo'),
         ),
       ],
     );
@@ -487,15 +516,30 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
 }
 
 class _DashboardTitle extends StatelessWidget {
-  const _DashboardTitle(this.text);
+  const _DashboardTitle(this.text, {this.trailing});
 
   final String text;
+
+  /// À direita do título (ex.: a temporada).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
     );
   }
 }

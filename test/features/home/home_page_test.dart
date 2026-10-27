@@ -13,6 +13,7 @@ import 'package:sport_league/features/profile/domain/profile.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -30,6 +31,9 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
         athleteRepositoryProvider.overrideWithValue(FakeAthleteRepository({})),
         gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
         disputeRepositoryProvider.overrideWithValue(FakeDisputeRepository()),
+        playerStatsRepositoryProvider.overrideWithValue(
+          FakePlayerStatsRepository(),
+        ),
         supabaseClientProvider.overrideWithValue(
           SupabaseClient(
             'http://localhost',

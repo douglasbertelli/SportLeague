@@ -24,6 +24,10 @@ import 'package:sport_league/features/availability/presentation/availability_pag
 import 'package:sport_league/features/availability/presentation/slot_picker_page.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/athletes/presentation/athlete_profile_page.dart';
+import 'package:sport_league/features/games/domain/player_stats.dart';
+import 'package:sport_league/features/games/presentation/game_sheet_page.dart';
+import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/games_tab_request.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
@@ -38,6 +42,7 @@ import 'package:sport_league/features/games/presentation/opponent_picker_page.da
 import 'package:sport_league/features/games/presentation/games_tab.dart';
 import 'package:sport_league/features/home/presentation/team_dashboard.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
+import 'package:sport_league/features/teams/domain/season.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/presentation/team_form_page.dart';
 import 'package:sport_league/features/teams/domain/team_stats.dart';
@@ -70,6 +75,7 @@ Future<ProviderContainer> _container({
   FakeVenueRepository? venues,
   PickImage? pickImage,
   FakeDisputeRepository? disputes,
+  FakePlayerStatsRepository? playerStats,
   CropSquare? cropSquare,
   Map<String, Object> saved = const {},
 }) async {
@@ -86,6 +92,9 @@ Future<ProviderContainer> _container({
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
       // Sem áudio nos testes.
       playWhistleProvider.overrideWithValue((_) async {}),
+      playerStatsRepositoryProvider.overrideWithValue(
+        playerStats ?? FakePlayerStatsRepository(),
+      ),
       disputeRepositoryProvider.overrideWithValue(
         disputes ?? FakeDisputeRepository(),
       ),
@@ -1773,6 +1782,49 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    testWidgets('não repete o número da camisa no time', (tester) async {
+      const ze = Athlete(
+        id: 'a1',
+        teamId: 'team-a',
+        name: 'Zé',
+        jerseyNumber: 10,
+        photoPath: 'u1/team-a/a1',
+        position: 'Meia',
+      );
+      final athletes = FakeAthleteRepository({
+        'team-a': [ze],
+      });
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+      );
+      await _pumpPage(tester, container, const AthleteFormPage());
+      await tester.enterText(find.byType(TextFormField).first, 'Carlos Lima');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número'),
+        '10',
+      );
+      await tapSave(tester);
+      // O nome vai no aviso (toast); o campo só marca "Já usado".
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text('Número já usado por Zé'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Já usado'), findsOneWidget);
+      expect(athletes.created, isEmpty);
+
+      // O próprio Zé continua com o 10 ao editar.
+      await _pumpPage(tester, container, const AthleteFormPage(athlete: ze));
+      await tester.ensureVisible(find.text('Salvar'));
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Já usado'), findsNothing);
+      expect(athletes.updated.single.jerseyNumber, 10);
+    });
+
     testWidgets('cadastrar atleta exige a foto', (tester) async {
       final athletes = FakeAthleteRepository({});
       final container = await _container(
@@ -1785,6 +1837,7 @@ void main() {
       await tapSave(tester);
 
       expect(find.text('Adicione a foto do atleta'), findsOneWidget);
+      expect(find.text('Escolha a posição'), findsOneWidget);
       expect(athletes.created, isEmpty);
     });
 
@@ -1809,10 +1862,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Trocar foto'), findsOneWidget);
 
+      // Posição obrigatória; Centroavante está na lista.
+      await tester.tap(find.text('Posição'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Centroavante'));
+      await tester.pumpAndSettle();
+
       await tester.enterText(find.byType(TextFormField).first, 'Carlos Lima');
       await tapSave(tester);
 
       expect(athletes.created.single.name, 'Carlos Lima');
+      expect(athletes.created.single.position, 'Centroavante');
       expect(athletes.created.single.teamId, 'team-a');
       expect(athletes.uploadedPhotos['athlete-1'], same(photo));
       // Pasta do dono do time, depois o time e o atleta.
@@ -1998,8 +2058,276 @@ void main() {
     // Guardado do ponto de vista de quem marcou: Amigos 1 × 2 Real.
     expect((dispute.teamScore, dispute.opponentScore), (1, 2));
     expect(find.text('Contestação enviada · aguardando Amigos FC'), findsOne);
-    // Uma contestação por vez: sem ações enquanto ela está aberta.
-    expect(find.byTooltip('Ações do amistoso'), findsNothing);
+    // Uma contestação por vez: o menu fica só com a súmula.
+    await tester.tap(find.byTooltip('Ações do amistoso'));
+    await tester.pumpAndSettle();
+    expect(find.text('Contestar placar'), findsNothing);
+    expect(find.text('Súmula (gols, cartões, craque)'), findsOneWidget);
+  });
+
+  group('temporada', () {
+    test('ano inteiro ou um mês', () {
+      const year = Season(2026);
+      expect((year.start, year.end), (DateTime(2026), DateTime(2027)));
+      expect(year.label, 'Temporada 2026');
+      const october = Season(2026, 10);
+      expect(
+        (october.start, october.end),
+        (DateTime(2026, 10), DateTime(2026, 11)),
+      );
+      expect(october.label, 'Outubro de 2026');
+      // Dezembro vira o ano.
+      expect(const Season(2026, 12).end, DateTime(2027));
+      expect(Season.current(DateTime(2026, 5, 3)), year);
+    });
+
+    testWidgets('escolher o mês refaz as estatísticas do time', (tester) async {
+      final teams = FakeTeamRepository([teamA]);
+      teams.statsByTeam['team-a'] = const TeamStats();
+      final container = await _container(teams: teams);
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 22, 12)),
+        ),
+      );
+      final thisYear = DateTime.now().year;
+      expect(teams.statsSeasons.last, Season(thisYear));
+
+      await tester.ensureVisible(find.text('Temporada $thisYear'));
+      await tester.tap(find.text('Temporada $thisYear'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Out'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(seasonProvider), Season(thisYear, 10));
+      expect(find.text('Outubro de $thisYear'), findsOneWidget);
+      expect(teams.statsSeasons.last, Season(thisYear, 10));
+    });
+  });
+
+  group('súmula', () {
+    final played = Game(
+      id: 'g1',
+      teamId: 'team-a',
+      opponent: 'Real Bairro',
+      opponentTeamId: 'team-rival',
+      modality: Modality.society,
+      scheduledAt: DateTime(2026, 10, 18, 15),
+      teamScore: 2,
+      opponentScore: 1,
+    );
+    const ze = Athlete(
+      id: 'a1',
+      teamId: 'team-a',
+      name: 'Zé',
+      jerseyNumber: 10,
+    );
+    const tico = Athlete(id: 'a2', teamId: 'team-a', name: 'Tico');
+    final athletes = FakeAthleteRepository({
+      'team-a': [tico, ze],
+    });
+
+    testWidgets('lança quem jogou, gols, cartões e o craque', (tester) async {
+      _usePhoneScreen(tester);
+      final stats = FakePlayerStatsRepository(
+        stats: const [
+          PlayerGameStats(
+            gameId: 'g1',
+            teamId: 'team-a',
+            athleteId: 'a2',
+            athleteName: 'Tico',
+          ),
+        ],
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+        playerStats: stats,
+      );
+      await _pumpPage(
+        tester,
+        container,
+        TeamSheetEditorPage(game: played, teamId: 'team-a'),
+      );
+
+      // Tico já estava na súmula; o Zé ainda não jogou.
+      expect(find.text('Não jogou'), findsOneWidget);
+      await tester.tap(find.text('10 · Zé'));
+      await tester.pumpAndSettle();
+      expect(find.text('Não jogou'), findsNothing);
+
+      // 2 gols e o craque para o Zé; um amarelo para o Tico.
+      final zeCard = find.ancestor(
+        of: find.text('10 · Zé'),
+        matching: find.byType(Card),
+      );
+      Finder inZe(Finder finder) =>
+          find.descendant(of: zeCard, matching: finder);
+      await tester.tap(inZe(find.byTooltip('Mais gols')));
+      await tester.pump();
+      await tester.tap(inZe(find.byTooltip('Mais gols')));
+      await tester.pump();
+      await tester.tap(inZe(find.byTooltip('Escolher como craque')));
+      await tester.pump();
+      final ticoCard = find.ancestor(
+        of: find.text('Tico'),
+        matching: find.byType(Card),
+      );
+      await tester.tap(
+        find.descendant(
+          of: ticoCard,
+          matching: find.byTooltip('Mais amarelos'),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      final ze2 = stats.stats.singleWhere((row) => row.athleteId == 'a1');
+      expect((ze2.goals, ze2.bestPlayer), (2, true));
+      final tico2 = stats.stats.singleWhere((row) => row.athleteId == 'a2');
+      expect((tico2.yellowCards, tico2.bestPlayer), (1, false));
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('a súmula mostra os dois times', (tester) async {
+      _usePhoneScreen(tester);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        playerStats: FakePlayerStatsRepository(
+          stats: const [
+            PlayerGameStats(
+              gameId: 'g1',
+              teamId: 'team-a',
+              athleteId: 'a1',
+              athleteName: 'Zé',
+              jerseyNumber: 10,
+              goals: 2,
+              assists: 1,
+              bestPlayer: true,
+            ),
+            PlayerGameStats(
+              gameId: 'g1',
+              teamId: 'team-rival',
+              athleteId: 'r1',
+              athleteName: 'Beto',
+              goals: 1,
+              redCard: true,
+            ),
+          ],
+        ),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        GameSheetPage(game: played, viewerTeamId: 'team-a'),
+      );
+      expect(find.text('Amigos FC'), findsOneWidget);
+      expect(find.text('10 · Zé'), findsOneWidget);
+      expect(find.text('2 gols · 1 assistência'), findsOneWidget);
+      expect(find.byTooltip('Craque do jogo'), findsOneWidget);
+      expect(find.text('Real Bairro'), findsOneWidget);
+      expect(find.text('Beto'), findsOneWidget);
+      expect(find.text('1 gol · vermelho'), findsOneWidget);
+    });
+
+    testWidgets('gol no placar ao vivo pergunta quem fez', (tester) async {
+      final stats = FakePlayerStatsRepository();
+      final teams = FakeTeamRepository([teamA]);
+      teams.statsByTeam['team-a'] = const TeamStats();
+      final container = await _container(
+        teams: teams,
+        athletes: athletes,
+        playerStats: stats,
+        games: FakeGameRepository({
+          'team-a': [
+            Game(
+              id: 'g1',
+              teamId: 'team-a',
+              opponent: 'Real Bairro',
+              modality: Modality.society,
+              scheduledAt: DateTime(2026, 10, 31, 15),
+            ),
+          ],
+        }),
+      );
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 31, 15, 30)),
+        ),
+      );
+      await tester.ensureVisible(find.byTooltip('Gol do Amigos FC'));
+      await tester.tap(find.byTooltip('Gol do Amigos FC'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quem fez o gol?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(DropdownMenu<String>, 'Gol de'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('10 · Zé').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salvar gol'));
+      await tester.pumpAndSettle();
+      expect(stats.goals, [(scorer: 'a1', assist: null)]);
+    });
+
+    testWidgets('perfil do atleta e artilharia do time', (tester) async {
+      _usePhoneScreen(tester);
+      final stats = FakePlayerStatsRepository(
+        totalsByTeam: {
+          'team-a': const [
+            AthleteTotals(
+              athleteId: 'a1',
+              name: 'Zé',
+              jerseyNumber: 10,
+              games: 4,
+              goals: 5,
+              assists: 2,
+              yellowCards: 1,
+              bestPlayer: 2,
+            ),
+            AthleteTotals(athleteId: 'a2', name: 'Tico', games: 3, assists: 3),
+          ],
+        },
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+        playerStats: stats,
+      );
+      await _pumpPage(tester, container, const AthleteProfilePage(athlete: ze));
+      expect(find.text('Números'), findsOneWidget);
+      expect(find.text('Temporada ${DateTime.now().year}'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget); // gols
+      expect(find.text('Gols'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget); // jogos
+      expect(find.byTooltip('Editar atleta'), findsOneWidget);
+      // Desmonta antes de abrir o perfil do time, para os providers saírem.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+
+      final teams = FakeTeamRepository([teamA]);
+      teams.statsByTeam['team-a'] = const TeamStats();
+      final profile = await _container(teams: teams, playerStats: stats);
+      await _pumpPage(tester, profile, const TeamProfilePage(teamId: 'team-a'));
+      // A lista da aba Visão geral (a outra é a das abas).
+      final list = find.byType(Scrollable).last;
+      await tester.scrollUntilVisible(
+        find.text('Garçons'),
+        200,
+        scrollable: list,
+      );
+      expect(find.text('Artilharia'), findsOneWidget);
+      expect(find.text('5 gols'), findsOneWidget);
+      // Garçons: Tico (3) antes do Zé (2).
+      expect(
+        tester.getTopLeft(find.text('3 assist.')).dy,
+        lessThan(tester.getTopLeft(find.text('2 assist.')).dy),
+      );
+    });
   });
 
   testWidgets('no fim de jogo, o adversário contesta pelo card do Início', (

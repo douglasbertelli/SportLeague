@@ -5,12 +5,15 @@ import 'package:sport_league/features/availability/data/availability_repository.
 import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
+import 'package:sport_league/features/games/domain/player_stats.dart';
 import 'package:sport_league/features/games/domain/score_dispute.dart';
 import 'package:sport_league/features/games/domain/opponent.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
+import 'package:sport_league/features/teams/domain/season.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 import 'package:sport_league/features/teams/domain/team_stats.dart';
 import 'package:sport_league/features/venues/data/venue_repository.dart';
@@ -101,11 +104,15 @@ class FakeTeamRepository implements TeamRepository {
   /// Números de cada time no perfil; seguidores e seguindo vêm de [follows].
   final statsByTeam = <String, TeamStats>{};
 
+  /// Temporadas pedidas nas estatísticas.
+  final statsSeasons = <Season?>[];
+
   /// Pares (quem segue, quem é seguido).
   final follows = <({String follower, String followed})>{};
 
   @override
-  Future<TeamStats> stats(String teamId) async {
+  Future<TeamStats> stats(String teamId, {Season? season}) async {
+    statsSeasons.add(season);
     final base = statsByTeam[teamId] ?? const TeamStats();
     return TeamStats(
       played: base.played,
@@ -454,6 +461,52 @@ class FakeDisputeRepository implements DisputeRepository {
     resolved.add((disputeId, accept));
     disputes.removeWhere((dispute) => dispute.id == disputeId);
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Súmulas em memória.
+class FakePlayerStatsRepository implements PlayerStatsRepository {
+  FakePlayerStatsRepository({
+    List<PlayerGameStats> stats = const [],
+    this.totalsByTeam = const {},
+  }) : stats = [...stats];
+
+  final List<PlayerGameStats> stats;
+  final Map<String, List<AthleteTotals>> totalsByTeam;
+  final goals = <({String scorer, String? assist})>[];
+
+  @override
+  Future<List<PlayerGameStats>> fetchGame(String gameId) async => [
+    for (final row in stats)
+      if (row.gameId == gameId) row,
+  ];
+
+  @override
+  Future<void> saveTeamSheet({
+    required String gameId,
+    required String teamId,
+    required List<PlayerGameStats> rows,
+  }) async {
+    stats
+      ..removeWhere((row) => row.gameId == gameId && row.teamId == teamId)
+      ..addAll(rows);
+  }
+
+  @override
+  Future<void> addGoal({
+    required String gameId,
+    required String teamId,
+    required String scorerId,
+    String? assistId,
+  }) async => goals.add((scorer: scorerId, assist: assistId));
+
+  @override
+  Future<List<AthleteTotals>> teamTotals(
+    String teamId, {
+    Season? season,
+  }) async => totalsByTeam[teamId] ?? const [];
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

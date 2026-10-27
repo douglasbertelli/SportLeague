@@ -6,6 +6,7 @@ import '../../../core/storage/preferences_provider.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../domain/team.dart';
+import '../domain/season.dart';
 import '../domain/team_stats.dart';
 
 /// Colunas do time com o local (home_venue) junto.
@@ -44,10 +45,16 @@ class TeamRepository {
   }
 
   /// Números e últimos resultados do time (função do banco).
-  Future<TeamStats> stats(String teamId) async {
+  /// Números do time; com [season], só os jogos da temporada (últimos
+  /// resultados, próximos jogos e seguidores não mudam).
+  Future<TeamStats> stats(String teamId, {Season? season}) async {
     final data = await _client.rpc<Map<String, dynamic>>(
       'team_profile_stats',
-      params: {'p_team': teamId},
+      params: {
+        'p_team': teamId,
+        'p_from': season?.start.toUtc().toIso8601String(),
+        'p_to': season?.end.toUtc().toIso8601String(),
+      },
     );
     return TeamStats.fromMap(data);
   }
@@ -200,7 +207,9 @@ final teamByIdProvider = FutureProvider.autoDispose.family<Team?, String>(
 
 /// Números do perfil de um time (como os jogos, buscados de novo ao voltar).
 final teamStatsProvider = FutureProvider.autoDispose.family<TeamStats, String>(
-  (ref, teamId) => ref.watch(teamRepositoryProvider).stats(teamId),
+  (ref, teamId) => ref
+      .watch(teamRepositoryProvider)
+      .stats(teamId, season: ref.watch(seasonProvider)),
 );
 
 /// Se o time ativo segue o time do perfil.

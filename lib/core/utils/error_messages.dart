@@ -40,6 +40,11 @@ String friendlyErrorMessage(Object error) {
     return error.message;
   }
   if (error is PostgrestException) {
+    // Número de camisa repetido no time (índice team_players_unique_number).
+    if (error.code == '23505' &&
+        error.message.contains('team_players_unique_number')) {
+      return 'Já existe um atleta com esse número no time.';
+    }
     return 'Não foi possível salvar os dados. Tente novamente.';
   }
   if (error is GoogleSignInException) {
