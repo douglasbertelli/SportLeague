@@ -83,6 +83,13 @@ configurado.
 3. **Escolha do perfil** (obrigatória no primeiro acesso):
    - **Administrador**: cria e gerencia times e jogadores.
    - **Jogador**: entra em times por busca ou convite.
+   - **Técnico**: entra nos times com o código de convite ou pedindo pelo
+     perfil do time (o dono aceita; o dono vê e tira os técnicos em
+     Convites). Usa o app como o administrador, pelo time ativo (Início,
+     Jogos, Atletas), mas só vê e acompanha: monta a **escalação** de cada
+     jogo (titulares, quantos a modalidade põe em campo, e reservas) e lança
+     a súmula; não edita o time, não marca jogos, não mexe no placar nem
+     cadastra atletas.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
    Serve para enviar documentos, brindes e outros itens ao usuário, não para
    encontrar times.
@@ -195,7 +202,7 @@ supabase/
 
 | Tabela          | Descrição                                                        |
 | --------------- | ---------------------------------------------------------------- |
-| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`) e plano (`free`/`premium`) |
+| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`) e foto (o técnico envia a dele pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
@@ -209,6 +216,8 @@ supabase/
 | `team_invite_codes` | Código de convite de cada time; só o dono vê e gera outro (`regenerate_invite_code`) |
 | `score_disputes` | Contestações do placar feitas pelo adversário depois do jogo (placar proposto e motivo); os dois times veem e quem marcou responde por `resolve_score_dispute` (aceitar muda o placar do jogo). Uma aberta por jogo |
 | `game_player_stats` | Súmula: o que cada atleta fez num jogo (estar na súmula é ter jogado; gols, assistências, cartões, craque — um por time). Cada time lança os seus atletas, a partir de 1 hora antes do jogo; quem vê o jogo vê a súmula. `add_player_goal` soma um gol pelo placar ao vivo e `team_player_totals` dá os totais dos atletas (perfil do atleta e artilharia) |
+| `team_coaches` | Técnicos de cada time (entram pelo convite aceito, com `kind = 'coach'` em `team_invites`); veem os jogos, as fotos dos atletas e lançam escalação e súmula (`private.is_team_staff`) |
+| `game_lineups` | Escalação: titulares e reservas de cada time no jogo; o dono ou o técnico montam antes e durante o jogo; quem vê o jogo vê a escalação |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda

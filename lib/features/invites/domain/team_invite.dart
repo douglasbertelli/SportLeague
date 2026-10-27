@@ -44,6 +44,7 @@ class TeamInvite {
     this.playerAvatarUrl,
     this.teamName,
     this.teamLogoUrl,
+    this.isCoach = false,
   });
 
   factory TeamInvite.fromMap(Map<String, dynamic> map) {
@@ -64,6 +65,7 @@ class TeamInvite {
       playerAvatarUrl: player?['avatar_url'] as String?,
       teamName: team?['name'] as String?,
       teamLogoUrl: team?['logo_url'] as String?,
+      isCoach: map['kind'] == 'coach',
     );
   }
 
@@ -72,6 +74,9 @@ class TeamInvite {
 
   /// Jogador convidado ou que pediu para entrar.
   final String profileId;
+
+  /// Técnico (entra na comissão técnica, não no elenco).
+  final bool isCoach;
   final bool isRequest;
   final InviteStatus status;
   final DateTime createdAt;

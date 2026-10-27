@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/media/photo_picker.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_color_picker.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
+import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 
 /// Aba Perfil: dados da conta, endereço e saída.
@@ -83,13 +86,50 @@ class ProfileTab extends ConsumerWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
+/// Foto do perfil; o técnico toca para enviar, trocar ou remover a dele.
+class _Avatar extends ConsumerStatefulWidget {
   const _Avatar({required this.profile});
 
   final Profile profile;
 
   @override
+  ConsumerState<_Avatar> createState() => _AvatarState();
+}
+
+class _AvatarState extends ConsumerState<_Avatar> {
+  var _saving = false;
+
+  Future<void> _choose() async {
+    final profile = widget.profile;
+    final choice = await chooseImage(
+      context,
+      ref,
+      noun: 'foto',
+      canRemove: profile.avatarUrl != null,
+      cropSquare: true,
+    );
+    if (choice == null) return;
+    setState(() => _saving = true);
+    try {
+      final repository = ref.read(profileRepositoryProvider);
+      switch (choice) {
+        case ImagePicked(:final image):
+          await repository.uploadPhoto(profile.id, image);
+        case ImageRemoved():
+          await repository.removePhoto(profile.id);
+      }
+      ref.invalidate(currentProfileProvider);
+    } catch (_) {
+      if (mounted) showErrorSnackBar(context, 'Não foi possível salvar a foto.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
+    final colorScheme = Theme.of(context).colorScheme;
     final initials = profile.fullName
         .split(' ')
         .where((part) => part.isNotEmpty)
@@ -97,11 +137,43 @@ class _Avatar extends StatelessWidget {
         .map((part) => part[0].toUpperCase())
         .join();
     final avatarUrl = profile.avatarUrl;
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: 40,
       foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
       onForegroundImageError: avatarUrl == null ? null : (_, _) {},
       child: Text(initials, style: Theme.of(context).textTheme.headlineSmall),
+    );
+    if (!profile.isCoach) return avatar;
+
+    return Semantics(
+      button: true,
+      label: avatarUrl == null ? 'Adicionar foto' : 'Trocar foto',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _saving ? null : _choose,
+        child: Stack(
+          children: [
+            avatar,
+            if (_saving)
+              const Positioned.fill(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: colorScheme.primary,
+                child: Icon(
+                  Icons.photo_camera,
+                  size: 14,
+                  color: colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

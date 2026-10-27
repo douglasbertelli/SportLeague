@@ -7,6 +7,7 @@ import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
 import 'package:sport_league/features/home/presentation/match_clock_panel.dart';
+import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 
 import '../teams/fakes.dart';
@@ -39,6 +40,8 @@ Future<FakeGameRepository> _pump(
     ProviderScope(
       overrides: [
         gameRepositoryProvider.overrideWithValue(games),
+        // O dono do time ativo (o técnico não controla o relógio).
+        canManageTeamProvider.overrideWithValue(true),
         playWhistleProvider.overrideWithValue((whistle) async {
           _whistles.add(whistle);
         }),
@@ -183,6 +186,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
+          canManageTeamProvider.overrideWithValue(true),
           playWhistleProvider.overrideWithValue((whistle) async {
             _whistles.add(whistle);
           }),

@@ -92,18 +92,44 @@ class InviteRepository {
     return rows.map(TeamInvite.fromMap).toList();
   }
 
-  /// Times em que o jogador é atleta.
+  /// Times em que o usuário é atleta ou técnico.
   Future<List<Team>> myTeams(String profileId) async {
-    final rows = await _client
-        .from('team_players')
-        .select('team:teams($teamColumns)')
-        .eq('profile_id', profileId);
+    final [players, coaches] = await Future.wait([
+      _client
+          .from('team_players')
+          .select('team:teams($teamColumns)')
+          .eq('profile_id', profileId),
+      _client
+          .from('team_coaches')
+          .select('team:teams($teamColumns)')
+          .eq('profile_id', profileId),
+    ]);
     return [
-      for (final row in rows)
+      for (final row in [...players, ...coaches])
         if (row['team'] case final Map<String, dynamic> team)
           Team.fromMap(team),
     ];
   }
+
+  /// Técnicos do time, com nome e foto.
+  Future<List<PlayerSummary>> teamCoaches(String teamId) async {
+    final rows = await _client
+        .from('team_coaches')
+        .select('profile:profiles(id, full_name, avatar_url)')
+        .eq('team_id', teamId);
+    return [
+      for (final row in rows)
+        if (row['profile'] case final Map<String, dynamic> profile)
+          PlayerSummary.fromMap(profile),
+    ];
+  }
+
+  /// O dono tira o técnico do time (ou o técnico sai).
+  Future<void> removeCoach(String teamId, String profileId) => _client
+      .from('team_coaches')
+      .delete()
+      .eq('team_id', teamId)
+      .eq('profile_id', profileId);
 
   /// O dono aceita ([accept]) ou recusa um pedido; o jogador aceita ou
   /// recusa um convite.
@@ -175,3 +201,9 @@ final shareTextProvider = Provider<Future<void> Function(String text)>(
   (ref) =>
       (text) async => SharePlus.instance.share(ShareParams(text: text)),
 );
+
+/// Técnicos do time.
+final teamCoachesProvider = FutureProvider.autoDispose
+    .family<List<PlayerSummary>, String>(
+      (ref, teamId) => ref.watch(inviteRepositoryProvider).teamCoaches(teamId),
+    );

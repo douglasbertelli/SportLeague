@@ -18,12 +18,15 @@ import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
 import 'package:sport_league/features/athletes/presentation/athlete_form_page.dart';
 import 'package:sport_league/features/athletes/presentation/athletes_tab.dart';
+import 'package:sport_league/features/teams/presentation/teams_page.dart';
 import 'package:sport_league/features/availability/data/availability_repository.dart';
 import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/availability/presentation/availability_page.dart';
 import 'package:sport_league/features/availability/presentation/slot_picker_page.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/lineup_repository.dart';
+import 'package:sport_league/features/games/presentation/lineup_page.dart';
 import 'package:sport_league/features/athletes/presentation/athlete_profile_page.dart';
 import 'package:sport_league/features/games/domain/player_stats.dart';
 import 'package:sport_league/features/games/presentation/game_sheet_page.dart';
@@ -76,6 +79,8 @@ Future<ProviderContainer> _container({
   PickImage? pickImage,
   FakeDisputeRepository? disputes,
   FakePlayerStatsRepository? playerStats,
+  FakeLineupRepository? lineups,
+  bool coach = false,
   CropSquare? cropSquare,
   Map<String, Object> saved = const {},
 }) async {
@@ -92,6 +97,11 @@ Future<ProviderContainer> _container({
       gameRepositoryProvider.overrideWithValue(games ?? FakeGameRepository({})),
       // Sem áudio nos testes.
       playWhistleProvider.overrideWithValue((_) async {}),
+      lineupRepositoryProvider.overrideWithValue(
+        lineups ?? FakeLineupRepository(),
+      ),
+      // Técnico: os times vêm dos vínculos.
+      isCoachProvider.overrideWithValue(coach),
       playerStatsRepositoryProvider.overrideWithValue(
         playerStats ?? FakePlayerStatsRepository(),
       ),
@@ -1049,9 +1059,14 @@ void main() {
 
       await tester.tap(find.text('Pendentes (2)'));
       await tester.pumpAndSettle();
-      // Aceitar e Recusar ficam à vista no card, sem menu.
+      // Aceitar e Recusar ficam à vista no card; o menu só tem a escalação.
       expect(find.textContaining('Aguardando sua resposta'), findsNothing);
-      expect(find.byTooltip('Ações do amistoso'), findsNothing);
+      await tester.tap(find.byTooltip('Ações do amistoso').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Escalação'), findsOneWidget);
+      expect(find.text('Cancelar amistoso'), findsNothing);
+      await tester.tap(find.text('Fechar'));
+      await tester.pumpAndSettle();
       expect(find.widgetWithText(FilledButton, 'Aceitar'), findsNWidgets(2));
       expect(find.widgetWithText(OutlinedButton, 'Recusar'), findsNWidgets(2));
 
@@ -2063,6 +2078,149 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Contestar placar'), findsNothing);
     expect(find.text('Súmula (gols, cartões, craque)'), findsOneWidget);
+  });
+
+  group('técnico', () {
+    // Time de outro administrador, em que o usuário (u1) é técnico.
+    const coached = Team(
+      id: 'team-x',
+      ownerId: 'u2',
+      name: 'Ponte Preta',
+      modalities: {Modality.society},
+    );
+    Game game({String id = 'g1', DateTime? at}) => Game(
+      id: id,
+      teamId: 'team-x',
+      opponent: 'Real Bairro',
+      modality: Modality.society,
+      scheduledAt: at ?? DateTime(2026, 11, 7, 15),
+    );
+    final squad = FakeAthleteRepository({
+      'team-x': [
+        for (var i = 1; i <= 9; i++)
+          Athlete(
+            id: 'x$i',
+            teamId: 'team-x',
+            name: 'Atleta $i',
+            jerseyNumber: i,
+            position: 'Meia',
+          ),
+      ],
+    });
+
+    Future<ProviderContainer> coachContainer({
+      FakeGameRepository? games,
+      FakeLineupRepository? lineups,
+    }) async {
+      final teams = FakeTeamRepository([teamA, coached]);
+      teams.coachedBy['u1'] = {'team-x'};
+      teams.statsByTeam['team-x'] = const TeamStats();
+      return _container(
+        teams: teams,
+        athletes: squad,
+        games: games,
+        lineups: lineups,
+        coach: true,
+      );
+    }
+
+    testWidgets('o técnico usa os times em que está, sem gerenciar', (
+      tester,
+    ) async {
+      final container = await coachContainer(
+        games: FakeGameRepository({
+          'team-x': [game()],
+        }),
+      );
+      // Só o time em que é técnico (o Amigos FC também é do u1, mas como dono).
+      final teams = await container.read(myTeamsProvider.future);
+      expect([for (final team in teams) team.name], ['Ponte Preta']);
+      expect(container.read(canManageTeamProvider), isFalse);
+
+      // Jogos: sem "Novo amistoso"; no card, só a escalação.
+      await _pumpTab(tester, container, GamesTab(now: DateTime(2026, 10, 22)));
+      expect(find.text('Novo amistoso'), findsNothing);
+      await tester.tap(find.byTooltip('Ações do amistoso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escalação'), findsOneWidget);
+      expect(find.text('Editar'), findsNothing);
+      expect(find.text('Cancelar amistoso'), findsNothing);
+
+      // Atletas: vê o elenco, sem cadastrar.
+      await _pumpTab(tester, container, const AthletesTab());
+      expect(find.text('9 atletas'), findsOneWidget);
+      expect(find.text('Novo atleta'), findsNothing);
+
+      // Meus times: escolhe o time, sem criar nem editar.
+      await _pumpPage(tester, container, const TeamsPage());
+      expect(find.text('Ponte Preta'), findsOneWidget);
+      expect(find.text('Novo time'), findsNothing);
+      expect(find.byTooltip('Editar Ponte Preta'), findsNothing);
+    });
+
+    testWidgets('técnico sem time é levado a entrar num, não a criar', (
+      tester,
+    ) async {
+      final teams = FakeTeamRepository([teamA]);
+      final container = await _container(teams: teams, coach: true);
+      await _pumpTab(tester, container, const AthletesTab());
+      expect(find.text('Entre num time'), findsOneWidget);
+      expect(find.text('Entrar num time'), findsOneWidget);
+      expect(find.text('Criar time'), findsNothing);
+    });
+
+    testWidgets('o Início do técnico não marca jogo', (tester) async {
+      final container = await coachContainer();
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 22, 12)),
+        ),
+      );
+      expect(find.text('Nenhum amistoso marcado.'), findsOneWidget);
+      expect(find.text('Marcar amistoso'), findsNothing);
+    });
+
+    testWidgets('escalação: titulares até o limite da modalidade', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final lineups = FakeLineupRepository();
+      final container = await coachContainer(lineups: lineups);
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(game: game(), teamId: 'team-x'),
+      );
+      // Society: 7 titulares.
+      expect(find.text('Titulares: 0 de 7 · Reservas: 0'), findsOneWidget);
+      Future<void> pick(int athlete, String spot) async {
+        final card = find.ancestor(
+          of: find.text('$athlete · Atleta $athlete'),
+          matching: find.byType(Card),
+        );
+        await tester.ensureVisible(card);
+        await tester.tap(find.descendant(of: card, matching: find.text(spot)));
+        await tester.pumpAndSettle();
+      }
+
+      for (var i = 1; i <= 7; i++) {
+        await pick(i, 'Tit.');
+      }
+      // O oitavo titular não entra.
+      await pick(8, 'Tit.');
+      expect(find.textContaining('Já são 7 titulares'), findsOneWidget);
+      await pick(8, 'Res.');
+
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      final saved = [for (final (_, entry) in lineups.entries) entry];
+      expect(saved.where((entry) => entry.starter), hasLength(7));
+      expect(saved.where((entry) => !entry.starter).single.athleteId, 'x8');
+      // O nono ficou fora.
+      expect(saved.any((entry) => entry.athleteId == 'x9'), isFalse);
+    });
   });
 
   group('temporada', () {

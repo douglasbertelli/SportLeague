@@ -5,6 +5,7 @@ import 'package:sport_league/features/availability/data/availability_repository.
 import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/lineup_repository.dart';
 import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
@@ -45,6 +46,15 @@ class FakeTeamRepository implements TeamRepository {
   @override
   Future<List<Team>> fetchByOwner(String ownerId) async =>
       teams.where((team) => team.ownerId == ownerId).toList();
+
+  /// Ids dos times em que cada perfil é técnico.
+  final coachedBy = <String, Set<String>>{};
+
+  @override
+  Future<List<Team>> fetchCoached(String profileId) async => [
+    for (final team in teams)
+      if (coachedBy[profileId]?.contains(team.id) ?? false) team,
+  ];
 
   @override
   Future<Team> create(Team team) async {
@@ -507,6 +517,35 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
     String teamId, {
     Season? season,
   }) async => totalsByTeam[teamId] ?? const [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Escalações em memória.
+class FakeLineupRepository implements LineupRepository {
+  FakeLineupRepository([List<(String, LineupEntry)> entries = const []])
+    : entries = [...entries];
+
+  /// (jogo, escalação).
+  final List<(String, LineupEntry)> entries;
+
+  @override
+  Future<List<LineupEntry>> fetchGame(String gameId) async => [
+    for (final (game, entry) in entries)
+      if (game == gameId) entry,
+  ];
+
+  @override
+  Future<void> saveTeam({
+    required String gameId,
+    required String teamId,
+    required List<LineupEntry> entries,
+  }) async {
+    this.entries
+      ..removeWhere((row) => row.$1 == gameId && row.$2.teamId == teamId)
+      ..addAll([for (final entry in entries) (gameId, entry)]);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

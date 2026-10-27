@@ -15,14 +15,18 @@ class TeamsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final teams = ref.watch(myTeamsProvider);
     final selectedId = ref.watch(selectedTeamProvider).value?.id;
+    // O técnico não cria nem edita times: só escolhe entre os que acompanha.
+    final coach = ref.watch(isCoachProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Meus times')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(Routes.newTeam),
-        icon: const Icon(Icons.add),
-        label: const Text('Novo time'),
-      ),
+      floatingActionButton: coach
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.push(Routes.newTeam),
+              icon: const Icon(Icons.add),
+              label: const Text('Novo time'),
+            ),
       body: teams.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
@@ -59,12 +63,14 @@ class TeamsPage extends ConsumerWidget {
                           [team.summary, ?team.location].join('\n'),
                         ),
                         isThreeLine: team.location != null,
-                        trailing: IconButton(
-                          tooltip: 'Editar ${team.name}',
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () =>
-                              context.push(Routes.editTeam, extra: team),
-                        ),
+                        trailing: coach
+                            ? null
+                            : IconButton(
+                                tooltip: 'Editar ${team.name}',
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () =>
+                                    context.push(Routes.editTeam, extra: team),
+                              ),
                         onTap: () => ref
                             .read(selectedTeamIdProvider.notifier)
                             .select(team.id!),

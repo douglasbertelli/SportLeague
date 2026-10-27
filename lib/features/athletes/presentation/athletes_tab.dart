@@ -41,12 +41,15 @@ class _AthleteList extends ConsumerWidget {
     final athletes = ref.watch(teamAthletesProvider(teamId));
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'new-athlete',
-        onPressed: () => context.push(Routes.newAthlete),
-        icon: const Icon(Icons.person_add_alt),
-        label: const Text('Novo atleta'),
-      ),
+      // Só o dono cadastra atletas (o técnico vê o elenco).
+      floatingActionButton: ref.watch(canManageTeamProvider)
+          ? FloatingActionButton.extended(
+              heroTag: 'new-athlete',
+              onPressed: () => context.push(Routes.newAthlete),
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Novo atleta'),
+            )
+          : null,
       body: athletes.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(

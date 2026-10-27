@@ -41,6 +41,17 @@ class FakeInviteRepository implements InviteRepository {
   final joined = <String>[];
   var regenerated = 0;
 
+  /// Técnicos por time.
+  final coaches = <String, List<PlayerSummary>>{};
+
+  @override
+  Future<List<PlayerSummary>> teamCoaches(String teamId) async =>
+      coaches[teamId] ?? const [];
+
+  @override
+  Future<void> removeCoach(String teamId, String profileId) async =>
+      coaches[teamId]?.removeWhere((coach) => coach.id == profileId);
+
   @override
   Future<String?> inviteCode(String teamId) async => codes[teamId];
 
