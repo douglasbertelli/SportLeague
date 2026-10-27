@@ -212,6 +212,11 @@ String? appRedirect({
         : Routes.onboardingAddress;
   }
 
+  // O técnico só se vincula a times existentes.
+  if (location == Routes.newTeam && (profile.value?.isCoach ?? false)) {
+    return Routes.home;
+  }
+
   const entryRoutes = {
     ..._publicRoutes,
     Routes.splash,

@@ -1,6 +1,7 @@
 enum UserRole {
   admin('Administrador', 'Cria e gerencia times e jogadores'),
-  player('Jogador', 'Entra em times por busca ou convite');
+  player('Jogador', 'Entra em times por busca ou convite'),
+  coach('Técnico', 'Acompanha os times, monta a escalação e a súmula');
 
   const UserRole(this.label, this.description);
 
@@ -61,5 +62,10 @@ class Profile {
   bool get needsRole => role == null;
   bool get needsName => fullName == placeholderName;
   bool get isAdmin => role == UserRole.admin;
+  bool get isCoach => role == UserRole.coach;
+
+  /// Administrador ou técnico: usa o app pelo time ativo (Início, Jogos,
+  /// Atletas).
+  bool get hasTeamHome => isAdmin || isCoach;
   bool get isPremium => plan == SubscriptionPlan.premium;
 }

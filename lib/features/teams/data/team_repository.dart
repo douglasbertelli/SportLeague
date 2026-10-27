@@ -27,6 +27,16 @@ class TeamRepository {
     return rows.map(Team.fromMap).toList();
   }
 
+  /// Times em que o usuário é técnico, em ordem alfabética.
+  Future<List<Team>> fetchCoached(String profileId) async {
+    final rows = await _client
+        .from('teams')
+        .select('$teamColumns, team_coaches!inner(profile_id)')
+        .eq('team_coaches.profile_id', profileId)
+        .order('name');
+    return rows.map(Team.fromMap).toList();
+  }
+
   /// Times da plataforma pelo nome, em ordem alfabética (vazio lista os
   /// primeiros).
   Future<List<Team>> search(String query) async {
@@ -193,11 +203,25 @@ final teamRepositoryProvider = Provider<TeamRepository>(
   (ref) => TeamRepository(ref.watch(supabaseClientProvider)),
 );
 
-/// Times do administrador logado.
+/// Se o usuário logado é técnico (os times dele vêm dos vínculos, não da
+/// posse). O app liga ao perfil em `main.dart`; aqui é falso.
+final isCoachProvider = Provider<bool>((ref) => false);
+
+/// Times do administrador logado, ou os times em que o técnico está.
 final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return const [];
-  return ref.watch(teamRepositoryProvider).fetchByOwner(userId);
+  final repository = ref.watch(teamRepositoryProvider);
+  return ref.watch(isCoachProvider)
+      ? repository.fetchCoached(userId)
+      : repository.fetchByOwner(userId);
+});
+
+/// Se o usuário é o dono do time ativo (o técnico só vê e escala). Sem time
+/// ativo, falso.
+final canManageTeamProvider = Provider<bool>((ref) {
+  final team = ref.watch(selectedTeamProvider).value;
+  return team != null && team.ownerId == ref.watch(currentUserIdProvider);
 });
 
 /// Um time pelo id, para o perfil.

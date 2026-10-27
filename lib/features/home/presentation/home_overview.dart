@@ -65,7 +65,9 @@ class HomeOverview extends ConsumerWidget {
             ),
             _ActionTile(
               icon: Icons.mail_outline,
-              title: 'Meus convites',
+              title: profile.isCoach
+                  ? 'Meus times e convites'
+                  : 'Meus convites',
               subtitle: switch ((ref.watch(myInvitesProvider).value ?? const [])
                   .where((invite) => invite.isPending && !invite.isRequest)
                   .length) {
@@ -85,8 +87,9 @@ class HomeOverview extends ConsumerWidget {
           style: theme.textTheme.headlineSmall,
         ),
         const SizedBox(height: 24),
-        // O administrador vê o painel do time ativo antes dos atalhos.
-        if (profile.isAdmin) ...[
+        // Administrador e técnico veem o painel do time ativo antes dos
+        // atalhos.
+        if (profile.hasTeamHome) ...[
           TeamDashboard(onOpenGames: onOpenGames),
           const SizedBox(height: 24),
           Padding(

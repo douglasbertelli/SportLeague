@@ -371,7 +371,7 @@ class _FollowBarState extends ConsumerState<_FollowBar> {
               ],
             ),
           ),
-          // O jogador (sem time ativo) pede para entrar no time.
+          // Jogador ou técnico pede para entrar no time.
           if (ref.watch(currentProfileProvider).value case final profile?
               when !profile.isAdmin)
             _JoinButton(team: widget.team, profileId: profile.id)

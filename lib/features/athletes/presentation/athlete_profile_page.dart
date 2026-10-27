@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../games/data/player_stats_repository.dart';
+import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/season_button.dart';
 import '../../teams/presentation/team_stats_widgets.dart';
 import '../domain/athlete.dart';
@@ -30,11 +31,12 @@ class AthleteProfilePage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(athlete.name),
         actions: [
-          IconButton(
-            tooltip: 'Editar atleta',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push(Routes.editAthlete, extra: athlete),
-          ),
+          if (ref.watch(canManageTeamProvider))
+            IconButton(
+              tooltip: 'Editar atleta',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.push(Routes.editAthlete, extra: athlete),
+            ),
         ],
       ),
       body: ListView(

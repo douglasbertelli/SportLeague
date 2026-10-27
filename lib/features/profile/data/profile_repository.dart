@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../domain/profile.dart';
 
@@ -32,6 +33,34 @@ class ProfileRepository {
         if (fullName != null) 'full_name': fullName.trim(),
       })
       .eq('id', userId);
+
+  static const _photoBucket = 'profile-photos';
+
+  /// Pasta do próprio usuário: as regras do Storage só deixam ele gravar.
+  static String _photoPath(String userId) => '$userId/avatar';
+
+  /// Envia (ou substitui) a foto de perfil e grava a URL pública no perfil.
+  /// A URL muda a cada envio para o app não mostrar a imagem antiga do cache.
+  Future<void> uploadPhoto(String userId, PickedImage image) async {
+    final storage = _client.storage.from(_photoBucket);
+    final path = _photoPath(userId);
+    await storage.uploadBinary(
+      path,
+      image.bytes,
+      fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+    );
+    final url = storage.getPublicUrl(
+      path,
+      cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+    await _client.from('profiles').update({'avatar_url': url}).eq('id', userId);
+  }
+
+  /// Tira a foto do perfil e apaga o arquivo.
+  Future<void> removePhoto(String userId) async {
+    await _client.from('profiles').update({'avatar_url': null}).eq('id', userId);
+    await _client.storage.from(_photoBucket).remove([_photoPath(userId)]);
+  }
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>(

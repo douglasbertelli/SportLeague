@@ -51,12 +51,15 @@ class _GameList extends ConsumerWidget {
     final games = ref.watch(teamGamesProvider(teamId));
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'new-game',
-        onPressed: () => context.push(Routes.newGame),
-        icon: const Icon(Icons.add),
-        label: const Text('Novo amistoso'),
-      ),
+      // Só o dono marca amistosos (o técnico acompanha).
+      floatingActionButton: ref.watch(canManageTeamProvider)
+          ? FloatingActionButton.extended(
+              heroTag: 'new-game',
+              onPressed: () => context.push(Routes.newGame),
+              icon: const Icon(Icons.add),
+              label: const Text('Novo amistoso'),
+            )
+          : null,
       body: games.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(

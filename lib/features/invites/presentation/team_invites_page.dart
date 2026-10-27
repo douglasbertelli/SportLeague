@@ -45,6 +45,8 @@ class TeamInvitesPage extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _Requests(team: team),
                 const SizedBox(height: 24),
+                _Coaches(team: team),
+                const SizedBox(height: 24),
                 _SentInvites(team: team),
               ],
             ),
@@ -246,6 +248,7 @@ class _Requests extends ConsumerWidget {
                             leading: _PlayerAvatar(request: request),
                             title: Text(request.playerName ?? 'Jogador'),
                             subtitle: Text(
+                              '${request.isCoach ? 'Técnico · ' : ''}'
                               'Pediu em ${formatGameDay(request.createdAt)}',
                             ),
                           ),
@@ -301,6 +304,7 @@ class _Requests extends ConsumerWidget {
                       leading: _PlayerAvatar(request: request),
                       title: Text(request.playerName ?? 'Jogador'),
                       subtitle: Text(
+                        '${request.isCoach ? 'Técnico · ' : ''}'
                         '${request.status.label} · '
                         '${formatGameDay(request.respondedAt ?? request.createdAt)}',
                       ),
@@ -390,6 +394,92 @@ class _PlayerAvatar extends StatelessWidget {
       foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
       onForegroundImageError: avatarUrl == null ? null : (_, _) {},
       child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
+    );
+  }
+}
+
+/// Técnicos do time (entram pelo código ou pedido, como os jogadores); o
+/// dono pode tirar.
+class _Coaches extends ConsumerWidget {
+  const _Coaches({required this.team});
+
+  final Team team;
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    PlayerSummary coach,
+  ) async {
+    if (!await confirmAction(
+      context,
+      title: 'Tirar o técnico?',
+      message: '${coach.name} deixa de ver os dados do ${team.name}.',
+      confirmLabel: 'Tirar',
+      confirmIcon: Icons.person_remove_outlined,
+      cancelLabel: 'Voltar',
+    )) {
+      return;
+    }
+    try {
+      await ref.read(inviteRepositoryProvider).removeCoach(team.id!, coach.id);
+      ref.invalidate(teamCoachesProvider(team.id!));
+    } catch (error) {
+      if (context.mounted) {
+        showErrorSnackBar(context, friendlyErrorMessage(error));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final coaches = ref.watch(teamCoachesProvider(team.id!)).value ?? const [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Técnicos (${coaches.length})',
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        if (coaches.isEmpty)
+          Text(
+            'O técnico entra com o mesmo código ou pedindo pelo perfil do '
+            'time. Ele vê os dados do time e monta a escalação e a súmula.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
+        else
+          Card(
+            child: Column(
+              children: [
+                for (final coach in coaches)
+                  ListTile(
+                    leading: CircleAvatar(
+                      foregroundImage: switch (coach.avatarUrl) {
+                        final url? => NetworkImage(url),
+                        null => null,
+                      },
+                      onForegroundImageError: coach.avatarUrl == null
+                          ? null
+                          : (_, _) {},
+                      child: Text(
+                        coach.name.isEmpty ? '?' : coach.name[0].toUpperCase(),
+                      ),
+                    ),
+                    title: Text(coach.name),
+                    subtitle: const Text('Técnico'),
+                    trailing: IconButton(
+                      tooltip: 'Tirar ${coach.name}',
+                      icon: const Icon(Icons.person_remove_outlined),
+                      onPressed: () => _remove(context, ref, coach),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

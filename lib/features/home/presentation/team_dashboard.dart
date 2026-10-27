@@ -13,6 +13,7 @@ import '../../games/domain/match_clock.dart';
 import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
+import '../../games/presentation/lineup_page.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/season_button.dart';
@@ -36,24 +37,34 @@ class TeamDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(selectedTeamProvider).value;
     if (team == null) {
+      // O técnico entra num time; o administrador cria.
+      final coach = ref.watch(isCoachProvider);
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Crie seu primeiro time para ver o painel dele.'),
+              Text(
+                coach
+                    ? 'Entre num time com o código de convite ou peça pelo '
+                          'perfil do time para ver o painel dele.'
+                    : 'Crie seu primeiro time para ver o painel dele.',
+              ),
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: () => context.push(Routes.newTeam),
-                icon: const Icon(Icons.add),
-                label: const Text('Criar time'),
+                onPressed: () =>
+                    context.push(coach ? Routes.playerInvites : Routes.newTeam),
+                icon: Icon(coach ? Icons.vpn_key_outlined : Icons.add),
+                label: Text(coach ? 'Entrar num time' : 'Criar time'),
               ),
             ],
           ),
         ),
       );
     }
+    // O técnico acompanha: sem marcar jogos, mexer no placar ou no relógio.
+    final canManage = ref.watch(canManageTeamProvider);
 
     final now = this.now ?? DateTime.now();
     final games = ref.watch(teamGamesProvider(team.id!)).value ?? const [];
@@ -96,8 +107,9 @@ class TeamDashboard extends ConsumerWidget {
           team: team,
           game: next.firstOrNull,
           clock: this.now == null ? null : () => now,
+          canManage: canManage,
         ),
-        if (disputed > 0) ...[
+        if (canManage && disputed > 0) ...[
           const SizedBox(height: 8),
           Card(
             child: ListTile(
@@ -116,7 +128,7 @@ class TeamDashboard extends ConsumerWidget {
             ),
           ),
         ],
-        if (pending.isNotEmpty) ...[
+        if (canManage && pending.isNotEmpty) ...[
           const SizedBox(height: 8),
           Card(
             child: ListTile(
@@ -251,7 +263,15 @@ class _TeamHeader extends StatelessWidget {
 /// Quando a contagem chega a zero, o título vira "Jogo em andamento" e
 /// estouram confetes.
 class _NextGameCard extends StatefulWidget {
-  const _NextGameCard({required this.team, required this.game, this.clock});
+  const _NextGameCard({
+    required this.team,
+    required this.game,
+    this.clock,
+    this.canManage = true,
+  });
+
+  /// Dono do time: marca amistosos (o técnico só acompanha).
+  final bool canManage;
 
   final Team team;
   final Game? game;
@@ -291,12 +311,14 @@ class _NextGameCardState extends State<_NextGameCard> {
                   Text('Próximo jogo', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   const Text('Nenhum amistoso marcado.'),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.push(Routes.newGame),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Marcar amistoso'),
-                  ),
+                  if (widget.canManage) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.push(Routes.newGame),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Marcar amistoso'),
+                    ),
+                  ],
                 ],
               )
             : Column(
@@ -371,6 +393,18 @@ class _NextGameCardState extends State<_NextGameCard> {
                       ],
                     ),
                   ],
+                  if (!live) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            openLineup(context, game: game, teamId: team.id!),
+                        icon: const Icon(Icons.format_list_numbered),
+                        label: const Text('Escalação'),
+                      ),
+                    ),
+                  ],
                   if (live) ...[
                     const Divider(height: 32),
                     MatchClockPanel(
@@ -380,7 +414,8 @@ class _NextGameCardState extends State<_NextGameCard> {
                     ),
                     const SizedBox(height: 16),
                     _LiveScore(team: team, game: game),
-                    if (game.clock?.phase == MatchPhase.finished &&
+                    if (widget.canManage &&
+                        game.clock?.phase == MatchPhase.finished &&
                         !game.isHostedBy(team.id!) &&
                         game.hasScore) ...[
                       const SizedBox(height: 16),
@@ -445,7 +480,9 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
     final theme = Theme.of(context);
     final team = widget.team;
     final game = widget.game;
-    final canEdit = game.isHostedBy(team.id!);
+    // Só o dono de quem marcou o jogo mexe no placar (o técnico acompanha).
+    final canEdit =
+        game.isHostedBy(team.id!) && ref.watch(canManageTeamProvider);
     final (mine, theirs) = game.scoreFor(team.id!) ?? (0, 0);
     final enabled = canEdit && !_saving;
 
@@ -503,12 +540,23 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
             ),
           ],
         ),
-        // Os dois times lançam a súmula dos seus atletas por aqui.
-        TextButton.icon(
-          onPressed: () =>
-              openGameSheet(context, game: game, viewerTeamId: team.id!),
-          icon: const Icon(Icons.assignment_outlined),
-          label: const Text('Súmula do jogo'),
+        // Os dois times lançam a súmula e a escalação dos seus atletas.
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () =>
+                  openGameSheet(context, game: game, viewerTeamId: team.id!),
+              icon: const Icon(Icons.assignment_outlined),
+              label: const Text('Súmula do jogo'),
+            ),
+            TextButton.icon(
+              onPressed: () =>
+                  openLineup(context, game: game, teamId: team.id!),
+              icon: const Icon(Icons.format_list_numbered),
+              label: const Text('Escalação'),
+            ),
+          ],
         ),
       ],
     );

@@ -10,6 +10,7 @@ import 'core/storage/preferences_provider.dart';
 import 'core/supabase/supabase_providers.dart';
 import 'core/theme/app_color_provider.dart';
 import 'core/theme/app_theme.dart';
+import 'features/profile/data/profile_repository.dart';
 import 'features/teams/data/team_repository.dart';
 
 Future<void> main() async {
@@ -36,6 +37,10 @@ Future<void> main() async {
         // Antes de entrar, o verde da marca.
         signedOutProvider.overrideWith(
           (ref) => ref.watch(currentUserIdProvider) == null,
+        ),
+        // O técnico usa os times em que está, não os que criou.
+        isCoachProvider.overrideWith(
+          (ref) => ref.watch(currentProfileProvider).value?.isCoach ?? false,
         ),
         // Cada time tem a sua cor.
         colorTeamProvider.overrideWith((ref) {

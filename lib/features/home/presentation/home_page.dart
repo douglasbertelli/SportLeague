@@ -18,7 +18,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider);
-    if (profile.value case final admin? when admin.isAdmin) {
+    if (profile.value case final admin? when admin.hasTeamHome) {
       return AdminHomePage(profile: admin);
     }
 

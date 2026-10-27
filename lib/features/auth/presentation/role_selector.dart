@@ -61,9 +61,11 @@ class _RoleCard extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(
-          role == UserRole.admin ? Icons.shield_outlined : Icons.directions_run,
-        ),
+        leading: Icon(switch (role) {
+          UserRole.admin => Icons.shield_outlined,
+          UserRole.player => Icons.directions_run,
+          UserRole.coach => Icons.sports,
+        }),
         title: Text(role.label),
         subtitle: Text(role.description),
         trailing: Icon(

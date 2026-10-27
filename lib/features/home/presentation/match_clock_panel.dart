@@ -11,6 +11,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
 import '../../games/domain/match_clock.dart';
+import '../../teams/data/team_repository.dart';
 
 /// Relógio da partida no card do jogo em andamento: cronômetro do tempo
 /// atual, com aviso quando acaba o tempo regulamentar. Quem marcou o jogo
@@ -42,7 +43,10 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
 
-  bool get _isHost => widget.game.isHostedBy(widget.viewerTeamId);
+  /// Quem controla o relógio: o dono do time que marcou (não o técnico).
+  bool get _isHost =>
+      widget.game.isHostedBy(widget.viewerTeamId) &&
+      ref.read(canManageTeamProvider);
 
   bool get _overtime => widget.game.clock?.overtimeAt(_now()) ?? false;
 

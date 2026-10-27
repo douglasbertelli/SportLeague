@@ -73,7 +73,9 @@ class _TeamSheet extends ConsumerWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings_outlined),
-            title: const Text('Gerenciar times'),
+            title: Text(
+              ref.watch(isCoachProvider) ? 'Meus times' : 'Gerenciar times',
+            ),
             onTap: () {
               Navigator.of(context).pop();
               context.push(Routes.teams);

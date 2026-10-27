@@ -103,6 +103,43 @@ void main() {
     );
   });
 
+  test('técnico não abre o cadastro de time', () {
+    const coach = AsyncData<Profile?>(
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.coach,
+        plan: SubscriptionPlan.free,
+      ),
+    );
+    const admin = AsyncData<Profile?>(
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.admin,
+        plan: SubscriptionPlan.free,
+      ),
+    );
+    expect(
+      redirect(
+        Routes.newTeam,
+        session: loggedIn,
+        profile: coach,
+        address: hasAddress,
+      ),
+      Routes.home,
+    );
+    expect(
+      redirect(
+        Routes.newTeam,
+        session: loggedIn,
+        profile: admin,
+        address: hasAddress,
+      ),
+      isNull,
+    );
+  });
+
   test('erro ao carregar endereço mostra a splash', () {
     expect(
       redirect(
