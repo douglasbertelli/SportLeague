@@ -8,6 +8,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../teams/presentation/team_search_page.dart';
 import 'admin_home_page.dart';
+import 'app_drawer.dart';
 import 'home_overview.dart';
 
 /// Tela inicial. O administrador tem navegação por abas; o jogador, por
@@ -23,11 +24,16 @@ class HomePage extends ConsumerWidget {
     }
 
     return Scaffold(
+      endDrawer: switch (profile.value) {
+        final profile? => AppDrawer(profile: profile),
+        null => null,
+      },
       appBar: AppBar(
         title: const Text('SportLeague'),
         actions: [
           const TeamSearchButton(),
           const ThemeModeButton(),
+          if (profile.value != null) const AppDrawerButton(),
           IconButton(
             tooltip: 'Editar endereço',
             icon: const Icon(Icons.location_on_outlined),

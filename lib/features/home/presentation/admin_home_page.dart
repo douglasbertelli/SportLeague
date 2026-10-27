@@ -9,6 +9,7 @@ import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
 import '../../teams/presentation/team_search_page.dart';
 import '../../teams/presentation/team_switcher.dart';
+import 'app_drawer.dart';
 import 'home_overview.dart';
 
 /// Home do administrador: Início, Jogos, Atletas e Perfil na barra inferior.
@@ -41,12 +42,17 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      endDrawer: AppDrawer(profile: widget.profile),
       appBar: AppBar(
         // Início, Jogos e Atletas mostram o time ativo e permitem trocá-lo.
         title: _index == _profileIndex
             ? const Text('Perfil')
             : const TeamSwitcher(),
-        actions: const [TeamSearchButton(), ThemeModeButton()],
+        actions: const [
+          TeamSearchButton(),
+          ThemeModeButton(),
+          AppDrawerButton(),
+        ],
       ),
       body: IndexedStack(
         index: _index,

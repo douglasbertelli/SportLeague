@@ -11,6 +11,10 @@ import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
+import '../../features/fundraisers/domain/fundraiser.dart';
+import '../../features/fundraisers/presentation/fundraiser_form_page.dart';
+import '../../features/fundraisers/presentation/fundraiser_page.dart';
+import '../../features/fundraisers/presentation/fundraisers_page.dart';
 import '../../features/games/domain/game.dart';
 import '../../features/games/presentation/game_form_page.dart';
 import '../../features/games/presentation/opponent_picker_page.dart';
@@ -166,6 +170,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'my-invites',
             builder: (_, _) => const PlayerInvitesPage(),
+          ),
+          GoRoute(
+            path: 'fundraisers',
+            builder: (_, _) => const FundraisersPage(),
+            routes: [
+              GoRoute(
+                path: 'form',
+                builder: (_, state) {
+                  final (:team, :fundraiser) = state.extra as FundraiserArgs;
+                  return FundraiserFormPage(team: team, fundraiser: fundraiser);
+                },
+              ),
+              GoRoute(
+                path: 'detail',
+                builder: (_, state) {
+                  final (:team, :fundraiser) = state.extra as FundraiserArgs;
+                  return FundraiserPage(team: team, fundraiser: fundraiser!);
+                },
+              ),
+            ],
           ),
         ],
       ),
