@@ -26,7 +26,13 @@ abstract final class AppTheme {
     // cor do tema, para contrastar com os títulos.
     final colorScheme = color
         .scheme(brightness)
-        .copyWith(onSurfaceVariant: _secondaryText(brightness));
+        .copyWith(
+          onSurfaceVariant: _secondaryText(brightness),
+          // No escuro, bordas de campos e botões mais discretas.
+          outline: brightness == Brightness.dark
+              ? const Color(0xFF4F5452)
+              : null,
+        );
     final textTheme = ThemeData(
       brightness: brightness,
       fontFamily: fontFamily,

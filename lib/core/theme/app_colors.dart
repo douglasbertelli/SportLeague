@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// inteiro, claro e escuro, é gerado a partir dela.
 class AppColor {
   /// Cor com tom: a paleta vem dela.
-  const AppColor(this.id, this.name, this.color)
+  const AppColor(this.id, this.name, this.color, {this.darkPrimary})
     : lightAccent = null,
       darkAccent = null,
       pureBlack = false;
@@ -18,7 +18,7 @@ class AppColor {
     required Color this.lightAccent,
     required Color this.darkAccent,
     this.pureBlack = false,
-  });
+  }) : darkPrimary = null;
 
   final String id;
   final String name;
@@ -33,13 +33,28 @@ class AppColor {
   /// No tema escuro, fundo preto puro.
   final bool pureBlack;
 
+  /// Destaque exato no tema escuro (o verde do logo, vivo sobre o fundo
+  /// escuro). No claro vale o tom gerado da cor, escuro o bastante para
+  /// contrastar com o branco.
+  final Color? darkPrimary;
+
   bool get isNeutral => lightAccent != null;
 
   /// Esquema de cores do tema [brightness].
   ColorScheme scheme(Brightness brightness) {
     final accent = brightness == Brightness.dark ? darkAccent : lightAccent;
     if (accent == null) {
-      return ColorScheme.fromSeed(seedColor: color, brightness: brightness);
+      final scheme = ColorScheme.fromSeed(
+        seedColor: color,
+        brightness: brightness,
+      );
+      return switch (darkPrimary) {
+        final primary? when brightness == Brightness.dark => scheme.copyWith(
+          primary: primary,
+          onPrimary: Colors.black,
+        ),
+        _ => scheme,
+      };
     }
     // Sem tom: a variante monocromática não puxa para nenhuma cor.
     final base = ColorScheme.fromSeed(
@@ -65,9 +80,15 @@ class AppColor {
   }
 }
 
-/// As cores oferecidas; a primeira (verde) é a padrão.
+/// As cores oferecidas; a primeira (o verde do logo) é a padrão e a das telas
+/// antes do login.
 const appColors = <AppColor>[
-  AppColor('green', 'Verde', Color(0xFF1B8A3A)),
+  AppColor(
+    'green',
+    'Verde SportLeague',
+    Color(0xFF07F469),
+    darkPrimary: Color(0xFF07F469),
+  ),
   AppColor('lime', 'Verde-limão', Color(0xFF7CB342)),
   AppColor('olive', 'Oliva', Color(0xFF808000)),
   AppColor('teal', 'Verde-água', Color(0xFF00897B)),

@@ -72,6 +72,33 @@ void main() {
     expect(preferences.getString('app_color.a'), 'red');
   });
 
+  test('o padrão é o verde do logo', () async {
+    final brand = appColors.first;
+    expect(brand.color, const Color(0xFF07F469));
+    // No escuro, o verde exato do logo; no claro, um tom mais escuro, que
+    // contrasta com o fundo branco.
+    expect(AppTheme.dark().colorScheme.primary, const Color(0xFF07F469));
+    expect(AppTheme.dark().colorScheme.onPrimary, Colors.black);
+    expect(
+      ThemeData.estimateBrightnessForColor(
+        AppTheme.light().colorScheme.primary,
+      ),
+      Brightness.dark,
+    );
+
+    // Antes de entrar, o verde da marca, mesmo com outra cor salva.
+    SharedPreferences.setMockInitialValues({'app_color': 'blue'});
+    final preferences = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        signedOutProvider.overrideWithValue(true),
+      ],
+    );
+    addTearDown(container.dispose);
+    expect(container.read(appColorProvider).id, 'green');
+  });
+
   test('o tema claro e o escuro seguem a cor escolhida', () {
     final red = appColors.firstWhere((color) => color.id == 'red');
     expect(
@@ -140,7 +167,7 @@ void main() {
     Color primary() =>
         Theme.of(tester.element(find.byType(AppColorTile))).colorScheme.primary;
     final greenPrimary = primary();
-    expect(find.text('Verde'), findsOneWidget);
+    expect(find.text('Verde SportLeague'), findsOneWidget);
 
     await tester.tap(find.text('Cor do app'));
     await tester.pumpAndSettle();
