@@ -30,6 +30,9 @@ abstract final class Routes {
 
   /// Recebe o `Athlete` em `extra`.
   static const editAthlete = '/home/athletes/edit';
+
+  /// Números do atleta. Recebe o `Athlete` em `extra`.
+  static const athleteProfile = '/home/athletes/profile';
   static const newGame = '/home/games/new';
 
   /// Recebe o `Game` em `extra`.

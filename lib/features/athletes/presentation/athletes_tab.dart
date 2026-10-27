@@ -89,8 +89,10 @@ class _AthleteList extends ConsumerWidget {
                             final parts => Text(parts.join(' · ')),
                           },
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () =>
-                              context.push(Routes.editAthlete, extra: athlete),
+                          onTap: () => context.push(
+                            Routes.athleteProfile,
+                            extra: athlete,
+                          ),
                         ),
                       ),
                   ],

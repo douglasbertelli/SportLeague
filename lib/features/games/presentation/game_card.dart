@@ -14,6 +14,7 @@ import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/score_dispute.dart';
 import 'contest_score.dart';
+import 'game_sheet_page.dart';
 
 /// "BAR" para "Barcelona": as 3 primeiras letras do nome, em maiúsculas.
 String teamCode(String name) {
@@ -23,7 +24,7 @@ String teamCode(String name) {
 }
 
 /// Ações do menu ⋮ do card.
-enum _GameAction { edit, accept, decline, cancel, score, contest }
+enum _GameAction { edit, accept, decline, cancel, score, contest, sheet }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
 /// ativo à esquerda, o adversário à direita, e abaixo data, hora, mando e
@@ -55,7 +56,15 @@ class _GameCardState extends ConsumerState<GameCard> {
       widget.stage == GameStage.scheduled &&
       !_game.scheduledAt.isAfter(DateTime.now());
 
-  List<_GameAction> _actions(ScoreDispute? dispute) {
+  List<_GameAction> _actions(ScoreDispute? dispute) => [
+    ..._statusActions(dispute),
+    // Durante e depois do jogo, cada time lança a súmula dos seus atletas.
+    if (_game.status == GameStatus.scheduled &&
+        (_inProgress || widget.stage == GameStage.played))
+      _GameAction.sheet,
+  ];
+
+  List<_GameAction> _statusActions(ScoreDispute? dispute) {
     final isHost = _game.isHostedBy(widget.viewerTeamId);
     return switch (_game.status) {
       GameStatus.canceled => const [],
@@ -112,6 +121,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.cancel => Icons.event_busy,
                     _GameAction.score => Icons.scoreboard_outlined,
                     _GameAction.contest => Icons.report_outlined,
+                    _GameAction.sheet => Icons.assignment_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -123,6 +133,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.score =>
                       _game.hasScore ? 'Corrigir placar' : 'Lançar placar',
                     _GameAction.contest => 'Contestar placar',
+                    _GameAction.sheet => 'Súmula (gols, cartões, craque)',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -211,6 +222,13 @@ class _GameCardState extends ConsumerState<GameCard> {
   Future<void> _run(_GameAction action) async {
     if (action == _GameAction.score) return _enterScore();
     if (action == _GameAction.contest) return _contest();
+    if (action == _GameAction.sheet) {
+      return openGameSheet(
+        context,
+        game: _game,
+        viewerTeamId: widget.viewerTeamId,
+      );
+    }
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
       return;

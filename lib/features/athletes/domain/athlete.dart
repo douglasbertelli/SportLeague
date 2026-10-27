@@ -6,6 +6,7 @@ const footballPositions = [
   'Volante',
   'Meia',
   'Atacante',
+  'Centroavante',
 ];
 
 /// Atleta de um time (tabela `team_players`). Pode ser só um nome cadastrado

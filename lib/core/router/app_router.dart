@@ -7,6 +7,7 @@ import '../../features/address/presentation/address_page.dart';
 import '../../features/athletes/domain/athlete.dart';
 import '../../features/availability/presentation/availability_page.dart';
 import '../../features/athletes/presentation/athlete_form_page.dart';
+import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
@@ -99,6 +100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'athletes/edit',
             builder: (_, state) =>
                 AthleteFormPage(athlete: state.extra as Athlete),
+          ),
+          GoRoute(
+            path: 'athletes/profile',
+            builder: (_, state) =>
+                AthleteProfilePage(athlete: state.extra as Athlete),
           ),
           GoRoute(path: 'games/new', builder: (_, _) => const GameFormPage()),
           GoRoute(

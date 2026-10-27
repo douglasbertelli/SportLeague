@@ -14,6 +14,9 @@ import '../../profile/data/profile_repository.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import '../domain/team_stats.dart';
+import '../../games/data/player_stats_repository.dart';
+import '../../games/domain/player_stats.dart';
+import 'season_button.dart';
 import 'team_logo.dart';
 import 'team_stats_widgets.dart';
 
@@ -163,6 +166,7 @@ class _Profile extends StatelessWidget {
         ),
         _FollowBar(team: team),
         _StatsSection(team: team),
+        _RankingsSection(teamId: team.id!),
       ],
     );
 
@@ -507,7 +511,8 @@ class _StatsSection extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const _SectionTitle('Estatísticas'),
+                // Temporada: vale para as estatísticas e a artilharia.
+                const _SectionTitle('Estatísticas', trailing: SeasonButton()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: StatsGrid(stats: stats),
@@ -708,15 +713,99 @@ String formatPhone(String digits) {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+  const _SectionTitle(this.text, {this.trailing});
 
   final String text;
+
+  /// À direita do título (ex.: a temporada).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
+/// Artilharia e garçons do time, pelas súmulas dos jogos.
+class _RankingsSection extends ConsumerWidget {
+  const _RankingsSection({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final totals = ref.watch(teamPlayerTotalsProvider(teamId)).value;
+    if (totals == null) return const SizedBox.shrink();
+
+    List<AthleteTotals> top(int Function(AthleteTotals) value) => ([
+      for (final row in totals)
+        if (value(row) > 0) row,
+    ]..sort((a, b) => value(b).compareTo(value(a)))).take(5).toList();
+
+    final scorers = top((row) => row.goals);
+    final assists = top((row) => row.assists);
+
+    Widget list(
+      List<AthleteTotals> rows,
+      int Function(AthleteTotals) value,
+      String unit,
+    ) => Column(
+      children: [
+        for (final (index, row) in rows.indexed)
+          ListTile(
+            dense: true,
+            leading: CircleAvatar(radius: 14, child: Text('${index + 1}')),
+            title: Text(
+              [
+                if (row.jerseyNumber case final number?) '$number',
+                row.name,
+              ].join(' · '),
+            ),
+            trailing: Text(
+              '${value(row)} $unit',
+              style: theme.textTheme.titleSmall,
+            ),
+          ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Artilharia'),
+        if (scorers.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Nenhum gol lançado nas súmulas ainda.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        else
+          list(scorers, (row) => row.goals, 'gols'),
+        if (assists.isNotEmpty) ...[
+          const _SectionTitle('Garçons'),
+          list(assists, (row) => row.assists, 'assist.'),
+        ],
+      ],
     );
   }
 }
