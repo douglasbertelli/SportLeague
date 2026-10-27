@@ -207,5 +207,6 @@ IconData fundraiserIcon(FundraiserItem item) => switch (item) {
   FundraiserItem.ball => Icons.sports_soccer,
   FundraiserItem.bib => Icons.checkroom_outlined,
   FundraiserItem.kit => Icons.dry_cleaning_outlined,
+  FundraiserItem.barbecue => Icons.outdoor_grill_outlined,
   FundraiserItem.other => Icons.shopping_bag_outlined,
 };
