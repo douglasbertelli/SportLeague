@@ -178,6 +178,16 @@ configurado.
    - O **jogador** entra num time com o código (Início → Meus convites), ou pede
      para entrar pelo perfil do time (Buscar times → **Pedir para entrar**).
      Aceito, ele vira atleta do time, ligado à conta dele.
+   - **Menu lateral** (☰ no topo da home, depois do modo claro/escuro; abre
+     pela direita), com as funcionalidades extras:
+     - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme ou
+       Outros (dizendo o que vai ser comprado). O administrador define o
+       valor por pessoa ou o valor total do produto (o app divide pelo
+       administrador e os atletas, arredondando o centavo para cima) e marca
+       quem pagou (ele e os atletas, sim ou não); a
+       vaquinha mostra o total arrecadado de quanto é esperado. O técnico e
+       os atletas acompanham. Vaquinhas antigas são encerradas (e podem ser
+       reabertas).
 
 ## Estrutura
 
@@ -193,6 +203,7 @@ lib/
     athletes/  atletas de cada time
     games/     jogos de cada time
     venues/    locais das partidas (cadastro, pesquisa e foto)
+    fundraisers/ vaquinhas do time e quem pagou
     splash/    carregamento inicial
 supabase/
   migrations/  schema do banco (tabelas, RLS e triggers)
@@ -218,6 +229,8 @@ supabase/
 | `game_player_stats` | Súmula: o que cada atleta fez num jogo (estar na súmula é ter jogado; gols, assistências, cartões, craque — um por time). Cada time lança os seus atletas, a partir de 1 hora antes do jogo; quem vê o jogo vê a súmula. `add_player_goal` soma um gol pelo placar ao vivo e `team_player_totals` dá os totais dos atletas (perfil do atleta e artilharia) |
 | `team_coaches` | Técnicos de cada time (entram pelo convite aceito, com `kind = 'coach'` em `team_invites`); veem os jogos, as fotos dos atletas e lançam escalação e súmula (`private.is_team_staff`). Todos veem os técnicos (foto e nome no perfil do time); só o técnico ou o dono removem |
 | `game_lineups` | Escalação: titulares e reservas de cada time no jogo; o dono ou o técnico montam antes e durante o jogo; quem vê o jogo vê a escalação |
+| `fundraisers` | Vaquinhas do time: item (bola, colete, uniforme ou outro, com o que vai ser comprado), valor em centavos (`amount_type`: por pessoa, ou o total do produto, que o app divide entre o dono e os atletas) e se está encerrada. Só o dono do time cria, altera e exclui; o dono, os técnicos e os atletas com conta veem (`private.is_team_member`) |
+| `fundraiser_payments` | Quem pagou a vaquinha (um atleta do time ou o dono); sem linha, não pagou. Só o dono marca e desmarca |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda

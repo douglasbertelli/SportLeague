@@ -59,4 +59,13 @@ abstract final class Routes {
 
   /// Escolha do local do time, no formulário do time; devolve o `Venue`.
   static const pickTeamVenue = '/home/teams/venue';
+
+  /// Vaquinhas do time (menu lateral).
+  static const fundraisers = '/home/fundraisers';
+
+  /// Cria ou edita a vaquinha; recebe `FundraiserArgs` em `extra`.
+  static const fundraiserForm = '/home/fundraisers/form';
+
+  /// Uma vaquinha e quem pagou; recebe `FundraiserArgs` em `extra`.
+  static const fundraiser = '/home/fundraisers/detail';
 }
