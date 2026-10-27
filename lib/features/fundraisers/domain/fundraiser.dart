@@ -11,6 +11,7 @@ enum FundraiserItem {
   ball('Bola'),
   bib('Colete'),
   kit('Uniforme'),
+  barbecue('Churrasco'),
   other('Outros');
 
   const FundraiserItem(this.label);

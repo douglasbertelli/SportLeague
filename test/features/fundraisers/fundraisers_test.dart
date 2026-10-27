@@ -174,6 +174,25 @@ void main() {
     expect(find.text('Início'), findsOneWidget);
   });
 
+  testWidgets('vaquinha do churrasco', (tester) async {
+    final fundraisers = FakeFundraiserRepository();
+    await _pump(tester, fundraisers, const FundraiserFormPage(team: _team));
+    await tester.tap(find.text('Churrasco'));
+    await tester.pumpAndSettle();
+    // Só "Outros" pede a descrição.
+    expect(find.text('O que vai ser comprado?'), findsNothing);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor por pessoa'),
+      '40',
+    );
+    await tester.tap(find.text('Criar vaquinha'));
+    await tester.pumpAndSettle();
+    final created = fundraisers.fundraisers.single;
+    expect(created.item, FundraiserItem.barbecue);
+    expect(created.title, 'Churrasco');
+    expect(created.toMap()['item'], 'barbecue');
+  });
+
   test('valor total dividido entre as pessoas', () {
     const shirts = Fundraiser(
       teamId: 'team-a',
