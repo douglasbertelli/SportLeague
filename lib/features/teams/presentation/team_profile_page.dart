@@ -9,7 +9,9 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/presentation/game_card.dart';
+import '../../games/presentation/game_sheet_page.dart';
 import '../../invites/data/invite_repository.dart';
+import '../../invites/domain/team_invite.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
@@ -21,7 +23,8 @@ import 'team_logo.dart';
 import 'team_stats_widgets.dart';
 
 /// Perfil público de um time, em duas abas. Visão geral: capa, seguidores
-/// (com o botão Seguir), estatísticas, últimos resultados e próximos jogos.
+/// (com o botão Seguir), técnicos, estatísticas, últimos resultados e
+/// próximos jogos.
 /// Sobre o time: mando, cidade, local, fundação, descrição, uniformes (para
 /// saber as cores da camisa) e contatos.
 class TeamProfilePage extends ConsumerWidget {
@@ -165,6 +168,11 @@ class _Profile extends StatelessWidget {
           ),
         ),
         _FollowBar(team: team),
+        _CoachesSection(
+          teamId: team.id!,
+          onOpenPhoto: (coach) =>
+              _showImage(context, coach.avatarUrl!, coach.name),
+        ),
         _StatsSection(team: team),
         _RankingsSection(teamId: team.id!),
       ],
@@ -737,6 +745,39 @@ class _SectionTitle extends StatelessWidget {
           ?trailing,
         ],
       ),
+    );
+  }
+}
+
+/// Comissão técnica: foto e nome dos técnicos do time. Some quando o time
+/// não tem técnico; tocar num técnico com foto a amplia.
+class _CoachesSection extends ConsumerWidget {
+  const _CoachesSection({required this.teamId, required this.onOpenPhoto});
+
+  final String teamId;
+  final ValueChanged<PlayerSummary> onOpenPhoto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coaches = ref.watch(teamCoachesProvider(teamId)).value;
+    if (coaches == null || coaches.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionTitle(coaches.length == 1 ? 'Técnico' : 'Comissão técnica'),
+        for (final coach in coaches)
+          ListTile(
+            leading: AthleteAvatar(
+              name: coach.name,
+              photoUrl: coach.avatarUrl,
+              radius: 24,
+            ),
+            title: Text(coach.name),
+            subtitle: const Text('Técnico'),
+            onTap: coach.avatarUrl == null ? null : () => onOpenPhoto(coach),
+          ),
+      ],
     );
   }
 }

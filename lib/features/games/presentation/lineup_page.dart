@@ -160,6 +160,27 @@ class _LineupPageState extends ConsumerState<LineupPage> {
       );
     }
     final starters = _count(_Spot.starter);
+    final mutedStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    // Uma seção por escala, na ordem da súmula; o atleta muda de seção ao
+    // trocar a escala.
+    final sections = [
+      (
+        _Spot.starter,
+        'Titulares',
+        '$starters de $_maxStarters',
+        'Nenhum titular escalado.',
+      ),
+      (
+        _Spot.sub,
+        'Reservas',
+        '${_count(_Spot.sub)}',
+        'Nenhum reserva escalado.',
+      ),
+      (_Spot.out, 'Fora', '${_count(_Spot.out)}', 'Todos foram escalados.'),
+    ];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -168,68 +189,87 @@ class _LineupPageState extends ConsumerState<LineupPage> {
           '${formatGameDay(widget.game.scheduledAt)} às '
           '${formatGameTime(widget.game.scheduledAt)} · '
           'x ${widget.game.opponentNameFor(widget.teamId)}',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: mutedStyle,
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Titulares: $starters de $_maxStarters · Reservas: '
-          '${_count(_Spot.sub)}',
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: starters == _maxStarters ? theme.colorScheme.primary : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        for (final athlete in athletes)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Row(
-                children: [
-                  AthleteAvatar(name: athlete.name, photoUrl: athlete.photoUrl),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          [
-                            if (athlete.jerseyNumber case final number?)
-                              '$number',
-                            athlete.name,
-                          ].join(' · '),
-                        ),
-                        if (athlete.position case final position?)
-                          Text(
-                            position,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                      ],
-                    ),
+        for (final (spot, title, count, empty) in sections) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(title, style: theme.textTheme.titleMedium),
+                ),
+                Text(
+                  count,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color:
+                        spot == _Spot.starter && starters == _maxStarters
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
-                  SegmentedButton<_Spot>(
-                    showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    segments: const [
-                      ButtonSegment(value: _Spot.starter, label: Text('Tit.')),
-                      ButtonSegment(value: _Spot.sub, label: Text('Res.')),
-                      ButtonSegment(value: _Spot.out, label: Text('Fora')),
-                    ],
-                    selected: {spots[athlete.id]!},
-                    onSelectionChanged: (selection) =>
-                        _set(athlete.id!, selection.single),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+          if (!spots.containsValue(spot))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(empty, style: mutedStyle),
+            ),
+          for (final athlete in athletes)
+            if (spots[athlete.id] == spot) _athleteCard(theme, athlete, spot),
+        ],
       ],
     );
   }
+
+  Widget _athleteCard(ThemeData theme, Athlete athlete, _Spot spot) => Card(
+    // A chave mantém o card certo quando o atleta muda de seção.
+    key: ValueKey(athlete.id),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Row(
+        children: [
+          AthleteAvatar(name: athlete.name, photoUrl: athlete.photoUrl),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  [
+                    if (athlete.jerseyNumber case final number?) '$number',
+                    athlete.name,
+                  ].join(' · '),
+                ),
+                if (athlete.position case final position?)
+                  Text(
+                    position,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          SegmentedButton<_Spot>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            segments: const [
+              ButtonSegment(value: _Spot.starter, label: Text('Tit.')),
+              ButtonSegment(value: _Spot.sub, label: Text('Res.')),
+              ButtonSegment(value: _Spot.out, label: Text('Fora')),
+            ],
+            selected: {spot},
+            onSelectionChanged: (selection) =>
+                _set(athlete.id!, selection.single),
+          ),
+        ],
+      ),
+    ),
+  );
 }

@@ -466,6 +466,27 @@ void main() {
     expect(find.text('Pedido enviado'), findsOneWidget);
   });
 
+  testWidgets('o perfil do time mostra o técnico', (tester) async {
+    final invites = FakeInviteRepository();
+    final container = await _container(role: UserRole.player, invites: invites);
+    await _pumpPage(
+      tester,
+      container,
+      const TeamProfilePage(teamId: 'team-rival'),
+    );
+    // Sem técnico, a seção não aparece.
+    expect(find.text('Comissão técnica'), findsNothing);
+    expect(find.text('Técnico'), findsNothing);
+
+    invites.coaches['team-rival'] = [
+      const PlayerSummary(id: 'u5', name: 'Tite Bacchi'),
+    ];
+    container.invalidate(teamCoachesProvider('team-rival'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tite Bacchi'), findsOneWidget);
+    expect(find.text('Técnico'), findsNWidgets(2));
+  });
+
   testWidgets('no time em que já é atleta, o jogador vê que é do time', (
     tester,
   ) async {
