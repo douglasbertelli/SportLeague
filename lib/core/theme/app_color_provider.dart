@@ -10,6 +10,10 @@ export 'app_colors.dart';
 /// não depender dos times.
 final colorTeamProvider = Provider<({String id, String name})?>((ref) => null);
 
+/// Sem ninguém logado (login, cadastro, abertura): o app fica no verde da
+/// marca, combinando com o logo. O app liga à sessão em `main.dart`.
+final signedOutProvider = Provider<bool>((ref) => false);
+
 final appColorProvider = NotifierProvider<AppColorNotifier, AppColor>(
   AppColorNotifier.new,
 );
@@ -24,6 +28,7 @@ class AppColorNotifier extends Notifier<AppColor> {
 
   @override
   AppColor build() {
+    if (ref.watch(signedOutProvider)) return appColors.first;
     final preferences = ref.watch(sharedPreferencesProvider);
     final team = ref.watch(colorTeamProvider);
     final saved =

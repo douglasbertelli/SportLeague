@@ -78,7 +78,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       appBar: AppBar(actions: const [ThemeModeButton()]),
       children: [
         const AppLogo(),
-        const SizedBox(height: 32),
+        const SizedBox(height: 56),
         Form(
           key: _formKey,
           child: AutofillGroup(

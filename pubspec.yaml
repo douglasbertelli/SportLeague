@@ -16,6 +16,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.4.3
+  flutter_svg: ^2.3.0
   go_router: ^18.1.1
   google_sign_in: ^7.2.0
   http: ^1.6.0
@@ -37,6 +38,7 @@ flutter:
 
   # Apitos do relógio da partida, gerados por tool/generate_whistles.dart.
   assets:
+    - assets/images/
     - assets/sounds/
 
   # DM Sans (SIL Open Font License, assets/fonts/OFL.txt). O peso 600 usa o

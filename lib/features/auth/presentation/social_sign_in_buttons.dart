@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/error_messages.dart';
@@ -51,14 +52,15 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
         const SizedBox(height: 16),
         _SocialButton(
           label: 'Continuar com Google',
-          icon: const _GoogleMark(),
+          icon: const _BrandMark('assets/images/google.svg'),
           loading: _loading == _Provider.google,
           onPressed: enabled ? () => _signIn(_Provider.google) : null,
         ),
         const SizedBox(height: 12),
         _SocialButton(
           label: 'Continuar com Apple',
-          icon: const Icon(Icons.apple),
+          // A maçã ocupa menos o quadro que o G; um pouco maior equilibra.
+          icon: const _BrandMark('assets/images/apple.svg', size: 24),
           loading: _loading == _Provider.apple,
           onPressed: enabled ? () => _signIn(_Provider.apple) : null,
         ),
@@ -113,25 +115,22 @@ class _OrDivider extends StatelessWidget {
   }
 }
 
-/// "G" do Google, já que os ícones do Material não incluem a marca.
-class _GoogleMark extends StatelessWidget {
-  const _GoogleMark();
+/// Ícone da marca (Google, Apple: Font Awesome Free, licença CC BY 4.0,
+/// créditos no arquivo), na cor do texto do tema (branco no escuro).
+class _BrandMark extends StatelessWidget {
+  const _BrandMark(this.asset, {this.size = 20});
+
+  final String asset;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox.square(
-      dimension: 20,
-      child: Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF4285F4),
-            height: 1,
-          ),
-        ),
-      ),
+    return SvgPicture.asset(
+      asset,
+      width: size,
+      height: size,
+      excludeFromSemantics: true,
+      theme: SvgTheme(currentColor: Theme.of(context).colorScheme.onSurface),
     );
   }
 }
