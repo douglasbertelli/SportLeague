@@ -1437,7 +1437,9 @@ void main() {
             // Quem marcou joga como visitante: o adversário é o mandante.
             hostIsHome: false,
             modality: Modality.society,
-            scheduledAt: DateTime(2026, 10, 25, 15),
+            // Daqui a 3 dias: ainda não começou (o card usa o relógio real).
+            scheduledAt: DateUtils.dateOnly(DateTime.now())
+                .add(const Duration(days: 3, hours: 15)),
           ),
         ],
       });
@@ -1445,11 +1447,7 @@ void main() {
         teams: FakeTeamRepository([rivalTeam]),
         games: games,
       );
-      await _pumpTab(
-        tester,
-        container,
-        GamesTab(now: DateTime(2026, 10, 22, 12)),
-      );
+      await _pumpTab(tester, container, GamesTab(now: DateTime.now()));
 
       expect(find.bySemanticsLabel('Amigos FC'), findsOneWidget);
       expect(find.text('Mandante'), findsOneWidget);
@@ -2347,6 +2345,13 @@ void main() {
     testWidgets('remove um dia do recorrente ou todas as semanas', (
       tester,
     ) async {
+      // O próximo sábado (ou hoje, se for sábado): a lista de dias sem jogo
+      // só mostra os que ainda não passaram, pelo relógio real.
+      final today = DateUtils.dateOnly(DateTime.now());
+      final saturday = today.add(
+        Duration(days: (DateTime.saturday - today.weekday) % 7),
+      );
+      final day = formatGameDay(saturday);
       final availability = FakeAvailabilityRepository(
         byTeam: {
           'team-a': [
@@ -2359,7 +2364,7 @@ void main() {
             Availability.single(
               id: 's1',
               teamId: 'team-a',
-              startsAt: DateTime(2026, 10, 24, 18),
+              startsAt: saturday.add(const Duration(hours: 18)),
             ),
           ],
         },
@@ -2369,12 +2374,7 @@ void main() {
         availability: availability,
       );
       _usePhoneScreen(tester);
-      // Sábado, 24/10/2026.
-      await _pumpPage(
-        tester,
-        container,
-        AvailabilityPage(today: DateTime(2026, 10, 24)),
-      );
+      await _pumpPage(tester, container, AvailabilityPage(today: saturday));
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('18:00'), findsOneWidget);
       // Tira a lista de baixo do botão "Adicionar horário".
@@ -2385,12 +2385,12 @@ void main() {
       await tester.tap(find.byTooltip('Remover horário').first);
       await tester.pumpAndSettle();
       expect(find.text('Todas as semanas'), findsOneWidget);
-      await tester.tap(find.text('Só em 24/10/2026'));
+      await tester.tap(find.text('Só em $day'));
       await tester.pumpAndSettle();
 
       expect(availability.skipped.single, (
         availabilityId: 'w1',
-        date: DateTime(2026, 10, 24),
+        date: saturday,
       ));
       expect(availability.deleted, isEmpty);
       expect(find.text('15:00'), findsNothing);
@@ -2406,7 +2406,7 @@ void main() {
             )
             .first,
       );
-      expect(find.text('Sem jogo em 24/10/2026'), findsOneWidget);
+      expect(find.text('Sem jogo em $day'), findsOneWidget);
 
       // O avulso sai de vez, com a confirmação de sempre.
       await tester.tap(find.byTooltip('Remover horário'));
