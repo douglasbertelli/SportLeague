@@ -144,7 +144,8 @@ class _AddressPageState extends ConsumerState<AddressPage> {
       ),
       children: [
         Text(
-          'Usamos seu endereço para encontrar times e jogos perto de você.',
+          'Usamos seu endereço para enviar documentos, brindes e outros '
+          'itens para você.',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 24),

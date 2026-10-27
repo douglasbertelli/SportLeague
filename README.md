@@ -84,6 +84,8 @@ configurado.
    - **Administrador**: cria e gerencia times e jogadores.
    - **Jogador**: entra em times por busca ou convite.
 4. **Cadastro de endereço** (obrigatório no primeiro acesso), com busca por CEP.
+   Serve para enviar documentos, brindes e outros itens ao usuário, não para
+   encontrar times.
 5. **Home** com as ações de cada perfil. O administrador tem a barra inferior
    **Início, Jogos, Atletas e Perfil**. O Início mostra o **painel do time
    ativo** (seguidores, próximo jogo com quanto falta para a partida, convites pendentes, estatísticas e
