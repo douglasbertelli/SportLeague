@@ -168,16 +168,19 @@ void main() {
     expect(top('Meu código'), lessThan(top('Cor do app')));
     expect(top('Cor do app'), lessThan(top('Endereço')));
     expect(top('Endereço'), lessThan(top('Sair')));
-    // Os três no mesmo card; o Sair em outro.
-    final group = find.ancestor(
-      of: find.text('Meu código'),
-      matching: find.byType(Card),
-    );
+    // Um card por item, com espaço entre eles.
+    Finder cardOf(String text) =>
+        find.ancestor(of: find.text(text), matching: find.byType(Card));
+    for (final other in ['Cor do app', 'Endereço', 'Sair']) {
+      expect(
+        find.descendant(of: cardOf('Meu código'), matching: find.text(other)),
+        findsNothing,
+      );
+    }
     expect(
-      find.descendant(of: group, matching: find.text('Endereço')),
-      findsOneWidget,
+      tester.getTopLeft(cardOf('Cor do app')).dy,
+      greaterThan(tester.getBottomLeft(cardOf('Meu código')).dy),
     );
-    expect(find.descendant(of: group, matching: find.text('Sair')), findsNothing);
   });
 
   testWidgets('página Meu código do jogador: JG e gerar outro', (

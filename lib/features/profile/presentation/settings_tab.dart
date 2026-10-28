@@ -46,47 +46,48 @@ class SettingsTab extends ConsumerWidget {
       ),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // A conta: com que e-mail entrou, o tipo de perfil e o plano.
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.account_circle_outlined),
-            title: Text(email ?? 'Conta'),
-            subtitle: Text(
-              [
-                ?profile?.role?.label,
-                // Só o administrador tem plano.
-                if (profile != null && profile.isAdmin)
-                  'Plano ${profile.plan.label}',
-              ].join(' · '),
+    // Itens mais altos, com folga em volta do ícone e do texto.
+    return ListTileTheme(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      minVerticalPadding: 12,
+      horizontalTitleGap: 20,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // A conta: com que e-mail entrou, o tipo de perfil e o plano.
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.account_circle_outlined),
+              title: Text(email ?? 'Conta'),
+              subtitle: Text(
+                [
+                  ?profile?.role?.label,
+                  // Só o administrador tem plano.
+                  if (profile != null && profile.isAdmin)
+                    'Plano ${profile.plan.label}',
+                ].join(' · '),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: Column(
-            children: [
-              for (final (index, item) in items.indexed) ...[
-                if (index > 0) const Divider(height: 1),
-                item,
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
-        Card(
-          child: ListTile(
-            leading: Icon(Icons.logout, color: theme.colorScheme.error),
-            title: Text(
-              'Sair',
-              style: TextStyle(color: theme.colorScheme.error),
+          // Um card por item, com espaço entre eles, como nas configurações do
+          // sistema.
+          for (final item in items) ...[
+            const SizedBox(height: 8),
+            Card(child: item),
+          ],
+          const SizedBox(height: 32),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.logout, color: theme.colorScheme.error),
+              title: Text(
+                'Sair',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              onTap: () => ref.read(authRepositoryProvider).signOut(),
             ),
-            onTap: () => ref.read(authRepositoryProvider).signOut(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
