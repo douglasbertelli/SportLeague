@@ -180,13 +180,18 @@ configurado.
    - O **jogador** entra num time com o código (Início → Meus convites), ou pede
      para entrar pelo perfil do time (Buscar times → **Pedir para entrar**).
      Aceito, ele vira atleta do time, ligado à conta dele.
-   - **Início do jogador**: no topo, a foto e o nome dele; abaixo do "Olá",
+   - **Início do jogador**: no topo, a foto e o nome dele (sem o "Olá"); logo abaixo,
      os **números do próprio jogador** (Meus números: jogos, gols,
      assistências, cartões e craque, com a temporada e os chips de cada time
      ou **Geral**, todos somados) e depois o card do time e o próximo jogo
      (com o placar ao vivo), só para acompanhar: sem marcar jogos, mexer no
      placar ou montar a escalação. Tocar no chip de um time troca o time
      ativo, e o painel inteiro (e a cor do app) vai junto.
+   - **Pendências no Início**, em destaque no topo, para todos: o
+     administrador vê os pedidos para entrar no time ativo (jogadores e
+     técnicos); o jogador e o técnico, os convites de times para responder e
+     os pedidos que ainda esperam o time. Tocar leva a responder. Puxar a
+     tela para baixo, ou voltar ao app, busca de novo.
    - **Menu lateral** (☰ no topo da home, depois do modo claro/escuro; abre
      pela direita), com as funcionalidades extras:
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,

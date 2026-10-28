@@ -13,6 +13,10 @@ import 'package:sport_league/features/athletes/data/athlete_repository.dart';
 import 'package:sport_league/features/invites/data/invite_repository.dart';
 import 'package:sport_league/features/invites/domain/team_invite.dart';
 import 'package:sport_league/features/athletes/domain/athlete.dart';
+import 'package:sport_league/features/games/data/dispute_repository.dart';
+import 'package:sport_league/features/games/data/game_repository.dart';
+import 'package:sport_league/features/games/data/player_stats_repository.dart';
+import 'package:sport_league/features/home/presentation/home_overview.dart';
 import 'package:sport_league/features/invites/presentation/invite_player_page.dart';
 import 'package:sport_league/features/invites/presentation/player_invites_page.dart';
 import 'package:sport_league/features/invites/presentation/team_invites_page.dart';
@@ -192,6 +196,13 @@ Future<ProviderContainer> _container({
       ),
       inviteRepositoryProvider.overrideWithValue(invites),
       shareTextProvider.overrideWithValue((text) async => shared?.add(text)),
+      // O painel do Início (jogos, contestações e números).
+      gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
+      disputeRepositoryProvider.overrideWithValue(FakeDisputeRepository()),
+      playerStatsRepositoryProvider.overrideWithValue(
+        FakePlayerStatsRepository(),
+      ),
+      isPlayerProvider.overrideWithValue(role == UserRole.player),
     ],
   );
   addTearDown(container.dispose);
@@ -407,6 +418,71 @@ void main() {
     expect(find.text('Convidado'), findsOneWidget);
     expect(find.text('No time'), findsOneWidget);
     expect(find.text('Convidar'), findsNothing);
+  });
+
+  testWidgets('o Início do administrador mostra os pedidos para entrar', (
+    tester,
+  ) async {
+    final invites = FakeInviteRepository(
+      invites: [
+        _request('r1'),
+        _request('r2', profileId: 'u8', playerName: 'Bia Rocha'),
+        // Já respondido: não conta.
+        _request('r3', status: InviteStatus.accepted),
+      ],
+    );
+    final container = await _container(role: UserRole.admin, invites: invites);
+    await _pumpPage(
+      tester,
+      container,
+      Scaffold(
+        body: HomeOverview(profile: container.read(currentProfileProvider).value!),
+      ),
+    );
+    expect(find.text('2 pedidos para entrar no Amigos FC'), findsOneWidget);
+    expect(find.text('Carlos Lima e Bia Rocha'), findsOneWidget);
+  });
+
+  testWidgets('o Início do jogador mostra convites e pedidos pendentes', (
+    tester,
+  ) async {
+    final invites = FakeInviteRepository(
+      invites: [
+        TeamInvite(
+          id: 'i1',
+          teamId: 'team-rival',
+          profileId: 'u1',
+          isRequest: false,
+          status: InviteStatus.pending,
+          createdAt: DateTime(2026, 10, 22),
+          teamName: 'Real Bairro',
+        ),
+        TeamInvite(
+          id: 'r1',
+          teamId: 'team-b',
+          profileId: 'u1',
+          isRequest: true,
+          status: InviteStatus.pending,
+          createdAt: DateTime(2026, 10, 22),
+          teamName: 'Bola Murcha',
+        ),
+      ],
+    );
+    final container = await _container(
+      role: UserRole.player,
+      invites: invites,
+    );
+    await _pumpPage(
+      tester,
+      container,
+      Scaffold(
+        body: HomeOverview(profile: container.read(currentProfileProvider).value!),
+      ),
+    );
+    expect(find.text('1 convite de time para responder'), findsOneWidget);
+    expect(find.text('Real Bairro'), findsOneWidget);
+    expect(find.text('Pedido para entrar no Bola Murcha'), findsOneWidget);
+    expect(find.text('Aguardando a resposta do time'), findsOneWidget);
   });
 
   test('código pessoal: JG ou TC e 6 caracteres', () {
