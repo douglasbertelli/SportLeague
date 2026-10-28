@@ -7,12 +7,14 @@ import '../../games/data/games_tab_request.dart';
 import '../../games/presentation/games_tab.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
+import '../../profile/presentation/settings_tab.dart';
 import '../../teams/presentation/team_search_page.dart';
 import '../../teams/presentation/team_switcher.dart';
 import 'app_drawer.dart';
 import 'home_overview.dart';
 
-/// Home do administrador: Início, Jogos, Atletas e Perfil na barra inferior.
+/// Home do administrador e do técnico: Início, Jogos, Atletas, Perfil e
+/// Config na barra inferior.
 /// Jogos e Atletas mostram só os dados do time ativo, escolhido no título.
 /// Cada aba mantém o próprio estado (rolagem etc.) ao trocar de aba.
 class AdminHomePage extends ConsumerStatefulWidget {
@@ -34,8 +36,14 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     ),
     (label: 'Atletas', icon: Icons.groups_outlined, selectedIcon: Icons.groups),
     (label: 'Perfil', icon: Icons.person_outline, selectedIcon: Icons.person),
+    (
+      label: 'Config',
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+    ),
   ];
   static const _profileIndex = 3;
+  static const _settingsIndex = 4;
 
   int _index = 0;
 
@@ -45,9 +53,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
       endDrawer: AppDrawer(profile: widget.profile),
       appBar: AppBar(
         // Início, Jogos e Atletas mostram o time ativo e permitem trocá-lo.
-        title: _index == _profileIndex
-            ? const Text('Perfil')
-            : const TeamSwitcher(),
+        title: switch (_index) {
+          _profileIndex => const Text('Perfil'),
+          _settingsIndex => const Text('Configurações'),
+          _ => const TeamSwitcher(),
+        },
         actions: const [
           TeamSearchButton(),
           ThemeModeButton(),
@@ -67,6 +77,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
           const GamesTab(),
           const AthletesTab(),
           ProfileTab(profile: widget.profile),
+          const SettingsTab(),
         ],
       ),
       bottomNavigationBar: NavigationBar(

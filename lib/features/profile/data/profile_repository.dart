@@ -34,6 +34,12 @@ class ProfileRepository {
       })
       .eq('id', userId);
 
+  /// Troca o nome do usuário (o banco aceita de 2 a 120 caracteres).
+  Future<void> updateName(String userId, String fullName) => _client
+      .from('profiles')
+      .update({'full_name': fullName.trim()})
+      .eq('id', userId);
+
   /// Salva os dados de atleta do jogador (nulo limpa o campo).
   Future<void> updateAthleteData({
     required String userId,

@@ -173,7 +173,7 @@ configurado.
    - **Convites** (Início do administrador): o código do time para mandar aos
      jogadores (Compartilhar, Copiar, Gerar outro), **Convidar jogador do app**
      (pesquisa pelo nome, ou pelo **código pessoal** do jogador, JG, ou do
-     técnico, TC, que fica no Perfil deles com Compartilhar, Copiar e Gerar
+     técnico, TC, que fica em Config › Meu código, com Compartilhar, Copiar e Gerar
      outro; o convidado aceita ou recusa em Meus convites), os
      convites enviados e os **pedidos para entrar**,
      com Aceitar e Recusar.
@@ -187,6 +187,12 @@ configurado.
      (com o placar ao vivo), só para acompanhar: sem marcar jogos, mexer no
      placar ou montar a escalação. Tocar no chip de um time troca o time
      ativo, e o painel inteiro (e a cor do app) vai junto.
+   - **Perfil**: a foto, o nome e, do jogador, os dados de atleta (posição,
+     pé dominante, altura e nascimento, com Editar). O resto fica na aba
+     **Config** da barra inferior (de todos os perfis), a tela de
+     **Configurações**: a conta (e-mail, tipo de perfil e, só do
+     administrador, o plano), Meu código
+     (jogador e técnico), a cor do time, o endereço e, à parte, o Sair.
    - **Pendências no Início**, em destaque no topo, para todos: o
      administrador vê os pedidos para entrar no time ativo (jogadores e
      técnicos); o jogador e o técnico, os convites de times para responder e
