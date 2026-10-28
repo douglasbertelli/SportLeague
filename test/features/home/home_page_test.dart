@@ -137,7 +137,8 @@ void main() {
       find.descendant(of: bar, matching: find.byType(NavigationDestination)),
       findsNWidgets(2),
     );
-    expect(find.text('Olá, Ana!'), findsOneWidget);
+    // Sem o "Olá": a foto e o nome já estão no topo.
+    expect(find.text('Olá, Ana!'), findsNothing);
     expect(find.byTooltip('Menu'), findsOneWidget);
     // No topo, a foto (iniciais) e o nome do jogador, não o time.
     expect(

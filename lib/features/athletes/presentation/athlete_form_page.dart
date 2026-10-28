@@ -51,8 +51,12 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
 
   bool get _isEditing => widget.athlete != null;
 
+  /// A foto do perfil do jogador vinculado também vale (quem entrou pelo
+  /// convite não tem foto de atleta).
   bool get _hasPhoto =>
-      _newPhoto != null || (!_removePhoto && _saved?.photoPath != null);
+      _newPhoto != null ||
+      (!_removePhoto &&
+          (_saved?.photoPath != null || _saved?.profilePhotoUrl != null));
 
   @override
   void dispose() {
@@ -120,6 +124,7 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
       jerseyNumber: int.tryParse(_numberController.text),
       profileId: _saved?.profileId,
       photoPath: _removePhoto ? null : _saved?.photoPath,
+      profilePhotoUrl: _saved?.profilePhotoUrl,
     );
     final repository = ref.read(athleteRepositoryProvider);
     await _run(teamId, () async {

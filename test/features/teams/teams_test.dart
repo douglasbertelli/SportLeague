@@ -2247,6 +2247,30 @@ void main() {
     });
   });
 
+  test('atleta que entrou pelo convite usa a foto do perfil', () {
+    final athlete = Athlete.fromMap({
+      'id': 'a1',
+      'team_id': 'team-a',
+      'name': 'Bruno Lima',
+      'profile_id': 'u7',
+      'photo_path': null,
+      'profile': {'avatar_url': 'https://fotos/u7.jpg'},
+    });
+    expect(athlete.profilePhotoUrl, 'https://fotos/u7.jpg');
+    // A foto de atleta, se o administrador enviar uma, tem prioridade (o
+    // repositório resolve a URL mostrada).
+    expect(athlete.copyWith(photoUrl: 'assinada').photoUrl, 'assinada');
+    expect(athlete.copyWith(photoUrl: 'x').profilePhotoUrl, 'https://fotos/u7.jpg');
+
+    final semConta = Athlete.fromMap({
+      'id': 'a2',
+      'team_id': 'team-a',
+      'name': 'Caio',
+      'profile': null,
+    });
+    expect(semConta.profilePhotoUrl, isNull);
+  });
+
   group('jogador', () {
     // Time de outro administrador, em que o usuário (u1) é atleta.
     const played = Team(

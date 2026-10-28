@@ -21,6 +21,7 @@ class Athlete {
     this.profileId,
     this.photoPath,
     this.photoUrl,
+    this.profilePhotoUrl,
   });
 
   factory Athlete.fromMap(Map<String, dynamic> map) => Athlete(
@@ -31,6 +32,10 @@ class Athlete {
     jerseyNumber: map['jersey_number'] as int?,
     profileId: map['profile_id'] as String?,
     photoPath: map['photo_path'] as String?,
+    profilePhotoUrl: switch (map['profile']) {
+      {'avatar_url': final String url} => url,
+      _ => null,
+    },
   );
 
   /// Nulo antes de o atleta ser salvo.
@@ -45,8 +50,13 @@ class Athlete {
   /// cadastrados antes da foto; o formulário exige ao salvar.
   final String? photoPath;
 
-  /// URL assinada e temporária da foto, gerada ao carregar (não é salva).
+  /// URL da foto mostrada, gerada ao carregar (não é salva): a assinada da
+  /// foto do atleta ou, sem ela, a foto do perfil do jogador vinculado.
   final String? photoUrl;
+
+  /// Foto do perfil do jogador vinculado ([profileId]), a que ele mesmo envia
+  /// no app. Quem entra pelo convite chega sem foto de atleta e usa esta.
+  final String? profilePhotoUrl;
 
   Athlete copyWith({
     String? photoPath,
@@ -61,6 +71,7 @@ class Athlete {
     profileId: profileId,
     photoPath: clearPhoto ? null : photoPath ?? this.photoPath,
     photoUrl: clearPhoto ? null : photoUrl ?? this.photoUrl,
+    profilePhotoUrl: profilePhotoUrl,
   );
 
   Map<String, dynamic> toMap() => {

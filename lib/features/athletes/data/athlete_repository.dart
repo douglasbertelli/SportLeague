@@ -18,14 +18,18 @@ class AthleteRepository {
 
   StorageFileApi get _photos => _client.storage.from(athletePhotosBucket);
 
-  /// Atletas do time, em ordem alfabética, com URL temporária da foto.
+  /// Atletas do time, em ordem alfabética, com URL temporária da foto (ou,
+  /// sem foto de atleta, a foto do perfil do jogador vinculado).
   Future<List<Athlete>> fetchByTeam(String teamId) async {
     final rows = await _client
         .from('team_players')
-        .select()
+        .select('*, profile:profiles(avatar_url)')
         .eq('team_id', teamId)
         .order('name');
-    final athletes = rows.map(Athlete.fromMap).toList();
+    final athletes = rows
+        .map(Athlete.fromMap)
+        .map((athlete) => athlete.copyWith(photoUrl: athlete.profilePhotoUrl))
+        .toList();
 
     final paths = [for (final a in athletes) ?a.photoPath];
     if (paths.isEmpty) return athletes;
@@ -42,7 +46,9 @@ class AthleteRepository {
     };
     return [
       for (final athlete in athletes)
-        athlete.copyWith(photoUrl: urlByPath[athlete.photoPath]),
+        athlete.copyWith(
+          photoUrl: urlByPath[athlete.photoPath] ?? athlete.profilePhotoUrl,
+        ),
     ];
   }
 
