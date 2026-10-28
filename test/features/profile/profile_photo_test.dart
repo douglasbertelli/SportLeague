@@ -13,6 +13,7 @@ import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/domain/player_stats.dart';
 import 'package:sport_league/features/profile/data/profile_repository.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
+import 'package:sport_league/features/profile/presentation/my_code_page.dart';
 import 'package:sport_league/features/profile/presentation/profile_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -53,6 +54,8 @@ Future<_FakeProfileRepository> _pump(
   WidgetTester tester,
   Profile profile, {
   List<MyTeamTotals> myTotals = const [],
+  // Tela aberta no lugar da aba Perfil (ex.: Meu código).
+  Widget? page,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
@@ -82,7 +85,7 @@ Future<_FakeProfileRepository> _pump(
         cropSquareProvider.overrideWithValue((context, image) async => image),
       ],
       child: MaterialApp(
-        home: Scaffold(body: ProfileTab(profile: profile)),
+        home: page ?? Scaffold(body: ProfileTab(profile: profile)),
       ),
     ),
   );
@@ -100,12 +103,52 @@ void main() {
     expect(profiles.uploaded, ['u1']);
   });
 
-  testWidgets('jogador vê o código JG e gera outro', (tester) async {
+  testWidgets('o Perfil leva à página Meu código', (tester) async {
+    await _pump(tester, _profile(UserRole.player, code: 'JG7K3M9Q'));
+    expect(find.text('Meu código'), findsOneWidget);
+    expect(
+      find.text('JG7K3M9Q · para o administrador te convidar'),
+      findsOneWidget,
+    );
+    // Os botões ficam na página, não no Perfil.
+    expect(find.text('Gerar outro'), findsNothing);
+
+    await _pump(tester, _profile(UserRole.admin));
+    expect(find.text('Meu código'), findsNothing);
+  });
+
+  testWidgets('Perfil agrupa os ajustes e deixa o Sair por último', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    await _pump(tester, _profile(UserRole.player, code: 'JG7K3M9Q'));
+    double top(String text) => tester.getTopLeft(find.text(text)).dy;
+    expect(top('Meu código'), lessThan(top('Dados de atleta')));
+    expect(top('Dados de atleta'), lessThan(top('Cor do app')));
+    expect(top('Cor do app'), lessThan(top('Endereço')));
+    expect(top('Endereço'), lessThan(top('Sair')));
+    // Os quatro no mesmo card; o Sair em outro.
+    final group = find.ancestor(
+      of: find.text('Meu código'),
+      matching: find.byType(Card),
+    );
+    expect(
+      find.descendant(of: group, matching: find.text('Endereço')),
+      findsOneWidget,
+    );
+    expect(find.descendant(of: group, matching: find.text('Sair')), findsNothing);
+  });
+
+  testWidgets('página Meu código do jogador: JG e gerar outro', (
+    tester,
+  ) async {
     final profiles = await _pump(
       tester,
       _profile(UserRole.player, code: 'JG7K3M9Q'),
+      page: const MyCodePage(),
     );
-    expect(find.text('Meu código'), findsOneWidget);
     expect(find.text('JG7K3M9Q'), findsOneWidget);
     expect(find.textContaining('como jogador'), findsOneWidget);
 
@@ -116,13 +159,14 @@ void main() {
     expect(profiles.regenerated, 1);
   });
 
-  testWidgets('técnico vê o código TC; administrador não tem', (tester) async {
-    await _pump(tester, _profile(UserRole.coach, code: 'TC2345AB'));
+  testWidgets('página Meu código do técnico: TC', (tester) async {
+    await _pump(
+      tester,
+      _profile(UserRole.coach, code: 'TC2345AB'),
+      page: const MyCodePage(),
+    );
     expect(find.text('TC2345AB'), findsOneWidget);
     expect(find.textContaining('como técnico'), findsOneWidget);
-
-    await _pump(tester, _profile(UserRole.admin));
-    expect(find.text('Meu código'), findsNothing);
   });
 
   testWidgets('o técnico remove a foto atual', (tester) async {
