@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,11 +6,9 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_color_picker.dart';
 import '../../../core/supabase/supabase_providers.dart';
-import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../invites/data/invite_repository.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 
@@ -56,53 +53,62 @@ class ProfileTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        if (profile.code case final code?) ...[
-          _MyCodeCard(profile: profile, code: code),
-          const SizedBox(height: 8),
-        ],
-        if (profile.isPlayer) ...[
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.sports_soccer),
-              title: const Text('Dados de atleta'),
-              subtitle: Text(
-                profile.hasAthleteData
-                    ? _athleteSummary(profile)
-                    : 'Posição, pé dominante, altura e nascimento',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(Routes.athleteData, extra: profile),
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-        const Card(child: AppColorTile()),
-        const SizedBox(height: 8),
+        // Tudo o que se ajusta no perfil, num grupo só; o Sair fica à parte,
+        // mais abaixo.
         Card(
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.location_on_outlined),
-                title: const Text('Endereço'),
-                subtitle: address == null
-                    ? null
-                    : Text(
-                        '${address.street}, ${address.number} - '
-                        '${address.city}/${address.state}',
-                      ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(Routes.editAddress),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(Icons.logout, color: theme.colorScheme.error),
-                title: Text(
-                  'Sair',
-                  style: TextStyle(color: theme.colorScheme.error),
+              for (final (index, item) in [
+                if (profile.code case final code?)
+                  ListTile(
+                    leading: const Icon(Icons.qr_code_2),
+                    title: const Text('Meu código'),
+                    subtitle: Text('$code · para o administrador te convidar'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(Routes.myCode),
+                  ),
+                if (profile.isPlayer)
+                  ListTile(
+                    leading: const Icon(Icons.sports_soccer),
+                    title: const Text('Dados de atleta'),
+                    subtitle: Text(
+                      profile.hasAthleteData
+                          ? _athleteSummary(profile)
+                          : 'Posição, pé dominante, altura e nascimento',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.push(Routes.athleteData, extra: profile),
+                  ),
+                const AppColorTile(),
+                ListTile(
+                  leading: const Icon(Icons.location_on_outlined),
+                  title: const Text('Endereço'),
+                  subtitle: address == null
+                      ? null
+                      : Text(
+                          '${address.street}, ${address.number} - '
+                          '${address.city}/${address.state}',
+                        ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(Routes.editAddress),
                 ),
-                onTap: () => ref.read(authRepositoryProvider).signOut(),
-              ),
+              ].indexed) ...[
+                if (index > 0) const Divider(height: 1),
+                item,
+              ],
             ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              'Sair',
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+            onTap: () => ref.read(authRepositoryProvider).signOut(),
           ),
         ),
       ],
@@ -121,121 +127,6 @@ String _athleteSummary(Profile profile) => [
     '${(height / 100).toStringAsFixed(2).replaceAll('.', ',')} m',
   if (profile.age() case final age?) '$age anos',
 ].join(' · ');
-
-/// Código pessoal (JG do jogador, TC do técnico) com Compartilhar, Copiar e
-/// Gerar outro: o administrador digita em Convidar para chamar para o time.
-class _MyCodeCard extends ConsumerStatefulWidget {
-  const _MyCodeCard({required this.profile, required this.code});
-
-  final Profile profile;
-  final String code;
-
-  @override
-  ConsumerState<_MyCodeCard> createState() => _MyCodeCardState();
-}
-
-class _MyCodeCardState extends ConsumerState<_MyCodeCard> {
-  bool _saving = false;
-
-  Future<void> _regenerate() async {
-    final confirmed = await confirmAction(
-      context,
-      title: 'Gerar outro código?',
-      message:
-          'O código atual deixa de valer: quem ainda não te convidou vai '
-          'precisar do novo. Os times em que você já está continuam.',
-      confirmLabel: 'Gerar outro',
-      confirmIcon: Icons.autorenew,
-    );
-    if (!confirmed) return;
-    setState(() => _saving = true);
-    try {
-      await ref.read(profileRepositoryProvider).regenerateCode();
-      ref.invalidate(currentProfileProvider);
-    } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final code = widget.code;
-    final role = widget.profile.isCoach ? 'técnico' : 'jogador';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Meu código', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Mande para o administrador do time: em Convidar, ele digita o '
-              'código e te chama como $role.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: SelectableText(
-                code,
-                semanticsLabel: 'Código ${code.split('').join(' ')}',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 4,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => ref.read(shareTextProvider)(
-                'Meu código no SportLeague: $code. Use em Convidar para me '
-                'chamar para o seu time.',
-              ),
-              icon: const Icon(Icons.share_outlined),
-              label: const Text('Compartilhar'),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(88, 48),
-                    ),
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: code));
-                      if (context.mounted) {
-                        showErrorSnackBar(context, 'Código copiado.');
-                      }
-                    },
-                    icon: const Icon(Icons.copy),
-                    label: const Text('Copiar'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(88, 48),
-                    ),
-                    onPressed: _saving ? null : _regenerate,
-                    icon: const Icon(Icons.autorenew),
-                    label: const Text('Gerar outro'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Foto do perfil; o técnico e o jogador tocam para enviar, trocar ou remover
 /// a deles.
