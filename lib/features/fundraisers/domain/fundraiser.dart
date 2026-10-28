@@ -82,7 +82,8 @@ class Fundraiser {
   /// o centavo para cima, para o total ser alcançado.
   int shareCents(int people) => switch (amountType) {
     AmountType.perPerson => amountCents,
-    AmountType.total => people <= 0 ? amountCents : (amountCents / people).ceil(),
+    AmountType.total =>
+      people <= 0 ? amountCents : (amountCents / people).ceil(),
   };
 
   /// Quanto a vaquinha junta quando todos os [people] pagam.

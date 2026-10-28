@@ -172,12 +172,21 @@ configurado.
 
    - **Convites** (Início do administrador): o código do time para mandar aos
      jogadores (Compartilhar, Copiar, Gerar outro), **Convidar jogador do app**
-     (pesquisa pelo nome; o jogador aceita ou recusa em Meus convites), os
+     (pesquisa pelo nome, ou pelo **código pessoal** do jogador, JG, ou do
+     técnico, TC, que fica no Perfil deles com Compartilhar, Copiar e Gerar
+     outro; o convidado aceita ou recusa em Meus convites), os
      convites enviados e os **pedidos para entrar**,
      com Aceitar e Recusar.
    - O **jogador** entra num time com o código (Início → Meus convites), ou pede
      para entrar pelo perfil do time (Buscar times → **Pedir para entrar**).
      Aceito, ele vira atleta do time, ligado à conta dele.
+   - **Início do jogador**: no topo, a foto e o nome dele; abaixo do "Olá",
+     os **números do próprio jogador** (Meus números: jogos, gols,
+     assistências, cartões e craque, com a temporada e os chips de cada time
+     ou **Geral**, todos somados) e depois o card do time e o próximo jogo
+     (com o placar ao vivo), só para acompanhar: sem marcar jogos, mexer no
+     placar ou montar a escalação. Tocar no chip de um time troca o time
+     ativo, e o painel inteiro (e a cor do app) vai junto.
    - **Menu lateral** (☰ no topo da home, depois do modo claro/escuro; abre
      pela direita), com as funcionalidades extras:
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
@@ -213,7 +222,7 @@ supabase/
 
 | Tabela          | Descrição                                                        |
 | --------------- | ---------------------------------------------------------------- |
-| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números) |
+| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). Jogador e técnico têm um **código pessoal** (`code`: JG ou TC + 6), criado pelo banco com o papel e trocado só por `regenerate_my_code`; o administrador convida pelo código. A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números, no Início) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |

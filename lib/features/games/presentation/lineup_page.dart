@@ -203,8 +203,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
                 Text(
                   count,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color:
-                        spot == _Spot.starter && starters == _maxStarters
+                    color: spot == _Spot.starter && starters == _maxStarters
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurfaceVariant,
                   ),

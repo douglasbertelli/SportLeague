@@ -56,6 +56,15 @@ class FakeTeamRepository implements TeamRepository {
       if (coachedBy[profileId]?.contains(team.id) ?? false) team,
   ];
 
+  /// Ids dos times em que cada perfil é atleta (jogador vinculado).
+  final playedBy = <String, Set<String>>{};
+
+  @override
+  Future<List<Team>> fetchPlayed(String profileId) async => [
+    for (final team in teams)
+      if (playedBy[profileId]?.contains(team.id) ?? false) team,
+  ];
+
   @override
   Future<Team> create(Team team) async {
     // Ida e volta pelo formato do banco, como o Supabase faria.

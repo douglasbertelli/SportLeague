@@ -75,15 +75,6 @@ class AppDrawer extends StatelessWidget {
           ),
         ),
         const Divider(indent: 28, endIndent: 28),
-        // O administrador e o técnico têm a aba Perfil.
-        if (profile.isPlayer)
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-            leading: const Icon(Icons.account_circle_outlined),
-            title: const Text('Meu perfil'),
-            subtitle: const Text('Foto, dados de atleta e seus números'),
-            onTap: () => _open(context, Routes.myProfile),
-          ),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.savings_outlined),

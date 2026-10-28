@@ -51,6 +51,9 @@ class ProfileRepository {
       })
       .eq('id', userId);
 
+  /// Gera outro código pessoal (JG ou TC); o antigo deixa de valer.
+  Future<String> regenerateCode() => _client.rpc<String>('regenerate_my_code');
+
   static const _photoBucket = 'profile-photos';
 
   /// Pasta do próprio usuário: as regras do Storage só deixam ele gravar.

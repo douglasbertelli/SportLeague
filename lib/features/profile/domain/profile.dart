@@ -50,6 +50,7 @@ class Profile {
     this.preferredPosition,
     this.preferredFoot,
     this.heightCm,
+    this.code,
   });
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -72,6 +73,7 @@ class Profile {
       _ => null,
     },
     heightCm: map['height_cm'] as int?,
+    code: map['code'] as String?,
   );
 
   /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
@@ -92,6 +94,10 @@ class Profile {
   final String? preferredPosition;
   final PreferredFoot? preferredFoot;
   final int? heightCm;
+
+  /// Código pessoal: JG + 6 do jogador, TC + 6 do técnico (nulo para o
+  /// administrador). O administrador convida pelo código.
+  final String? code;
 
   /// Idade completa em [today] (hoje, por padrão).
   int? age([DateTime? today]) {

@@ -21,6 +21,13 @@ import '../teams/fakes.dart';
 class _FakeProfileRepository implements ProfileRepository {
   final uploaded = <String>[];
   final removed = <String>[];
+  var regenerated = 0;
+
+  @override
+  Future<String> regenerateCode() async {
+    regenerated++;
+    return 'JG9Z8Y7X';
+  }
 
   @override
   Future<void> uploadPhoto(String userId, PickedImage image) async =>
@@ -33,12 +40,13 @@ class _FakeProfileRepository implements ProfileRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Profile _profile(UserRole role, {String? avatarUrl}) => Profile(
+Profile _profile(UserRole role, {String? avatarUrl, String? code}) => Profile(
   id: 'u1',
   fullName: 'Ana Souza',
   role: role,
   plan: SubscriptionPlan.free,
   avatarUrl: avatarUrl,
+  code: code,
 );
 
 Future<_FakeProfileRepository> _pump(
@@ -83,7 +91,7 @@ Future<_FakeProfileRepository> _pump(
 }
 
 void main() {
-  testWidgets('o tÃ©cnico envia a foto de perfil', (tester) async {
+  testWidgets('o técnico envia a foto de perfil', (tester) async {
     final profiles = await _pump(tester, _profile(UserRole.coach));
     await tester.tap(find.bySemanticsLabel(RegExp('Adicionar foto')));
     await tester.pumpAndSettle();
@@ -92,7 +100,32 @@ void main() {
     expect(profiles.uploaded, ['u1']);
   });
 
-  testWidgets('o tÃ©cnico remove a foto atual', (tester) async {
+  testWidgets('jogador vê o código JG e gera outro', (tester) async {
+    final profiles = await _pump(
+      tester,
+      _profile(UserRole.player, code: 'JG7K3M9Q'),
+    );
+    expect(find.text('Meu código'), findsOneWidget);
+    expect(find.text('JG7K3M9Q'), findsOneWidget);
+    expect(find.textContaining('como jogador'), findsOneWidget);
+
+    await tester.tap(find.text('Gerar outro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gerar outro').last);
+    await tester.pumpAndSettle();
+    expect(profiles.regenerated, 1);
+  });
+
+  testWidgets('técnico vê o código TC; administrador não tem', (tester) async {
+    await _pump(tester, _profile(UserRole.coach, code: 'TC2345AB'));
+    expect(find.text('TC2345AB'), findsOneWidget);
+    expect(find.textContaining('como técnico'), findsOneWidget);
+
+    await _pump(tester, _profile(UserRole.admin));
+    expect(find.text('Meu código'), findsNothing);
+  });
+
+  testWidgets('o técnico remove a foto atual', (tester) async {
     final profiles = await _pump(
       tester,
       _profile(UserRole.coach, avatarUrl: 'http://localhost/foto.png'),
@@ -138,40 +171,12 @@ void main() {
     expect(find.text('Meia · Pé esquerdo · 1,78 m · 24 anos'), findsOneWidget);
   });
 
-  testWidgets('o jogador vê os números somados e por time', (tester) async {
-    await _pump(
-      tester,
-      _profile(UserRole.player),
-      myTotals: const [
-        MyTeamTotals(
-          teamId: 't1',
-          teamName: 'Amigos FC',
-          totals: AthleteTotals(
-            athleteId: 'a1',
-            name: 'Amigos FC',
-            jerseyNumber: 10,
-            games: 3,
-            goals: 4,
-          ),
-        ),
-        MyTeamTotals(
-          teamId: 't2',
-          teamName: 'Unidos',
-          totals: AthleteTotals(
-            athleteId: 'a2',
-            name: 'Unidos',
-            games: 2,
-            goals: 1,
-          ),
-        ),
-      ],
-    );
-    expect(find.text('Meus números'), findsOneWidget);
-    // Soma: 5 jogos e 5 gols.
-    expect(find.text('5'), findsNWidgets(2));
-    await tester.scrollUntilVisible(find.text('Unidos'), 200);
-    expect(find.text('Amigos FC'), findsOneWidget);
-    expect(find.text('Nº 10'), findsOneWidget);
+  testWidgets('os números do jogador ficam no Início, não no Perfil', (
+    tester,
+  ) async {
+    await _pump(tester, _profile(UserRole.player));
+    expect(find.text('Dados de atleta'), findsOneWidget);
+    expect(find.text('Meus números'), findsNothing);
   });
 
   test('a idade conta o aniversário do ano', () {

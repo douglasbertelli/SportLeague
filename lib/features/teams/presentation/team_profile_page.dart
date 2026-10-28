@@ -431,7 +431,8 @@ class _JoinButtonState extends ConsumerState<_JoinButton> {
       await action();
       ref
         ..invalidate(myInvitesProvider)
-        ..invalidate(myPlayerTeamsProvider);
+        ..invalidate(myPlayerTeamsProvider)
+        ..invalidate(myTeamsProvider);
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
     } finally {

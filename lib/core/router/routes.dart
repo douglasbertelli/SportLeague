@@ -7,11 +7,8 @@ abstract final class Routes {
   static const home = '/home';
   static const editAddress = '/home/address';
 
-  /// Meu perfil do jogador (o administrador e o técnico usam a aba Perfil).
-  static const myProfile = '/home/me';
-
-  /// Dados de atleta do jogador; recebe o `Profile` em `extra`.
-  static const athleteData = '/home/me/athlete';
+  /// Dados de atleta do jogador (aba Perfil); recebe o `Profile` em `extra`.
+  static const athleteData = '/home/athlete-data';
   static const teams = '/home/teams';
   static const newTeam = '/home/teams/new';
 

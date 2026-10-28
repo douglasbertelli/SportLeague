@@ -52,8 +52,17 @@ class InviteRepository {
     return rows.map(TeamInvite.fromMap).toList();
   }
 
-  /// Contas de jogador pelo nome, para convidar.
+  /// Contas de jogador pelo nome, para convidar. Um código pessoal (JG ou TC)
+  /// acha o jogador ou o técnico dono dele.
   Future<List<PlayerSummary>> searchPlayers(String query) async {
+    if (asProfileCode(query) case final code?) {
+      final rows = await _client
+          .from('profiles')
+          .select('id, full_name, avatar_url, role')
+          .eq('code', code)
+          .inFilter('role', ['player', 'coach']);
+      return rows.map(PlayerSummary.fromMap).toList();
+    }
     // %, _ e \ são curingas do ilike: procurados como texto.
     final term = query.trim().replaceAllMapped(
       RegExp(r'[%_\\]'),

@@ -8,12 +8,15 @@ import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/dispute_repository.dart';
 import '../../games/data/game_repository.dart';
+import '../../games/data/player_stats_repository.dart';
+import '../../games/domain/player_stats.dart';
 import '../../games/domain/game.dart';
 import '../../games/domain/match_clock.dart';
 import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../games/presentation/lineup_page.dart';
+import '../../profile/presentation/my_numbers_section.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/season_button.dart';
@@ -37,8 +40,8 @@ class TeamDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(selectedTeamProvider).value;
     if (team == null) {
-      // O técnico entra num time; o administrador cria.
-      final coach = ref.watch(isCoachProvider);
+      // O técnico e o jogador entram num time; o administrador cria.
+      final coach = ref.watch(isCoachProvider) || ref.watch(isPlayerProvider);
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -64,7 +67,9 @@ class TeamDashboard extends ConsumerWidget {
       );
     }
     // O técnico acompanha: sem marcar jogos, mexer no placar ou no relógio.
+    // O jogador também não monta a escalação.
     final canManage = ref.watch(canManageTeamProvider);
+    final isStaff = ref.watch(isTeamStaffProvider);
 
     final now = this.now ?? DateTime.now();
     final games = ref.watch(teamGamesProvider(team.id!)).value ?? const [];
@@ -94,9 +99,18 @@ class TeamDashboard extends ConsumerWidget {
         if (dispute.teamId != team.id) dispute,
     ].length;
 
+    // O jogador vê primeiro os números dele (de um time ou de todos); o
+    // administrador e o técnico, os do time, depois dos jogos.
+    final player = ref.watch(isPlayerProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (player) ...[
+          const _DashboardTitle('Meus números', trailing: SeasonButton()),
+          _MyTeamNumbers(teamId: team.id!),
+          const SizedBox(height: 16),
+        ],
         _TeamHeader(
           team: team,
           followers: stats?.followers,
@@ -108,6 +122,7 @@ class TeamDashboard extends ConsumerWidget {
           game: next.firstOrNull,
           clock: this.now == null ? null : () => now,
           canManage: canManage,
+          isStaff: isStaff,
         ),
         if (canManage && disputed > 0) ...[
           const SizedBox(height: 8),
@@ -154,57 +169,166 @@ class TeamDashboard extends ConsumerWidget {
             ),
           ),
         ],
-        const SizedBox(height: 16),
-        // Temporada: vale para as estatísticas abaixo e para os atletas.
-        const _DashboardTitle('Estatísticas', trailing: SeasonButton()),
-        const SizedBox(height: 8),
-        if (stats == null)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else ...[
-          StatsGrid(stats: stats),
+        // A temporada vale para as estatísticas e para os atletas.
+        if (!player) ...[
+          const SizedBox(height: 16),
+          const _DashboardTitle('Estatísticas', trailing: SeasonButton()),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Text(
-                    'Últ. jogos',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(width: 16),
-                  if (stats.recent.isEmpty)
-                    const Expanded(child: Text('Nenhum amistoso realizado'))
-                  else
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        // Do mais antigo para o mais recente, como uma linha
-                        // do tempo.
-                        children: [
-                          for (final game in stats.recent.reversed)
-                            Tooltip(
-                              message:
-                                  '${game.opponent} · '
-                                  '${formatGameDay(game.scheduledAt)}',
-                              child: OutcomeBadge(game: game, radius: 14),
-                            ),
-                        ],
-                      ),
+          if (stats == null)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            StatsGrid(stats: stats),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Text(
+                      'Últ. jogos',
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
-                ],
+                    const SizedBox(width: 16),
+                    if (stats.recent.isEmpty)
+                      const Expanded(child: Text('Nenhum amistoso realizado'))
+                    else
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          // Do mais antigo para o mais recente, como uma linha
+                          // do tempo.
+                          children: [
+                            for (final game in stats.recent.reversed)
+                              Tooltip(
+                                message:
+                                    '${game.opponent} · '
+                                    '${formatGameDay(game.scheduledAt)}',
+                                child: OutcomeBadge(game: game, radius: 14),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ],
     );
   }
 }
+
+/// Os números do jogador logado: jogos, gols, assistências, cartões e craque,
+/// pelas súmulas da temporada. Os chips escolhem o time ativo entre os times
+/// em que ele é atleta (o painel inteiro troca, com a cor do time) ou o Geral
+/// (os números de todos somados).
+class _MyTeamNumbers extends ConsumerStatefulWidget {
+  const _MyTeamNumbers({required this.teamId});
+
+  /// Time ativo.
+  final String teamId;
+
+  @override
+  ConsumerState<_MyTeamNumbers> createState() => _MyTeamNumbersState();
+}
+
+class _MyTeamNumbersState extends ConsumerState<_MyTeamNumbers> {
+  /// Geral: a soma de todos os times.
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final teams = ref.watch(myTeamsProvider).value ?? const <Team>[];
+    final selectedId = widget.teamId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Com um time só, o Geral é o próprio time.
+        if (teams.length > 1) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    avatar: const Icon(Icons.functions, size: 18),
+                    label: const Text('Geral'),
+                    tooltip: 'Todos os seus times somados',
+                    selected: _all,
+                    onSelected: (_) => setState(() => _all = true),
+                  ),
+                ),
+                for (final team in teams)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      avatar: TeamLogo(team: team, radius: 12),
+                      label: Text(team.name),
+                      selected: !_all && team.id == selectedId,
+                      onSelected: (_) {
+                        setState(() => _all = false);
+                        ref
+                            .read(selectedTeamIdProvider.notifier)
+                            .select(team.id!);
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        ref
+            .watch(myTotalsProvider)
+            .when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => TextButton.icon(
+                onPressed: () => ref.invalidate(myTotalsProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text(
+                  'Erro ao carregar os números. Tentar novamente',
+                ),
+              ),
+              data: (totals) {
+                // Sem súmula no time ainda, tudo zerado.
+                final rows = [
+                  for (final team in totals)
+                    if (_all || team.teamId == selectedId) team.totals,
+                ];
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: PlayerTotalsGrid(totals: _sum(rows)),
+                  ),
+                );
+              },
+            ),
+      ],
+    );
+  }
+}
+
+/// Soma os números de vários times (Geral).
+AthleteTotals _sum(List<AthleteTotals> rows) => AthleteTotals(
+  athleteId: '',
+  name: '',
+  games: rows.fold(0, (sum, row) => sum + row.games),
+  goals: rows.fold(0, (sum, row) => sum + row.goals),
+  assists: rows.fold(0, (sum, row) => sum + row.assists),
+  yellowCards: rows.fold(0, (sum, row) => sum + row.yellowCards),
+  redCards: rows.fold(0, (sum, row) => sum + row.redCards),
+  bestPlayer: rows.fold(0, (sum, row) => sum + row.bestPlayer),
+);
 
 /// Logo, nome, resumo, seguidores e o atalho para o perfil público.
 class _TeamHeader extends StatelessWidget {
@@ -268,10 +392,14 @@ class _NextGameCard extends StatefulWidget {
     required this.game,
     this.clock,
     this.canManage = true,
+    this.isStaff = true,
   });
 
   /// Dono do time: marca amistosos (o técnico só acompanha).
   final bool canManage;
+
+  /// Dono ou técnico: monta a escalação e a súmula (o jogador só vê).
+  final bool isStaff;
 
   final Team team;
   final Game? game;
@@ -393,7 +521,7 @@ class _NextGameCardState extends State<_NextGameCard> {
                       ],
                     ),
                   ],
-                  if (!live) ...[
+                  if (!live && widget.isStaff) ...[
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -540,24 +668,26 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
             ),
           ],
         ),
-        // Os dois times lançam a súmula e a escalação dos seus atletas.
-        Wrap(
-          alignment: WrapAlignment.center,
-          children: [
-            TextButton.icon(
-              onPressed: () =>
-                  openGameSheet(context, game: game, viewerTeamId: team.id!),
-              icon: const Icon(Icons.assignment_outlined),
-              label: const Text('Súmula do jogo'),
-            ),
-            TextButton.icon(
-              onPressed: () =>
-                  openLineup(context, game: game, teamId: team.id!),
-              icon: const Icon(Icons.format_list_numbered),
-              label: const Text('Escalação'),
-            ),
-          ],
-        ),
+        // Os dois times lançam a súmula e a escalação dos seus atletas (o
+        // dono e o técnico; o jogador acompanha).
+        if (ref.watch(isTeamStaffProvider))
+          Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () =>
+                    openGameSheet(context, game: game, viewerTeamId: team.id!),
+                icon: const Icon(Icons.assignment_outlined),
+                label: const Text('Súmula do jogo'),
+              ),
+              TextButton.icon(
+                onPressed: () =>
+                    openLineup(context, game: game, teamId: team.id!),
+                icon: const Icon(Icons.format_list_numbered),
+                label: const Text('Escalação'),
+              ),
+            ],
+          ),
       ],
     );
   }

@@ -12,8 +12,9 @@ import '../../teams/data/team_repository.dart';
 import '../data/invite_repository.dart';
 import '../domain/team_invite.dart';
 
-/// Pesquisa os jogadores do app pelo nome e convida para o time ativo. Quem
-/// já é atleta ou já tem convite pendente aparece marcado.
+/// Pesquisa os jogadores do app pelo nome (ou o jogador e o técnico pelo
+/// código pessoal, JG ou TC) e convida para o time ativo. Quem já está no
+/// time ou já tem convite pendente aparece marcado.
 class InvitePlayerPage extends ConsumerStatefulWidget {
   const InvitePlayerPage({super.key});
 
@@ -89,6 +90,13 @@ class _InvitePlayerPageState extends ConsumerState<InvitePlayerPage> {
                 in ref.watch(teamAthletesProvider(teamId)).value ?? const [])
               ?athlete.profileId,
           };
+    final coaches = teamId == null
+        ? const <String>{}
+        : {
+            for (final coach
+                in ref.watch(teamCoachesProvider(teamId)).value ?? const [])
+              coach.id,
+          };
     final invited = teamId == null
         ? const <String>{}
         : {
@@ -109,7 +117,7 @@ class _InvitePlayerPageState extends ConsumerState<InvitePlayerPage> {
               controller: _searchController,
               autofocus: true,
               decoration: const InputDecoration(
-                hintText: 'Nome do jogador',
+                hintText: 'Nome do jogador ou código (JG ou TC)',
                 prefixIcon: Icon(Icons.search),
               ),
               textInputAction: TextInputAction.search,
@@ -139,8 +147,9 @@ class _InvitePlayerPageState extends ConsumerState<InvitePlayerPage> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Nenhum jogador encontrado. Quem ainda não tem o app pode '
-                  'entrar com o código do time.',
+                  'Nenhum jogador encontrado. Peça o código dele (Perfil › '
+                  'Meu código); quem ainda não tem o app pode entrar com o '
+                  'código do time.',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -163,8 +172,10 @@ class _InvitePlayerPageState extends ConsumerState<InvitePlayerPage> {
                       child: Text(player.name[0].toUpperCase()),
                     ),
                     title: Text(player.name),
+                    subtitle: player.isCoach ? const Text('Técnico') : null,
                     trailing: switch ((
-                      athletes.contains(player.id),
+                      athletes.contains(player.id) ||
+                          coaches.contains(player.id),
                       invited.contains(player.id),
                     )) {
                       (true, _) => const Chip(

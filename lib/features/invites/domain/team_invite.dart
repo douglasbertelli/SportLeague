@@ -13,19 +13,36 @@ enum InviteStatus {
       InviteStatus.values.firstWhere((status) => status.name == value);
 }
 
-/// Conta de jogador na pesquisa para convidar.
+/// Conta de jogador (ou de técnico, achado pelo código) na pesquisa para
+/// convidar.
 class PlayerSummary {
-  const PlayerSummary({required this.id, required this.name, this.avatarUrl});
+  const PlayerSummary({
+    required this.id,
+    required this.name,
+    this.avatarUrl,
+    this.isCoach = false,
+  });
 
   factory PlayerSummary.fromMap(Map<String, dynamic> map) => PlayerSummary(
     id: map['id'] as String,
     name: map['full_name'] as String,
     avatarUrl: map['avatar_url'] as String?,
+    isCoach: map['role'] == 'coach',
   );
 
   final String id;
   final String name;
   final String? avatarUrl;
+
+  /// Técnico: aceito o convite, entra na comissão técnica.
+  final bool isCoach;
+}
+
+/// Código pessoal digitado: JG (jogador) ou TC (técnico) + 6 caracteres.
+/// Devolve o código normalizado, ou nulo se o texto não for um código.
+String? asProfileCode(String text) {
+  final code = text.trim().toUpperCase();
+  return RegExp(r'^(JG|TC)[A-Z0-9]{6}$').hasMatch(code) ? code : null;
 }
 
 /// Convite do time ao jogador ([isRequest] falso) ou pedido do jogador para

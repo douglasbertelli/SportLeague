@@ -94,7 +94,8 @@ class _FundraiserFormPageState extends ConsumerState<FundraiserFormPage> {
     final cents = parseMoney(_amount.text);
     if (people == null || cents == null || cents <= 0) {
       return switch (_amountType) {
-        AmountType.perPerson => 'Cada atleta e o administrador pagam esse valor',
+        AmountType.perPerson =>
+          'Cada atleta e o administrador pagam esse valor',
         AmountType.total =>
           'Dividido entre o administrador e os atletas do time',
       };
@@ -201,7 +202,8 @@ class _FundraiserFormPageState extends ConsumerState<FundraiserFormPage> {
                 ),
                 validator: (value) => switch (parseMoney(value ?? '')) {
                   null => 'Informe o valor',
-                  final cents when cents <= 0 => 'O valor deve ser maior que zero',
+                  final cents when cents <= 0 =>
+                    'O valor deve ser maior que zero',
                   _ => null,
                 },
               ),
