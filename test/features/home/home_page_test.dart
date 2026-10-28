@@ -81,7 +81,7 @@ void main() {
 
       final bar = find.byType(NavigationBar);
       expect(bar, findsOneWidget);
-      for (final label in ['Início', 'Jogos', 'Atletas', 'Perfil']) {
+      for (final label in ['Início', 'Jogos', 'Atletas', 'Perfil', 'Config']) {
         expect(
           find.descendant(of: bar, matching: find.text(label)),
           findsOneWidget,
@@ -120,6 +120,17 @@ void main() {
       await tester.tap(find.descendant(of: bar, matching: find.text('Perfil')));
       await tester.pumpAndSettle();
       expect(find.text('Ana Souza'), findsOneWidget);
+
+      // Endereço e Sair ficam na aba Config.
+      await tester.tap(find.descendant(of: bar, matching: find.text('Config')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Configurações'),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.text('Avenida Paulista, 1000 - São Paulo/SP'),
         findsOneWidget,
@@ -128,21 +139,26 @@ void main() {
     },
   );
 
-  testWidgets('jogador navega pelas abas Início e Perfil', (tester) async {
+  testWidgets('jogador navega pelas abas Início, Perfil e Config', (
+    tester,
+  ) async {
     await _pumpHome(tester, UserRole.player);
 
     final bar = find.byType(NavigationBar);
     expect(bar, findsOneWidget);
     expect(
       find.descendant(of: bar, matching: find.byType(NavigationDestination)),
-      findsNWidgets(2),
+      findsNWidgets(3),
     );
     // Sem o "Olá": a foto e o nome já estão no topo.
     expect(find.text('Olá, Ana!'), findsNothing);
     expect(find.byTooltip('Menu'), findsOneWidget);
     // No topo, a foto (iniciais) e o nome do jogador, não o time.
     expect(
-      find.descendant(of: find.byType(AppBar), matching: find.text('Ana Souza')),
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Ana Souza'),
+      ),
       findsOneWidget,
     );
     expect(
@@ -168,5 +184,9 @@ void main() {
     expect(find.text('Dados de atleta'), findsOneWidget);
     // Os números ficam no painel do Início.
     expect(find.text('Meus números'), findsNothing);
+
+    await tester.tap(find.descendant(of: bar, matching: find.text('Config')));
+    await tester.pumpAndSettle();
+    expect(find.text('Sair'), findsOneWidget);
   });
 }

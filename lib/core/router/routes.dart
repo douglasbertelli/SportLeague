@@ -10,7 +10,7 @@ abstract final class Routes {
   /// Dados de atleta do jogador (aba Perfil); recebe o `Profile` em `extra`.
   static const athleteData = '/home/athlete-data';
 
-  /// Código pessoal do jogador ou do técnico (aba Perfil).
+  /// Código pessoal do jogador ou do técnico (aba Config).
   static const myCode = '/home/my-code';
   static const teams = '/home/teams';
   static const newTeam = '/home/teams/new';

@@ -15,6 +15,7 @@ import 'package:sport_league/features/profile/data/profile_repository.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
 import 'package:sport_league/features/profile/presentation/my_code_page.dart';
 import 'package:sport_league/features/profile/presentation/profile_tab.dart';
+import 'package:sport_league/features/profile/presentation/settings_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../teams/fakes.dart';
@@ -23,6 +24,11 @@ class _FakeProfileRepository implements ProfileRepository {
   final uploaded = <String>[];
   final removed = <String>[];
   var regenerated = 0;
+  String? renamed;
+
+  @override
+  Future<void> updateName(String userId, String fullName) async =>
+      renamed = fullName;
 
   @override
   Future<String> regenerateCode() async {
@@ -103,33 +109,66 @@ void main() {
     expect(profiles.uploaded, ['u1']);
   });
 
-  testWidgets('o Perfil leva à página Meu código', (tester) async {
+  testWidgets('Perfil do jogador: foto, nome e dados de atleta', (
+    tester,
+  ) async {
     await _pump(tester, _profile(UserRole.player, code: 'JG7K3M9Q'));
-    expect(find.text('Meu código'), findsOneWidget);
-    expect(
-      find.text('JG7K3M9Q · para o administrador te convidar'),
-      findsOneWidget,
-    );
-    // Os botões ficam na página, não no Perfil.
-    expect(find.text('Gerar outro'), findsNothing);
+    expect(find.text('Ana Souza'), findsOneWidget);
+    expect(find.text('Dados de atleta'), findsOneWidget);
+    // Esses ficam na aba Config.
+    expect(find.text('Meu código'), findsNothing);
+    expect(find.text('Endereço'), findsNothing);
+    expect(find.text('Sair'), findsNothing);
 
     await _pump(tester, _profile(UserRole.admin));
-    expect(find.text('Meu código'), findsNothing);
+    expect(find.text('Dados de atleta'), findsNothing);
   });
 
-  testWidgets('Perfil agrupa os ajustes e deixa o Sair por último', (
+  testWidgets('o jogador edita o próprio nome', (tester) async {
+    final profiles = await _pump(tester, _profile(UserRole.player));
+    await tester.tap(find.byTooltip('Editar nome'));
+    await tester.pumpAndSettle();
+
+    final field = find.widgetWithText(TextFormField, 'Nome');
+    await tester.enterText(field, ' ');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Informe o seu nome'), findsOneWidget);
+    expect(profiles.renamed, isNull);
+
+    await tester.enterText(field, '  Ana Paula Souza ');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    expect(profiles.renamed, 'Ana Paula Souza');
+
+    // O administrador e o técnico não têm o lápis.
+    await _pump(tester, _profile(UserRole.admin));
+    expect(find.byTooltip('Editar nome'), findsNothing);
+  });
+
+  testWidgets('Configurações: código, cor e endereço; o Sair por último', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);
-    await _pump(tester, _profile(UserRole.player, code: 'JG7K3M9Q'));
+    await _pump(
+      tester,
+      _profile(UserRole.player, code: 'JG7K3M9Q'),
+      page: const Scaffold(body: SettingsTab()),
+    );
+    expect(
+      find.text('JG7K3M9Q · para o administrador te convidar'),
+      findsOneWidget,
+    );
+    // Jogador e técnico não têm plano.
+    expect(find.text('Jogador'), findsOneWidget);
+    expect(find.textContaining('Plano'), findsNothing);
     double top(String text) => tester.getTopLeft(find.text(text)).dy;
-    expect(top('Meu código'), lessThan(top('Dados de atleta')));
-    expect(top('Dados de atleta'), lessThan(top('Cor do app')));
+    expect(top('Meu código'), lessThan(top('Cor do app')));
     expect(top('Cor do app'), lessThan(top('Endereço')));
     expect(top('Endereço'), lessThan(top('Sair')));
-    // Os quatro no mesmo card; o Sair em outro.
+    // Os três no mesmo card; o Sair em outro.
     final group = find.ancestor(
       of: find.text('Meu código'),
       matching: find.byType(Card),
@@ -197,7 +236,7 @@ void main() {
     expect(find.text('Meus números'), findsNothing);
   });
 
-  testWidgets('o jogador vê o resumo dos dados de atleta', (tester) async {
+  testWidgets('o jogador vê os dados de atleta no Perfil', (tester) async {
     final today = DateTime.now();
     await _pump(
       tester,
@@ -212,7 +251,15 @@ void main() {
         birthDate: DateTime(today.year - 24, 1, 1),
       ),
     );
-    expect(find.text('Meia · Pé esquerdo · 1,78 m · 24 anos'), findsOneWidget);
+    expect(find.text('Meia'), findsOneWidget);
+    expect(find.text('Esquerdo'), findsOneWidget);
+    expect(find.text('1,78 m'), findsOneWidget);
+    expect(find.textContaining('24 anos'), findsOneWidget);
+    expect(find.text('Editar'), findsOneWidget);
+
+    // Sem dados: cada linha avisa.
+    await _pump(tester, _profile(UserRole.player));
+    expect(find.text('Não informado'), findsNWidgets(4));
   });
 
   testWidgets('os números do jogador ficam no Início, não no Perfil', (
