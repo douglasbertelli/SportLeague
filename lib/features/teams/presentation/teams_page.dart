@@ -15,8 +15,9 @@ class TeamsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final teams = ref.watch(myTeamsProvider);
     final selectedId = ref.watch(selectedTeamProvider).value?.id;
-    // O técnico não cria nem edita times: só escolhe entre os que acompanha.
-    final coach = ref.watch(isCoachProvider);
+    // O técnico e o jogador não criam nem editam times: só escolhem entre os
+    // que acompanham.
+    final coach = ref.watch(isCoachProvider) || ref.watch(isPlayerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Meus times')),

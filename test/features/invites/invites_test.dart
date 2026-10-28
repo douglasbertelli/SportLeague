@@ -74,14 +74,22 @@ class FakeInviteRepository implements InviteRepository {
   ];
 
   List<PlayerSummary> players = const [];
+
+  /// Jogadores e técnicos pelo código pessoal.
+  Map<String, PlayerSummary> byCode = const {};
   final sentInvites = <(String, String)>[];
 
   @override
-  Future<List<PlayerSummary>> searchPlayers(String query) async => [
-    for (final player in players)
-      if (player.name.toLowerCase().contains(query.trim().toLowerCase()))
-        player,
-  ];
+  Future<List<PlayerSummary>> searchPlayers(String query) async {
+    if (asProfileCode(query) case final code?) {
+      return [?byCode[code]];
+    }
+    return [
+      for (final player in players)
+        if (player.name.toLowerCase().contains(query.trim().toLowerCase()))
+          player,
+    ];
+  }
 
   @override
   Future<void> invitePlayer({
@@ -399,6 +407,33 @@ void main() {
     expect(find.text('Convidado'), findsOneWidget);
     expect(find.text('No time'), findsOneWidget);
     expect(find.text('Convidar'), findsNothing);
+  });
+
+  test('código pessoal: JG ou TC e 6 caracteres', () {
+    expect(asProfileCode(' jg7k3m9q '), 'JG7K3M9Q');
+    expect(asProfileCode('TC2345AB'), 'TC2345AB');
+    expect(asProfileCode('XX2345AB'), isNull);
+    expect(asProfileCode('JG123'), isNull);
+    expect(asProfileCode('Carlos'), isNull);
+  });
+
+  testWidgets('admin convida o técnico pelo código', (tester) async {
+    final invites = FakeInviteRepository(codes: {'team-a': 'ABCD2345'})
+      ..byCode = const {
+        'TC7K3M9Q': PlayerSummary(id: 'u5', name: 'Tite Bacchi', isCoach: true),
+      };
+    final container = await _container(role: UserRole.admin, invites: invites);
+    await _pumpPage(tester, container, const InvitePlayerPage());
+
+    await tester.enterText(find.byType(TextField), 'tc7k3m9q');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Tite Bacchi'), findsOneWidget);
+    expect(find.text('Técnico'), findsOneWidget);
+
+    await tester.tap(find.text('Convidar'));
+    await tester.pumpAndSettle();
+    expect(invites.sentInvites, [('team-a', 'u5')]);
   });
 
   testWidgets('jogador aceita ou recusa um convite recebido', (tester) async {

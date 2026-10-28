@@ -42,6 +42,10 @@ Future<void> main() async {
         isCoachProvider.overrideWith(
           (ref) => ref.watch(currentProfileProvider).value?.isCoach ?? false,
         ),
+        // O jogador acompanha os times em que é atleta.
+        isPlayerProvider.overrideWith(
+          (ref) => ref.watch(currentProfileProvider).value?.isPlayer ?? false,
+        ),
         // Cada time tem a sua cor.
         colorTeamProvider.overrideWith((ref) {
           final team = ref.watch(selectedTeamProvider).value;

@@ -37,6 +37,17 @@ class TeamRepository {
     return rows.map(Team.fromMap).toList();
   }
 
+  /// Times em que o usuário é atleta (jogador vinculado), em ordem
+  /// alfabética.
+  Future<List<Team>> fetchPlayed(String profileId) async {
+    final rows = await _client
+        .from('teams')
+        .select('$teamColumns, team_players!inner(profile_id)')
+        .eq('team_players.profile_id', profileId)
+        .order('name');
+    return rows.map(Team.fromMap).toList();
+  }
+
   /// Times da plataforma pelo nome, em ordem alfabética (vazio lista os
   /// primeiros).
   Future<List<Team>> search(String query) async {
@@ -207,11 +218,17 @@ final teamRepositoryProvider = Provider<TeamRepository>(
 /// posse). O app liga ao perfil em `main.dart`; aqui é falso.
 final isCoachProvider = Provider<bool>((ref) => false);
 
-/// Times do administrador logado, ou os times em que o técnico está.
+/// Se o usuário logado é jogador (os times dele são aqueles em que é
+/// atleta). O app liga ao perfil em `main.dart`; aqui é falso.
+final isPlayerProvider = Provider<bool>((ref) => false);
+
+/// Times do administrador logado, os times em que o técnico está ou os
+/// times em que o jogador é atleta.
 final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return const [];
   final repository = ref.watch(teamRepositoryProvider);
+  if (ref.watch(isPlayerProvider)) return repository.fetchPlayed(userId);
   return ref.watch(isCoachProvider)
       ? repository.fetchCoached(userId)
       : repository.fetchByOwner(userId);
@@ -223,6 +240,12 @@ final canManageTeamProvider = Provider<bool>((ref) {
   final team = ref.watch(selectedTeamProvider).value;
   return team != null && team.ownerId == ref.watch(currentUserIdProvider);
 });
+
+/// Se o usuário monta a escalação e a súmula do time ativo: o dono ou o
+/// técnico. O jogador só acompanha.
+final isTeamStaffProvider = Provider<bool>(
+  (ref) => ref.watch(canManageTeamProvider) || ref.watch(isCoachProvider),
+);
 
 /// Um time pelo id, para o perfil.
 final teamByIdProvider = FutureProvider.autoDispose.family<Team?, String>(

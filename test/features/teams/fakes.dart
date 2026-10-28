@@ -56,6 +56,15 @@ class FakeTeamRepository implements TeamRepository {
       if (coachedBy[profileId]?.contains(team.id) ?? false) team,
   ];
 
+  /// Ids dos times em que cada perfil é atleta (jogador vinculado).
+  final playedBy = <String, Set<String>>{};
+
+  @override
+  Future<List<Team>> fetchPlayed(String profileId) async => [
+    for (final team in teams)
+      if (playedBy[profileId]?.contains(team.id) ?? false) team,
+  ];
+
   @override
   Future<Team> create(Team team) async {
     // Ida e volta pelo formato do banco, como o Supabase faria.
@@ -481,10 +490,14 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
   FakePlayerStatsRepository({
     List<PlayerGameStats> stats = const [],
     this.totalsByTeam = const {},
+    this.mine = const [],
   }) : stats = [...stats];
 
   final List<PlayerGameStats> stats;
   final Map<String, List<AthleteTotals>> totalsByTeam;
+
+  /// Números do jogador logado, por time.
+  final List<MyTeamTotals> mine;
   final goals = <({String scorer, String? assist})>[];
 
   @override
@@ -517,6 +530,9 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
     String teamId, {
     Season? season,
   }) async => totalsByTeam[teamId] ?? const [];
+
+  @override
+  Future<List<MyTeamTotals>> myTotals({Season? season}) async => mine;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

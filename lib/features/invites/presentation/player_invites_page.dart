@@ -34,7 +34,9 @@ class _PlayerInvitesPageState extends ConsumerState<PlayerInvitesPage> {
 
   void _refresh() => ref
     ..invalidate(myInvitesProvider)
-    ..invalidate(myPlayerTeamsProvider);
+    ..invalidate(myPlayerTeamsProvider)
+    // O painel do Início usa os times do jogador e do técnico.
+    ..invalidate(myTeamsProvider);
 
   /// Mostra o time do código e entra nele, se o jogador confirmar.
   Future<void> _useCode() async {

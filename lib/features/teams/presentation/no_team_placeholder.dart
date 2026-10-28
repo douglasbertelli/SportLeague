@@ -7,13 +7,14 @@ import '../../../core/widgets/empty_state.dart';
 import '../data/team_repository.dart';
 
 /// Mostrado enquanto o administrador ainda não criou nenhum time (ou o técnico
-/// ainda não entrou em nenhum: ele não cria times, só se vincula).
+/// ou o jogador ainda não entrou em nenhum: eles não criam times, só se
+/// vinculam).
 class NoTeamPlaceholder extends ConsumerWidget {
   const NoTeamPlaceholder({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(isCoachProvider)) {
+    if (ref.watch(isCoachProvider) || ref.watch(isPlayerProvider)) {
       return EmptyState(
         icon: Icons.shield_outlined,
         title: 'Entre num time',

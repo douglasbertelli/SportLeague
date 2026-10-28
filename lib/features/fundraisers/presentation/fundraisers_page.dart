@@ -124,7 +124,9 @@ class _TeamFundraisers extends ConsumerWidget {
           child: TextButton.icon(
             onPressed: () => ref.invalidate(teamFundraisersProvider(team.id!)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Erro ao carregar as vaquinhas. Tentar novamente'),
+            label: const Text(
+              'Erro ao carregar as vaquinhas. Tentar novamente',
+            ),
           ),
         ),
         data: (fundraisers) => fundraisers.isEmpty

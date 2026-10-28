@@ -34,6 +34,26 @@ class ProfileRepository {
       })
       .eq('id', userId);
 
+  /// Salva os dados de atleta do jogador (nulo limpa o campo).
+  Future<void> updateAthleteData({
+    required String userId,
+    DateTime? birthDate,
+    String? preferredPosition,
+    PreferredFoot? preferredFoot,
+    int? heightCm,
+  }) => _client
+      .from('profiles')
+      .update({
+        'birth_date': birthDate?.toIso8601String().substring(0, 10),
+        'preferred_position': preferredPosition,
+        'preferred_foot': preferredFoot?.name,
+        'height_cm': heightCm,
+      })
+      .eq('id', userId);
+
+  /// Gera outro código pessoal (JG ou TC); o antigo deixa de valer.
+  Future<String> regenerateCode() => _client.rpc<String>('regenerate_my_code');
+
   static const _photoBucket = 'profile-photos';
 
   /// Pasta do próprio usuário: as regras do Storage só deixam ele gravar.
@@ -58,7 +78,10 @@ class ProfileRepository {
 
   /// Tira a foto do perfil e apaga o arquivo.
   Future<void> removePhoto(String userId) async {
-    await _client.from('profiles').update({'avatar_url': null}).eq('id', userId);
+    await _client
+        .from('profiles')
+        .update({'avatar_url': null})
+        .eq('id', userId);
     await _client.storage.from(_photoBucket).remove([_photoPath(userId)]);
   }
 }

@@ -87,9 +87,9 @@ class HomeOverview extends ConsumerWidget {
           style: theme.textTheme.headlineSmall,
         ),
         const SizedBox(height: 24),
-        // Administrador e técnico veem o painel do time ativo antes dos
-        // atalhos.
-        if (profile.hasTeamHome) ...[
+        // Todos veem o painel do time ativo antes dos atalhos (o jogador, do
+        // time em que é atleta, só acompanhando).
+        if (profile.hasTeamHome || profile.isPlayer) ...[
           TeamDashboard(onOpenGames: onOpenGames),
           const SizedBox(height: 24),
           Padding(

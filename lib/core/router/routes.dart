@@ -6,6 +6,9 @@ abstract final class Routes {
   static const onboardingAddress = '/onboarding/address';
   static const home = '/home';
   static const editAddress = '/home/address';
+
+  /// Dados de atleta do jogador (aba Perfil); recebe o `Profile` em `extra`.
+  static const athleteData = '/home/athlete-data';
   static const teams = '/home/teams';
   static const newTeam = '/home/teams/new';
 

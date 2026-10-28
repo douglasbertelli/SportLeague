@@ -216,7 +216,10 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
               children: [
                 Row(
                   children: [
-                    Icon(fundraiserIcon(fundraiser.item), color: colors.primary),
+                    Icon(
+                      fundraiserIcon(fundraiser.item),
+                      color: colors.primary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -279,7 +282,10 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
-                child: Text('Participantes', style: theme.textTheme.titleMedium),
+                child: Text(
+                  'Participantes',
+                  style: theme.textTheme.titleMedium,
+                ),
               ),
               Text(
                 'Pago',
@@ -295,9 +301,7 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
             participant: participant,
             paid: payments.contains(participant.key),
             saving: _saving.contains(participant.key),
-            onChanged: canMark
-                ? (paid) => _setPaid(participant, paid)
-                : null,
+            onChanged: canMark ? (paid) => _setPaid(participant, paid) : null,
           ),
       ],
     );
@@ -345,10 +349,7 @@ class _ParticipantTile extends StatelessWidget {
             ),
             if (onChanged != null) ...[
               const SizedBox(width: 8),
-              Switch(
-                value: paid,
-                onChanged: saving ? null : onChanged,
-              ),
+              Switch(value: paid, onChanged: saving ? null : onChanged),
             ],
           ],
         ),

@@ -9,14 +9,25 @@ import 'package:sport_league/core/media/square_crop_page.dart';
 import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
 import 'package:sport_league/features/address/data/address_repository.dart';
+import 'package:sport_league/features/games/data/player_stats_repository.dart';
+import 'package:sport_league/features/games/domain/player_stats.dart';
 import 'package:sport_league/features/profile/data/profile_repository.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
 import 'package:sport_league/features/profile/presentation/profile_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../teams/fakes.dart';
+
 class _FakeProfileRepository implements ProfileRepository {
   final uploaded = <String>[];
   final removed = <String>[];
+  var regenerated = 0;
+
+  @override
+  Future<String> regenerateCode() async {
+    regenerated++;
+    return 'JG9Z8Y7X';
+  }
 
   @override
   Future<void> uploadPhoto(String userId, PickedImage image) async =>
@@ -29,18 +40,20 @@ class _FakeProfileRepository implements ProfileRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Profile _profile(UserRole role, {String? avatarUrl}) => Profile(
+Profile _profile(UserRole role, {String? avatarUrl, String? code}) => Profile(
   id: 'u1',
   fullName: 'Ana Souza',
   role: role,
   plan: SubscriptionPlan.free,
   avatarUrl: avatarUrl,
+  code: code,
 );
 
 Future<_FakeProfileRepository> _pump(
   WidgetTester tester,
-  Profile profile,
-) async {
+  Profile profile, {
+  List<MyTeamTotals> myTotals = const [],
+}) async {
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
   final profiles = _FakeProfileRepository();
@@ -59,6 +72,9 @@ Future<_FakeProfileRepository> _pump(
         currentProfileProvider.overrideWith((ref) async => profile),
         myAddressProvider.overrideWith((ref) async => null),
         profileRepositoryProvider.overrideWithValue(profiles),
+        playerStatsRepositoryProvider.overrideWithValue(
+          FakePlayerStatsRepository(mine: myTotals),
+        ),
         pickImageProvider.overrideWithValue(
           (source, {maxSize = smallImageSize}) async =>
               PickedImage(bytes: kTransparentImage, contentType: 'image/png'),
@@ -75,7 +91,7 @@ Future<_FakeProfileRepository> _pump(
 }
 
 void main() {
-  testWidgets('o tÃ©cnico envia a foto de perfil', (tester) async {
+  testWidgets('o técnico envia a foto de perfil', (tester) async {
     final profiles = await _pump(tester, _profile(UserRole.coach));
     await tester.tap(find.bySemanticsLabel(RegExp('Adicionar foto')));
     await tester.pumpAndSettle();
@@ -84,7 +100,32 @@ void main() {
     expect(profiles.uploaded, ['u1']);
   });
 
-  testWidgets('o tÃ©cnico remove a foto atual', (tester) async {
+  testWidgets('jogador vê o código JG e gera outro', (tester) async {
+    final profiles = await _pump(
+      tester,
+      _profile(UserRole.player, code: 'JG7K3M9Q'),
+    );
+    expect(find.text('Meu código'), findsOneWidget);
+    expect(find.text('JG7K3M9Q'), findsOneWidget);
+    expect(find.textContaining('como jogador'), findsOneWidget);
+
+    await tester.tap(find.text('Gerar outro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gerar outro').last);
+    await tester.pumpAndSettle();
+    expect(profiles.regenerated, 1);
+  });
+
+  testWidgets('técnico vê o código TC; administrador não tem', (tester) async {
+    await _pump(tester, _profile(UserRole.coach, code: 'TC2345AB'));
+    expect(find.text('TC2345AB'), findsOneWidget);
+    expect(find.textContaining('como técnico'), findsOneWidget);
+
+    await _pump(tester, _profile(UserRole.admin));
+    expect(find.text('Meu código'), findsNothing);
+  });
+
+  testWidgets('o técnico remove a foto atual', (tester) async {
     final profiles = await _pump(
       tester,
       _profile(UserRole.coach, avatarUrl: 'http://localhost/foto.png'),
@@ -96,18 +137,127 @@ void main() {
     expect(profiles.removed, ['u1']);
   });
 
-  testWidgets('os outros perfis nÃ£o trocam a foto por aqui', (tester) async {
-    await _pump(tester, _profile(UserRole.player));
+  testWidgets('o jogador também envia a foto de perfil', (tester) async {
+    final profiles = await _pump(tester, _profile(UserRole.player));
+    await tester.tap(find.bySemanticsLabel(RegExp('Adicionar foto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher da galeria'));
+    await tester.pumpAndSettle();
+    expect(profiles.uploaded, ['u1']);
+  });
+
+  testWidgets('o administrador não troca a foto por aqui', (tester) async {
+    await _pump(tester, _profile(UserRole.admin));
     expect(find.bySemanticsLabel(RegExp('Adicionar foto')), findsNothing);
+    expect(find.text('Dados de atleta'), findsNothing);
+    expect(find.text('Meus números'), findsNothing);
+  });
+
+  testWidgets('o jogador vê o resumo dos dados de atleta', (tester) async {
+    final today = DateTime.now();
+    await _pump(
+      tester,
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+        preferredPosition: 'Meia',
+        preferredFoot: PreferredFoot.left,
+        heightCm: 178,
+        birthDate: DateTime(today.year - 24, 1, 1),
+      ),
+    );
+    expect(find.text('Meia · Pé esquerdo · 1,78 m · 24 anos'), findsOneWidget);
+  });
+
+  testWidgets('os números do jogador ficam no Início, não no Perfil', (
+    tester,
+  ) async {
+    await _pump(tester, _profile(UserRole.player));
+    expect(find.text('Dados de atleta'), findsOneWidget);
+    expect(find.text('Meus números'), findsNothing);
+  });
+
+  test('a idade conta o aniversário do ano', () {
+    final profile = Profile(
+      id: 'u1',
+      fullName: 'Ana Souza',
+      plan: SubscriptionPlan.free,
+      birthDate: DateTime(2000, 6, 15),
+    );
+    expect(profile.age(DateTime(2026, 6, 14)), 25);
+    expect(profile.age(DateTime(2026, 6, 15)), 26);
   });
 }
 
 /// PNG 1x1 transparente.
 final kTransparentImage = Uint8List.fromList([
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
-  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
-  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0A,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
 ]);

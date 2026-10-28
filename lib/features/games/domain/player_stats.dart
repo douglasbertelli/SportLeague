@@ -121,3 +121,25 @@ class AthleteTotals {
   /// Vezes em que foi o craque do jogo.
   final int bestPlayer;
 }
+
+/// Totais do jogador logado num dos times em que é atleta (Meus números).
+class MyTeamTotals {
+  const MyTeamTotals({
+    required this.teamId,
+    required this.teamName,
+    this.teamLogoUrl,
+    required this.totals,
+  });
+
+  factory MyTeamTotals.fromMap(Map<String, dynamic> map) => MyTeamTotals(
+    teamId: map['team_id'] as String,
+    teamName: map['team_name'] as String,
+    teamLogoUrl: map['team_logo_url'] as String?,
+    totals: AthleteTotals.fromMap({...map, 'name': map['team_name']}),
+  );
+
+  final String teamId;
+  final String teamName;
+  final String? teamLogoUrl;
+  final AthleteTotals totals;
+}

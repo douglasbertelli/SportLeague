@@ -84,6 +84,21 @@ class PlayerStatsRepository {
         AthleteTotals.fromMap(row as Map<String, dynamic>),
     ];
   }
+
+  /// Totais do jogador logado em cada time em que é atleta; com [season], só
+  /// os jogos da temporada.
+  Future<List<MyTeamTotals>> myTotals({Season? season}) async {
+    final rows = await _client.rpc<List<dynamic>>(
+      'my_player_totals',
+      params: {
+        'p_from': season?.start.toUtc().toIso8601String(),
+        'p_to': season?.end.toUtc().toIso8601String(),
+      },
+    );
+    return [
+      for (final row in rows) MyTeamTotals.fromMap(row as Map<String, dynamic>),
+    ];
+  }
 }
 
 final playerStatsRepositoryProvider = Provider<PlayerStatsRepository>(
@@ -104,3 +119,10 @@ final teamPlayerTotalsProvider = FutureProvider.autoDispose
           .watch(playerStatsRepositoryProvider)
           .teamTotals(teamId, season: ref.watch(seasonProvider)),
     );
+
+/// Números do jogador logado em cada um dos seus times.
+final myTotalsProvider = FutureProvider.autoDispose<List<MyTeamTotals>>(
+  (ref) => ref
+      .watch(playerStatsRepositoryProvider)
+      .myTotals(season: ref.watch(seasonProvider)),
+);

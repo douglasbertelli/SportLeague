@@ -28,6 +28,8 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
         sharedPreferencesProvider.overrideWithValue(preferences),
         currentUserIdProvider.overrideWithValue('u1'),
         teamRepositoryProvider.overrideWithValue(FakeTeamRepository([teamA])),
+        // Como em `main.dart`: os times seguem o tipo de perfil.
+        isPlayerProvider.overrideWithValue(role == UserRole.player),
         athleteRepositoryProvider.overrideWithValue(FakeAthleteRepository({})),
         gameRepositoryProvider.overrideWithValue(FakeGameRepository({})),
         disputeRepositoryProvider.overrideWithValue(FakeDisputeRepository()),
@@ -126,11 +128,44 @@ void main() {
     },
   );
 
-  testWidgets('jogador continua sem a barra inferior', (tester) async {
+  testWidgets('jogador navega pelas abas Início e Perfil', (tester) async {
     await _pumpHome(tester, UserRole.player);
 
-    expect(find.byType(NavigationBar), findsNothing);
+    final bar = find.byType(NavigationBar);
+    expect(bar, findsOneWidget);
+    expect(
+      find.descendant(of: bar, matching: find.byType(NavigationDestination)),
+      findsNWidgets(2),
+    );
     expect(find.text('Olá, Ana!'), findsOneWidget);
+    expect(find.byTooltip('Menu'), findsOneWidget);
+    // No topo, a foto (iniciais) e o nome do jogador, não o time.
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Ana Souza')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('AS')),
+      findsOneWidget,
+    );
+    // Ainda não é atleta de nenhum time: o painel convida a entrar num (o
+    // Amigos FC é do u1 como dono, não conta).
+    expect(find.text('Entrar num time'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Buscar times'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Buscar times'), findsOneWidget);
+
+    await tester.tap(find.descendant(of: bar, matching: find.text('Perfil')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Perfil')),
+      findsOneWidget,
+    );
+    expect(find.text('Dados de atleta'), findsOneWidget);
+    // Os números ficam no painel do Início.
+    expect(find.text('Meus números'), findsNothing);
   });
 }

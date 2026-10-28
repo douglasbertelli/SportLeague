@@ -74,7 +74,9 @@ class _TeamSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: Text(
-              ref.watch(isCoachProvider) ? 'Meus times' : 'Gerenciar times',
+              ref.watch(isCoachProvider) || ref.watch(isPlayerProvider)
+                  ? 'Meus times'
+                  : 'Gerenciar times',
             ),
             onTap: () {
               Navigator.of(context).pop();
