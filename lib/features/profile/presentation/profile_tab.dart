@@ -11,8 +11,10 @@ import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
+import 'my_numbers_section.dart';
 
-/// Aba Perfil: dados da conta, endereço e saída.
+/// Aba Perfil: dados da conta, endereço e saída. O jogador vê também os dados
+/// de atleta e os números dele em todos os times.
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key, required this.profile});
 
@@ -52,6 +54,24 @@ class ProfileTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
+        if (profile.isPlayer) ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.sports_soccer),
+              title: const Text('Dados de atleta'),
+              subtitle: Text(
+                profile.hasAthleteData
+                    ? _athleteSummary(profile)
+                    : 'Posição, pé dominante, altura e nascimento',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(Routes.athleteData, extra: profile),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const MyNumbersSection(),
+          const SizedBox(height: 24),
+        ],
         const Card(child: AppColorTile()),
         const SizedBox(height: 8),
         Card(
@@ -86,7 +106,20 @@ class ProfileTab extends ConsumerWidget {
   }
 }
 
-/// Foto do perfil; o técnico toca para enviar, trocar ou remover a dele.
+/// "Meia · Pé direito · 1,78 m · 24 anos", só com o que foi preenchido.
+String _athleteSummary(Profile profile) => [
+  ?profile.preferredPosition,
+  if (profile.preferredFoot case final foot?)
+    foot == PreferredFoot.both
+        ? 'Ambidestro'
+        : 'Pé ${foot.label.toLowerCase()}',
+  if (profile.heightCm case final height?)
+    '${(height / 100).toStringAsFixed(2).replaceAll('.', ',')} m',
+  if (profile.age() case final age?) '$age anos',
+].join(' · ');
+
+/// Foto do perfil; o técnico e o jogador tocam para enviar, trocar ou remover
+/// a deles.
 class _Avatar extends ConsumerStatefulWidget {
   const _Avatar({required this.profile});
 
@@ -120,7 +153,9 @@ class _AvatarState extends ConsumerState<_Avatar> {
       }
       ref.invalidate(currentProfileProvider);
     } catch (_) {
-      if (mounted) showErrorSnackBar(context, 'Não foi possível salvar a foto.');
+      if (mounted) {
+        showErrorSnackBar(context, 'Não foi possível salvar a foto.');
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -143,7 +178,7 @@ class _AvatarState extends ConsumerState<_Avatar> {
       onForegroundImageError: avatarUrl == null ? null : (_, _) {},
       child: Text(initials, style: Theme.of(context).textTheme.headlineSmall),
     );
-    if (!profile.isCoach) return avatar;
+    if (!profile.isCoach && !profile.isPlayer) return avatar;
 
     return Semantics(
       button: true,

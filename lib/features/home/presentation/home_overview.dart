@@ -57,6 +57,13 @@ class HomeOverview extends ConsumerWidget {
             ),
           ]
         : [
+            if (profile.isPlayer)
+              _ActionTile(
+                icon: Icons.account_circle_outlined,
+                title: 'Meu perfil',
+                subtitle: 'Foto, dados de atleta e seus números',
+                onTap: () => context.push(Routes.myProfile),
+              ),
             _ActionTile(
               icon: Icons.search,
               title: 'Buscar times',

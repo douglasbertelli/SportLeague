@@ -4,15 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/widgets/theme_mode_button.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../teams/presentation/team_search_page.dart';
 import 'admin_home_page.dart';
 import 'app_drawer.dart';
 import 'home_overview.dart';
 
-/// Tela inicial. O administrador tem navegação por abas; o jogador, por
-/// enquanto, só a tela de boas-vindas.
+/// Tela inicial. O administrador e o técnico têm navegação por abas; o
+/// jogador, a tela de boas-vindas e o Meu perfil pela barra do topo.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -34,15 +33,11 @@ class HomePage extends ConsumerWidget {
           const TeamSearchButton(),
           const ThemeModeButton(),
           if (profile.value != null) const AppDrawerButton(),
+          // Endereço e Sair ficam no Meu perfil.
           IconButton(
-            tooltip: 'Editar endereço',
-            icon: const Icon(Icons.location_on_outlined),
-            onPressed: () => context.push(Routes.editAddress),
-          ),
-          IconButton(
-            tooltip: 'Sair',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            tooltip: 'Meu perfil',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => context.push(Routes.myProfile),
           ),
         ],
       ),

@@ -481,10 +481,14 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
   FakePlayerStatsRepository({
     List<PlayerGameStats> stats = const [],
     this.totalsByTeam = const {},
+    this.mine = const [],
   }) : stats = [...stats];
 
   final List<PlayerGameStats> stats;
   final Map<String, List<AthleteTotals>> totalsByTeam;
+
+  /// Números do jogador logado, por time.
+  final List<MyTeamTotals> mine;
   final goals = <({String scorer, String? assist})>[];
 
   @override
@@ -517,6 +521,9 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
     String teamId, {
     Season? season,
   }) async => totalsByTeam[teamId] ?? const [];
+
+  @override
+  Future<List<MyTeamTotals>> myTotals({Season? season}) async => mine;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

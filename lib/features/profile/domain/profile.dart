@@ -24,6 +24,20 @@ enum SubscriptionPlan {
       SubscriptionPlan.values.firstWhere((plan) => plan.name == value);
 }
 
+/// Pé dominante do jogador.
+enum PreferredFoot {
+  right('Direito'),
+  left('Esquerdo'),
+  both('Os dois');
+
+  const PreferredFoot(this.label);
+
+  final String label;
+
+  static PreferredFoot fromName(String value) =>
+      PreferredFoot.values.firstWhere((foot) => foot.name == value);
+}
+
 class Profile {
   const Profile({
     required this.id,
@@ -32,6 +46,10 @@ class Profile {
     required this.plan,
     this.phone,
     this.avatarUrl,
+    this.birthDate,
+    this.preferredPosition,
+    this.preferredFoot,
+    this.heightCm,
   });
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -44,6 +62,16 @@ class Profile {
     plan: SubscriptionPlan.fromName(map['plan'] as String),
     phone: map['phone'] as String?,
     avatarUrl: map['avatar_url'] as String?,
+    birthDate: switch (map['birth_date']) {
+      final String date => DateTime.parse(date),
+      _ => null,
+    },
+    preferredPosition: map['preferred_position'] as String?,
+    preferredFoot: switch (map['preferred_foot']) {
+      final String name => PreferredFoot.fromName(name),
+      _ => null,
+    },
+    heightCm: map['height_cm'] as int?,
   );
 
   /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
@@ -59,10 +87,34 @@ class Profile {
   final String? phone;
   final String? avatarUrl;
 
+  /// Dados de atleta, que o jogador preenche no Perfil.
+  final DateTime? birthDate;
+  final String? preferredPosition;
+  final PreferredFoot? preferredFoot;
+  final int? heightCm;
+
+  /// Idade completa em [today] (hoje, por padrão).
+  int? age([DateTime? today]) {
+    final birth = birthDate;
+    if (birth == null) return null;
+    final now = today ?? DateTime.now();
+    final hadBirthday =
+        now.month > birth.month ||
+        (now.month == birth.month && now.day >= birth.day);
+    return now.year - birth.year - (hadBirthday ? 0 : 1);
+  }
+
+  bool get hasAthleteData =>
+      birthDate != null ||
+      preferredPosition != null ||
+      preferredFoot != null ||
+      heightCm != null;
+
   bool get needsRole => role == null;
   bool get needsName => fullName == placeholderName;
   bool get isAdmin => role == UserRole.admin;
   bool get isCoach => role == UserRole.coach;
+  bool get isPlayer => role == UserRole.player;
 
   /// Administrador ou técnico: usa o app pelo time ativo (Início, Jogos,
   /// Atletas).

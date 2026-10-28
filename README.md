@@ -213,7 +213,7 @@ supabase/
 
 | Tabela          | Descrição                                                        |
 | --------------- | ---------------------------------------------------------------- |
-| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`) e foto (o técnico envia a dele pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) |
+| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |

@@ -132,5 +132,7 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text('Olá, Ana!'), findsOneWidget);
     expect(find.text('Buscar times'), findsOneWidget);
+    expect(find.text('Meu perfil'), findsOneWidget);
+    expect(find.byTooltip('Meu perfil'), findsOneWidget);
   });
 }
