@@ -256,21 +256,27 @@ class _GameCardState extends ConsumerState<GameCard> {
     }
 
     final opponentName = _game.opponentNameFor(widget.viewerTeamId);
-    if (action != _GameAction.accept) {
-      final decline = action == _GameAction.decline;
+    // Cancelar pede o motivo; recusar o convite, só a confirmação.
+    String? reason;
+    if (action == _GameAction.decline) {
       final confirmed = await confirmAction(
         context,
-        title: decline ? 'Recusar amistoso?' : 'Cancelar amistoso?',
-        message: decline
-            ? 'O amistoso contra $opponentName será recusado e irá para '
-                  'Cancelados.'
-            : 'O amistoso contra $opponentName será cancelado'
-                  '${_game.opponentTeamId != null ? ' para os dois times' : ''}.',
-        confirmLabel: decline ? 'Recusar' : 'Cancelar amistoso',
-        confirmIcon: decline ? Icons.close : Icons.event_busy,
+        title: 'Recusar amistoso?',
+        message:
+            'O amistoso contra $opponentName será recusado e irá para '
+            'Cancelados.',
+        confirmLabel: 'Recusar',
+        confirmIcon: Icons.close,
         cancelLabel: 'Voltar',
       );
       if (!confirmed) return;
+    } else if (action == _GameAction.cancel) {
+      reason = await askCancelReason(
+        context,
+        opponentName: opponentName,
+        bothTeams: _game.opponentTeamId != null,
+      );
+      if (reason == null) return;
     }
 
     setState(() => _loading = true);
@@ -278,7 +284,7 @@ class _GameCardState extends ConsumerState<GameCard> {
       final repository = ref.read(gameRepositoryProvider);
       await (action == _GameAction.accept
           ? repository.accept(_game.id!)
-          : repository.cancel(_game.id!));
+          : repository.cancel(_game.id!, reason: reason));
       ref.invalidate(teamGamesProvider(widget.viewerTeamId));
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
@@ -443,6 +449,11 @@ class _GameCardState extends ConsumerState<GameCard> {
                       const SizedBox(height: 12),
                       Text(statusLine, style: mutedStyle),
                     ],
+                    if (_game.status == GameStatus.canceled)
+                      if (_game.cancelReason case final reason?) ...[
+                        const SizedBox(height: 4),
+                        Text('Motivo: $reason', style: mutedStyle),
+                      ],
                     if (dispute != null) ...[
                       const SizedBox(height: 16),
                       _DisputeBox(
@@ -823,6 +834,113 @@ class _ScoreSheetState extends State<_ScoreSheet> {
         ),
         const SheetBackButton(),
       ],
+    );
+  }
+}
+
+/// Pede o motivo do cancelamento (obrigatório, de 3 a 200 caracteres) e
+/// confirma. Devolve o motivo, ou nulo se voltar.
+Future<String?> askCancelReason(
+  BuildContext context, {
+  required String opponentName,
+  required bool bothTeams,
+}) => showModalBottomSheet<String>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (_) =>
+      _CancelReasonSheet(opponentName: opponentName, bothTeams: bothTeams),
+);
+
+class _CancelReasonSheet extends StatefulWidget {
+  const _CancelReasonSheet({
+    required this.opponentName,
+    required this.bothTeams,
+  });
+
+  final String opponentName;
+  final bool bothTeams;
+
+  @override
+  State<_CancelReasonSheet> createState() => _CancelReasonSheetState();
+}
+
+class _CancelReasonSheetState extends State<_CancelReasonSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Cancelar amistoso?', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              'O amistoso contra ${widget.opponentName} será cancelado'
+              '${widget.bothTeams ? ' para os dois times' : ''}. Conte o '
+              'motivo: ${widget.bothTeams ? 'os dois times veem' : 'ele fica no card'}.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _controller,
+              autofocus: true,
+              maxLength: 200,
+              minLines: 2,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Motivo do cancelamento',
+                hintText: 'Ex.: Chuva, falta de jogadores, campo indisponível',
+              ),
+              validator: (value) => (value ?? '').trim().length < 3
+                  ? 'Informe o motivo do cancelamento'
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              onPressed: _confirm,
+              icon: const Icon(Icons.event_busy),
+              label: const Text('Cancelar amistoso'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Voltar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
