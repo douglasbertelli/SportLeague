@@ -8,6 +8,7 @@ import '../../../core/theme/app_color_picker.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
+import 'edit_text_sheet.dart';
 
 /// Aba Config (barra inferior de todos): a conta (e-mail, tipo de perfil e,
 /// do administrador, o plano), Meu código (jogador e técnico), a cor do time, o endereço e, à
@@ -23,6 +24,15 @@ class SettingsTab extends ConsumerWidget {
     final address = ref.watch(myAddressProvider).value;
 
     final items = [
+      // O jogador troca o nome completo aqui; no Perfil aparece o apelido.
+      if (profile != null && profile.isPlayer)
+        ListTile(
+          leading: const Icon(Icons.badge_outlined),
+          title: const Text('Nome'),
+          subtitle: Text(profile.fullName),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => editFullName(context, ref, profile),
+        ),
       if (profile?.code case final code?)
         ListTile(
           leading: const Icon(Icons.qr_code_2),

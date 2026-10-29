@@ -25,10 +25,24 @@ class _FakeProfileRepository implements ProfileRepository {
   final removed = <String>[];
   var regenerated = 0;
   String? renamed;
+  String? nickname;
+  final coverUploaded = <String>[];
+  final coverRemoved = <String>[];
+
+  @override
+  Future<void> uploadCover(String userId, PickedImage image) async =>
+      coverUploaded.add(userId);
+
+  @override
+  Future<void> removeCover(String userId) async => coverRemoved.add(userId);
 
   @override
   Future<void> updateName(String userId, String fullName) async =>
       renamed = fullName;
+
+  @override
+  Future<void> updateNickname(String userId, String value) async =>
+      nickname = value;
 
   @override
   Future<String> regenerateCode() async {
@@ -124,9 +138,103 @@ void main() {
     expect(find.text('Dados de atleta'), findsNothing);
   });
 
-  testWidgets('o jogador edita o próprio nome', (tester) async {
+  testWidgets('o jogador envia a capa; a foto fica metade sobre ela', (
+    tester,
+  ) async {
     final profiles = await _pump(tester, _profile(UserRole.player));
-    await tester.tap(find.byTooltip('Editar nome'));
+    final cover = find.bySemanticsLabel(RegExp('Adicionar capa'));
+    expect(cover, findsOneWidget);
+
+    // A foto fica centralizada, com o centro na borda de baixo da capa.
+    final coverRect = tester.getRect(cover);
+    final avatarCenter = tester.getCenter(
+      find.bySemanticsLabel(RegExp('Adicionar foto')),
+    );
+    expect(avatarCenter.dy, moreOrLessEquals(coverRect.bottom, epsilon: 1));
+    expect(avatarCenter.dx, moreOrLessEquals(coverRect.center.dx, epsilon: 1));
+
+    await tester.tap(cover);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher da galeria'));
+    await tester.pumpAndSettle();
+    expect(profiles.coverUploaded, ['u1']);
+    // A foto de perfil não foi mexida.
+    expect(profiles.uploaded, isEmpty);
+  });
+
+  testWidgets('o jogador remove a capa; outros perfis não têm capa', (
+    tester,
+  ) async {
+    final profiles = await _pump(
+      tester,
+      const Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+        coverUrl: 'http://localhost/capa.png',
+      ),
+    );
+    await tester.tap(find.bySemanticsLabel(RegExp('Trocar capa')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remover capa'));
+    await tester.pumpAndSettle();
+    expect(profiles.coverRemoved, ['u1']);
+
+    await _pump(tester, _profile(UserRole.coach));
+    expect(find.bySemanticsLabel(RegExp('capa')), findsNothing);
+  });
+
+  testWidgets('o Perfil mostra o apelido, e o jogador edita', (tester) async {
+    // Sem apelido, mostra o nome.
+    var profiles = await _pump(tester, _profile(UserRole.player));
+    expect(find.text('Ana Souza'), findsOneWidget);
+    await tester.tap(find.byTooltip('Adicionar apelido'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Apelido'),
+      ' Aninha ',
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    expect(profiles.nickname, 'Aninha');
+
+    // Com apelido, ele aparece no lugar do nome.
+    profiles = await _pump(
+      tester,
+      const Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+        nickname: 'Aninha',
+      ),
+    );
+    expect(find.text('Aninha'), findsOneWidget);
+    expect(find.text('Ana Souza'), findsNothing);
+    expect(
+      const Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        plan: SubscriptionPlan.free,
+      ).displayName,
+      'Ana Souza',
+    );
+    expect(find.byTooltip('Editar apelido'), findsOneWidget);
+
+    // O administrador não tem apelido.
+    await _pump(tester, _profile(UserRole.admin));
+    expect(find.byTooltip('Adicionar apelido'), findsNothing);
+  });
+
+  testWidgets('o jogador edita o nome completo em Config', (tester) async {
+    final profiles = await _pump(
+      tester,
+      _profile(UserRole.player),
+      page: const Scaffold(body: SettingsTab()),
+    );
+    expect(find.text('Nome'), findsOneWidget);
+    await tester.tap(find.text('Ana Souza'));
     await tester.pumpAndSettle();
 
     final field = find.widgetWithText(TextFormField, 'Nome');
@@ -140,10 +248,6 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
     expect(profiles.renamed, 'Ana Paula Souza');
-
-    // O administrador e o técnico não têm o lápis.
-    await _pump(tester, _profile(UserRole.admin));
-    expect(find.byTooltip('Editar nome'), findsNothing);
   });
 
   testWidgets('Configurações: código, cor e endereço; o Sair por último', (

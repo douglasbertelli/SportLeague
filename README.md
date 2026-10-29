@@ -187,7 +187,11 @@ configurado.
      (com o placar ao vivo), só para acompanhar: sem marcar jogos, mexer no
      placar ou montar a escalação. Tocar no chip de um time troca o time
      ativo, e o painel inteiro (e a cor do app) vai junto.
-   - **Perfil**: a foto, o nome e, do jogador, os dados de atleta (posição,
+   - **Perfil**: do jogador, a **capa** (imagem larga 16:9, enviada por
+     ele, com a foto centralizada metade sobre a borda de baixo); a foto,
+     o nome (do jogador, o **apelido**, editado pelo lápis; sem apelido,
+     o nome completo, que ele troca em Config › Nome) e, do jogador, os
+     dados de atleta (posição,
      pé dominante, altura e nascimento, com Editar). O resto fica na aba
      **Config** da barra inferior (de todos os perfis), a tela de
      **Configurações**: a conta (e-mail, tipo de perfil e, só do
@@ -233,7 +237,7 @@ supabase/
 
 | Tabela          | Descrição                                                        |
 | --------------- | ---------------------------------------------------------------- |
-| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). Jogador e técnico têm um **código pessoal** (`code`: JG ou TC + 6), criado pelo banco com o papel e trocado só por `regenerate_my_code`; o administrador convida pelo código. A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números, no Início) |
+| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta), capa do jogador (`cover_url`, na mesma pasta), apelido do jogador (`nickname`, até 40 caracteres, mostrado no perfil dele) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). Jogador e técnico têm um **código pessoal** (`code`: JG ou TC + 6), criado pelo banco com o papel e trocado só por `regenerate_my_code`; o administrador convida pelo código. A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números, no Início) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
