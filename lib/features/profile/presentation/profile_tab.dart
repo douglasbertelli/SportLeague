@@ -5,13 +5,18 @@ import 'package:go_router/go_router.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/theme/app_color_picker.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../address/data/address_repository.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 import 'edit_text_sheet.dart';
 
-/// Aba Perfil: a foto, o nome e, do jogador, os dados de atleta. O resto
-/// (Meu código, cor do time, endereço e Sair) fica na aba Config.
+/// Aba Perfil. Do jogador: a capa, a foto, o apelido e os dados de atleta (o
+/// resto fica na aba Config). Do administrador e do técnico, tudo aqui: a
+/// conta, Meu código (técnico), a cor do time, o endereço e o Sair.
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({super.key, required this.profile});
 
@@ -19,19 +24,14 @@ class ProfileTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!profile.isPlayer) return _StaffProfile(profile: profile);
     final theme = Theme.of(context);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        // O jogador tem a capa, com a foto sobreposta na borda de baixo.
-        if (profile.isPlayer)
-          _CoverHeader(profile: profile)
-        else
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Center(child: _Avatar(profile: profile)),
-          ),
+        // A capa, com a foto sobreposta na borda de baixo.
+        _CoverHeader(profile: profile),
         const SizedBox(height: 12),
         // Nome e dados de atleta, com a margem dos lados (a capa vai de
         // borda a borda).
@@ -48,38 +48,124 @@ class ProfileTab extends ConsumerWidget {
 
   List<Widget> _details(BuildContext context, WidgetRef ref, ThemeData theme) {
     return [
-      if (profile.isPlayer)
-        // O jogador mostra o apelido (ou o nome, sem apelido) e troca pelo
-        // lápis; o nome completo fica em Config.
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(width: 48),
-            Flexible(
-              child: Text(
-                profile.displayName,
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
+      // O apelido (ou o nome, sem apelido), trocado pelo lápis; o nome
+      // completo fica em Config.
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(width: 48),
+          Flexible(
+            child: Text(
+              profile.displayName,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          IconButton(
+            tooltip: profile.nickname == null
+                ? 'Adicionar apelido'
+                : 'Editar apelido',
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            onPressed: () => editNickname(context, ref, profile),
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      _AthleteDataCard(profile: profile),
+    ];
+  }
+}
+
+/// Perfil do administrador e do técnico, como antes da aba Config: a foto, o
+/// nome, o e-mail e o tipo de perfil (e, do administrador, o plano); num
+/// grupo, Meu código (técnico), a cor do time e o endereço; o Sair à parte.
+class _StaffProfile extends ConsumerWidget {
+  const _StaffProfile({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final email = ref.watch(supabaseClientProvider).auth.currentUser?.email;
+    final address = ref.watch(myAddressProvider).value;
+    final items = [
+      if (profile.code case final code?)
+        ListTile(
+          leading: const Icon(Icons.qr_code_2),
+          title: const Text('Meu código'),
+          subtitle: Text('$code · para o administrador te convidar'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.myCode),
+        ),
+      const AppColorTile(),
+      ListTile(
+        leading: const Icon(Icons.location_on_outlined),
+        title: const Text('Endereço'),
+        subtitle: address == null
+            ? null
+            : Text(
+                '${address.street}, ${address.number} - '
+                '${address.city}/${address.state}',
               ),
-            ),
-            IconButton(
-              tooltip: profile.nickname == null
-                  ? 'Adicionar apelido'
-                  : 'Editar apelido',
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              onPressed: () => editNickname(context, ref, profile),
-            ),
-          ],
-        )
-      else
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(Routes.editAddress),
+      ),
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Center(child: _Avatar(profile: profile)),
+        const SizedBox(height: 12),
         Text(
           profile.fullName,
           style: theme.textTheme.titleLarge,
           textAlign: TextAlign.center,
         ),
-      const SizedBox(height: 24),
-      if (profile.isPlayer) _AthleteDataCard(profile: profile),
-    ];
+        if (email != null)
+          Text(
+            email,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        const SizedBox(height: 12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          children: [
+            if (profile.role case final role?) Chip(label: Text(role.label)),
+            // Só o administrador tem plano.
+            if (profile.isAdmin)
+              Chip(label: Text('Plano ${profile.plan.label}')),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Card(
+          child: Column(
+            children: [
+              for (final (index, item) in items.indexed) ...[
+                if (index > 0) const Divider(height: 1),
+                item,
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              'Sair',
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+            onTap: () => ref.read(authRepositoryProvider).signOut(),
+          ),
+        ),
+      ],
+    );
   }
 }
 

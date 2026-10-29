@@ -305,6 +305,21 @@ void main() {
     expect(profiles.regenerated, 1);
   });
 
+  testWidgets('o Perfil do técnico continua com tudo, sem plano', (
+    tester,
+  ) async {
+    await _pump(tester, _profile(UserRole.coach, code: 'TC2345AB'));
+    expect(find.text('Ana Souza'), findsOneWidget);
+    expect(find.text('Técnico'), findsOneWidget);
+    expect(find.textContaining('Plano'), findsNothing);
+    expect(find.text('Meu código'), findsOneWidget);
+    expect(find.text('Endereço'), findsOneWidget);
+    expect(find.text('Sair'), findsOneWidget);
+    // Sem capa nem apelido (são do jogador).
+    expect(find.bySemanticsLabel(RegExp('capa')), findsNothing);
+    expect(find.byTooltip('Adicionar apelido'), findsNothing);
+  });
+
   testWidgets('página Meu código do técnico: TC', (tester) async {
     await _pump(
       tester,

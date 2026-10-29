@@ -86,12 +86,17 @@ void main() {
 
       final bar = find.byType(NavigationBar);
       expect(bar, findsOneWidget);
-      for (final label in ['Início', 'Jogos', 'Atletas', 'Perfil', 'Config']) {
+      for (final label in ['Início', 'Jogos', 'Atletas', 'Perfil']) {
         expect(
           find.descendant(of: bar, matching: find.text(label)),
           findsOneWidget,
         );
       }
+      // A aba Config é só do jogador.
+      expect(
+        find.descendant(of: bar, matching: find.text('Config')),
+        findsNothing,
+      );
       expect(find.text('Olá, Ana!'), findsOneWidget);
       // O título mostra o time ativo.
       expect(
@@ -125,17 +130,8 @@ void main() {
       await tester.tap(find.descendant(of: bar, matching: find.text('Perfil')));
       await tester.pumpAndSettle();
       expect(find.text('Ana Souza'), findsOneWidget);
-
-      // Endereço e Sair ficam na aba Config.
-      await tester.tap(find.descendant(of: bar, matching: find.text('Config')));
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.text('Configurações'),
-        ),
-        findsOneWidget,
-      );
+      // O Perfil do administrador continua com tudo: plano, endereço e Sair.
+      expect(find.text('Plano Gratuito'), findsOneWidget);
       expect(
         find.text('Avenida Paulista, 1000 - São Paulo/SP'),
         findsOneWidget,
