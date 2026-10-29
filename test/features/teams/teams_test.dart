@@ -1484,14 +1484,52 @@ void main() {
       expect(find.text('Editar'), findsNothing);
       await tester.tap(find.text('Cancelar amistoso'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('Cancelar amistoso'),
-        ),
+      final confirm = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Cancelar amistoso'),
       );
+
+      // Sem motivo não cancela.
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(find.text('Informe o motivo do cancelamento'), findsOneWidget);
+      expect(games.canceled, isEmpty);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Motivo do cancelamento'),
+        '  Campo alagado pela chuva ',
+      );
+      await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(games.canceled, ['g1']);
+      expect(games.cancelReasons['g1'], 'Campo alagado pela chuva');
+    });
+
+    testWidgets('o card do amistoso cancelado mostra o motivo', (
+      tester,
+    ) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: FakeGameRepository({
+          'team-a': [
+            Game(
+              id: 'g2',
+              teamId: 'team-a',
+              opponent: 'Real Bairro',
+              opponentTeamId: 'team-rival',
+              modality: Modality.society,
+              scheduledAt: DateTime(2026, 11, 7, 15),
+              status: GameStatus.canceled,
+              canceledByTeamId: 'team-rival',
+              cancelReason: 'Faltaram jogadores',
+            ),
+          ],
+        }),
+      );
+      container.read(gamesTabRequestProvider.notifier).open(GameStage.canceled);
+      await _pumpTab(tester, container, GamesTab(now: DateTime(2026, 10, 22)));
+      expect(find.text('Cancelado por Real Bairro'), findsOneWidget);
+      expect(find.text('Motivo: Faltaram jogadores'), findsOneWidget);
     });
   });
 

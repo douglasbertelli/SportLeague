@@ -45,6 +45,7 @@ class Game {
     this.opponentCity,
     this.status = GameStatus.scheduled,
     this.canceledByTeamId,
+    this.cancelReason,
     this.hostIsHome = true,
     this.modality,
     this.opponentTeamId,
@@ -71,6 +72,7 @@ class Game {
       opponentCity: opponentTeam?['city'] as String?,
       status: GameStatus.fromName(map['status'] as String? ?? 'scheduled'),
       canceledByTeamId: map['canceled_by_team_id'] as String?,
+      cancelReason: map['cancel_reason'] as String?,
       hostIsHome: map['host_is_home'] as bool? ?? true,
       opponent: map['opponent'] as String,
       scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
@@ -112,6 +114,9 @@ class Game {
 
   /// Time que cancelou ou recusou; nulo se o adversário foi excluído.
   final String? canceledByTeamId;
+
+  /// Motivo que quem cancelou escreveu; os dois times veem.
+  final String? cancelReason;
 
   /// Se o time que marcou joga como mandante; o adversário fica com o lado
   /// oposto.

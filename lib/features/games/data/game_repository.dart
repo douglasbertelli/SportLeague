@@ -68,9 +68,15 @@ class GameRepository {
   Future<void> accept(String gameId) =>
       _setStatus(gameId, GameStatus.scheduled);
 
-  /// Cancela (ou recusa, se pendente). Vale para os dois times; o banco
-  /// registra qual deles cancelou.
-  Future<void> cancel(String gameId) => _setStatus(gameId, GameStatus.canceled);
+  /// Cancela (ou recusa, se pendente), com o [reason] escrito por quem
+  /// cancelou. Vale para os dois times; o banco registra qual deles cancelou.
+  Future<void> cancel(String gameId, {String? reason}) => _client
+      .from('games')
+      .update({
+        'status': GameStatus.canceled.name,
+        'cancel_reason': reason?.trim(),
+      })
+      .eq('id', gameId);
 
   Future<void> _setStatus(String gameId, GameStatus status) =>
       _client.from('games').update({'status': status.name}).eq('id', gameId);

@@ -14,6 +14,7 @@ import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/opponent.dart';
 import '../../venues/domain/venue.dart';
+import 'game_card.dart';
 import 'games_tab.dart';
 import 'opponent_picker_page.dart';
 
@@ -270,20 +271,15 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
 
   Future<void> _cancelGame() async {
     final game = widget.game!;
-    final confirmed = await confirmAction(
+    final reason = await askCancelReason(
       context,
-      title: 'Cancelar amistoso?',
-      message:
-          'O amistoso contra ${game.opponent} irá para Cancelados'
-          '${game.opponentTeamId != null ? ' para os dois times' : ''}.',
-      confirmLabel: 'Cancelar amistoso',
-      confirmIcon: Icons.event_busy,
-      cancelLabel: 'Voltar',
+      opponentName: game.opponent,
+      bothTeams: game.opponentTeamId != null,
     );
-    if (!confirmed) return;
+    if (reason == null) return;
     await _run(
       game.teamId,
-      () => ref.read(gameRepositoryProvider).cancel(game.id!),
+      () => ref.read(gameRepositoryProvider).cancel(game.id!, reason: reason),
     );
   }
 

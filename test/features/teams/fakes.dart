@@ -237,7 +237,13 @@ class FakeGameRepository implements GameRepository {
   Future<void> accept(String gameId) async => accepted.add(gameId);
 
   @override
-  Future<void> cancel(String gameId) async => canceled.add(gameId);
+  Future<void> cancel(String gameId, {String? reason}) async {
+    canceled.add(gameId);
+    cancelReasons[gameId] = reason;
+  }
+
+  /// Motivo enviado em cada cancelamento.
+  final cancelReasons = <String, String?>{};
 
   final scores = <String, (int, int)>{};
 
