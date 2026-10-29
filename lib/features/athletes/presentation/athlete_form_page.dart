@@ -29,8 +29,12 @@ class AthleteFormPage extends ConsumerStatefulWidget {
 class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
-    text: widget.athlete?.name,
+    text: _isLinked ? widget.athlete?.displayName : widget.athlete?.name,
   );
+
+  /// Atleta vinculado a uma conta: o nome (ou apelido) vem do perfil do
+  /// jogador e só ele altera.
+  bool get _isLinked => widget.athlete?.profileId != null;
   late final _numberController = TextEditingController(
     text: widget.athlete?.jerseyNumber?.toString(),
   );
@@ -119,7 +123,8 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     final athlete = Athlete(
       id: _saved?.id,
       teamId: teamId,
-      name: _nameController.text,
+      // O vinculado mantém o nome cadastrado (o campo só mostra o do perfil).
+      name: _isLinked ? _saved!.name : _nameController.text,
       position: _position,
       jerseyNumber: int.tryParse(_numberController.text),
       profileId: _saved?.profileId,
@@ -161,7 +166,7 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     final confirmed = await confirmDelete(
       context,
       title: 'Excluir atleta?',
-      message: '${athlete.name} será removido do time.',
+      message: '${athlete.displayName} será removido do time.',
     );
     if (!confirmed) return;
     await _run(
@@ -255,12 +260,28 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nome do atleta'),
+                readOnly: _isLinked,
+                enabled: !_isLinked,
+                decoration: InputDecoration(
+                  labelText: 'Nome do atleta',
+                  helperText: _isLinked
+                      ? 'Vem do perfil do jogador: só ele altera o nome e o '
+                            'apelido'
+                      : null,
+                  helperMaxLines: 2,
+                  suffixIcon: _isLinked
+                      ? const Icon(Icons.lock_outline, size: 18)
+                      : null,
+                ),
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.next,
-                maxLength: 120,
-                validator: (value) =>
-                    Validators.name(value, message: 'Informe o nome do atleta'),
+                maxLength: _isLinked ? null : 120,
+                validator: (value) => _isLinked
+                    ? null
+                    : Validators.name(
+                        value,
+                        message: 'Informe o nome do atleta',
+                      ),
               ),
               const SizedBox(height: 8),
               Row(

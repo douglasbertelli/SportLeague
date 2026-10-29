@@ -21,7 +21,13 @@ class PlayerGameStats {
       gameId: map['game_id'] as String,
       teamId: map['team_id'] as String,
       athleteId: map['athlete_id'] as String,
-      athleteName: athlete?['name'] as String?,
+      // Do jogador vinculado, o apelido (ou o nome do perfil); do atleta sem
+      // conta, o nome cadastrado no time.
+      athleteName: switch (athlete?['profile']) {
+        {'nickname': final String nickname} => nickname,
+        {'full_name': final String fullName} => fullName,
+        _ => athlete?['name'] as String?,
+      },
       jerseyNumber: athlete?['jersey_number'] as int?,
       goals: map['goals'] as int? ?? 0,
       assists: map['assists'] as int? ?? 0,

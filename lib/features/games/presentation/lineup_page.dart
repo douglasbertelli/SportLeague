@@ -230,7 +230,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
         children: [
-          AthleteAvatar(name: athlete.name, photoUrl: athlete.photoUrl),
+          AthleteAvatar(name: athlete.displayName, photoUrl: athlete.photoUrl),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -239,7 +239,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
                 Text(
                   [
                     if (athlete.jerseyNumber case final number?) '$number',
-                    athlete.name,
+                    athlete.displayName,
                   ].join(' · '),
                 ),
                 if (athlete.position case final position?)

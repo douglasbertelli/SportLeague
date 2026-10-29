@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../athletes/data/athlete_repository.dart';
 import '../../games/data/dispute_repository.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
@@ -48,6 +49,8 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
       ref
         ..invalidate(teamRequestsProvider(teamId))
         ..invalidate(teamGamesProvider(teamId))
+        // Apelido e foto dos jogadores podem ter mudado no perfil deles.
+        ..invalidate(teamAthletesProvider(teamId))
         ..invalidate(teamDisputesProvider(teamId));
     }
     await ref.read(myInvitesProvider.future);

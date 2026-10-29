@@ -82,7 +82,7 @@ class _AthleteList extends ConsumerWidget {
                       Card(
                         child: ListTile(
                           leading: _AthletePhoto(athlete: athlete),
-                          title: Text(athlete.name),
+                          title: Text(athlete.displayName),
                           subtitle: switch ([
                             ?athlete.position,
                             if (athlete.jerseyNumber case final number?)
@@ -119,7 +119,7 @@ class _AthletePhoto extends StatelessWidget {
       radius: 24,
       foregroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
       onForegroundImageError: photoUrl == null ? null : (_, _) {},
-      child: Text(athlete.name[0].toUpperCase()),
+      child: Text(athlete.displayName[0].toUpperCase()),
     );
   }
 }

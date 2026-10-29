@@ -22,6 +22,8 @@ class Athlete {
     this.photoPath,
     this.photoUrl,
     this.profilePhotoUrl,
+    this.profileNickname,
+    this.profileFullName,
   });
 
   factory Athlete.fromMap(Map<String, dynamic> map) => Athlete(
@@ -34,6 +36,14 @@ class Athlete {
     photoPath: map['photo_path'] as String?,
     profilePhotoUrl: switch (map['profile']) {
       {'avatar_url': final String url} => url,
+      _ => null,
+    },
+    profileNickname: switch (map['profile']) {
+      {'nickname': final String nickname} => nickname,
+      _ => null,
+    },
+    profileFullName: switch (map['profile']) {
+      {'full_name': final String fullName} => fullName,
       _ => null,
     },
   );
@@ -58,6 +68,17 @@ class Athlete {
   /// no app. Quem entra pelo convite chega sem foto de atleta e usa esta.
   final String? profilePhotoUrl;
 
+  /// Apelido que o jogador vinculado escolheu no perfil dele.
+  final String? profileNickname;
+
+  /// Nome completo do perfil do jogador vinculado.
+  final String? profileFullName;
+
+  /// Nome mostrado nas telas. Do jogador vinculado, o que ele escolheu no
+  /// perfil (o apelido ou, sem ele, o nome completo), que só ele altera; do
+  /// atleta sem conta, o nome cadastrado no time ([name]).
+  String get displayName => profileNickname ?? profileFullName ?? name;
+
   Athlete copyWith({
     String? photoPath,
     String? photoUrl,
@@ -72,6 +93,8 @@ class Athlete {
     photoPath: clearPhoto ? null : photoPath ?? this.photoPath,
     photoUrl: clearPhoto ? null : photoUrl ?? this.photoUrl,
     profilePhotoUrl: profilePhotoUrl,
+    profileNickname: profileNickname,
+    profileFullName: profileFullName,
   );
 
   Map<String, dynamic> toMap() => {

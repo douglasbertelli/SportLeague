@@ -158,7 +158,7 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
               for (final athlete in athletes)
                 FundraiserParticipant(
                   athleteId: athlete.id,
-                  name: athlete.name,
+                  name: athlete.displayName,
                   photoUrl: athlete.photoUrl,
                   subtitle: [
                     if (athlete.profileId == widget.team.ownerId)
