@@ -187,16 +187,17 @@ configurado.
      (com o placar ao vivo), só para acompanhar: sem marcar jogos, mexer no
      placar ou montar a escalação. Tocar no chip de um time troca o time
      ativo, e o painel inteiro (e a cor do app) vai junto.
-   - **Perfil**: do jogador, a **capa** (imagem larga 16:9, enviada por
-     ele, com a foto centralizada metade sobre a borda de baixo); a foto,
-     o nome (do jogador, o **apelido**, editado pelo lápis; sem apelido,
-     o nome completo, que ele troca em Config › Nome) e, do jogador, os
-     dados de atleta (posição,
-     pé dominante, altura e nascimento, com Editar). O resto fica na aba
-     **Config** da barra inferior (de todos os perfis), a tela de
-     **Configurações**: a conta (e-mail, tipo de perfil e, só do
-     administrador, o plano), Meu código
-     (jogador e técnico), a cor do time, o endereço e, à parte, o Sair.
+   - **Perfil do jogador**: a **capa** (imagem larga 16:9, enviada por
+     ele, com a foto centralizada metade sobre a borda de baixo), a foto, o
+     **apelido** (editado pelo lápis; sem apelido, o nome completo) e os
+     dados de atleta (posição, pé dominante, altura e nascimento, com
+     Editar). O resto fica na aba **Config** da barra inferior do jogador,
+     a tela de **Configurações**: a conta (e-mail e tipo de perfil), o Nome,
+     Meu código, a cor do time, o endereço e, à parte, o Sair.
+   - **Perfil do administrador e do técnico** (sem a aba Config): a foto, o
+     nome, o e-mail, o tipo de perfil (e o plano, só do administrador) e,
+     num grupo, Meu código (técnico), a cor do time e o endereço; o Sair à
+     parte, mais abaixo.
    - **Pendências no Início**, em destaque no topo, para todos: o
      administrador vê os pedidos para entrar no time ativo (jogadores e
      técnicos); o jogador e o técnico, os convites de times para responder e
