@@ -40,6 +40,14 @@ class ProfileRepository {
       .update({'full_name': fullName.trim()})
       .eq('id', userId);
 
+  /// Troca o apelido (vazio tira, e o perfil volta a mostrar o nome).
+  Future<void> updateNickname(String userId, String nickname) => _client
+      .from('profiles')
+      .update({
+        'nickname': nickname.trim().isEmpty ? null : nickname.trim(),
+      })
+      .eq('id', userId);
+
   /// Salva os dados de atleta do jogador (nulo limpa o campo).
   Future<void> updateAthleteData({
     required String userId,
@@ -89,6 +97,31 @@ class ProfileRepository {
         .update({'avatar_url': null})
         .eq('id', userId);
     await _client.storage.from(_photoBucket).remove([_photoPath(userId)]);
+  }
+
+  /// Capa, na mesma pasta da foto.
+  static String _coverPath(String userId) => '$userId/cover';
+
+  /// Envia (ou substitui) a capa e grava a URL pública no perfil.
+  Future<void> uploadCover(String userId, PickedImage image) async {
+    final storage = _client.storage.from(_photoBucket);
+    final path = _coverPath(userId);
+    await storage.uploadBinary(
+      path,
+      image.bytes,
+      fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+    );
+    final url = storage.getPublicUrl(
+      path,
+      cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+    await _client.from('profiles').update({'cover_url': url}).eq('id', userId);
+  }
+
+  /// Tira a capa do perfil e apaga o arquivo.
+  Future<void> removeCover(String userId) async {
+    await _client.from('profiles').update({'cover_url': null}).eq('id', userId);
+    await _client.storage.from(_photoBucket).remove([_coverPath(userId)]);
   }
 }
 

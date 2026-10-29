@@ -51,6 +51,8 @@ class Profile {
     this.preferredFoot,
     this.heightCm,
     this.code,
+    this.coverUrl,
+    this.nickname,
   });
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -74,6 +76,8 @@ class Profile {
     },
     heightCm: map['height_cm'] as int?,
     code: map['code'] as String?,
+    coverUrl: map['cover_url'] as String?,
+    nickname: map['nickname'] as String?,
   );
 
   /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
@@ -98,6 +102,15 @@ class Profile {
   /// Código pessoal: JG + 6 do jogador, TC + 6 do técnico (nulo para o
   /// administrador). O administrador convida pelo código.
   final String? code;
+
+  /// Capa do perfil do jogador: a imagem larga atrás da foto.
+  final String? coverUrl;
+
+  /// Apelido do jogador, o nome mostrado no perfil dele.
+  final String? nickname;
+
+  /// O apelido, ou o nome completo sem apelido.
+  String get displayName => nickname ?? fullName;
 
   /// Idade completa em [today] (hoje, por padrão).
   int? age([DateTime? today]) {

@@ -19,7 +19,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../teams/fakes.dart';
 
-Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
+Future<void> _pumpHome(
+  WidgetTester tester,
+  UserRole role, {
+  String? nickname,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -50,6 +54,7 @@ Future<void> _pumpHome(WidgetTester tester, UserRole role) async {
               fullName: 'Ana Souza',
               role: role,
               plan: SubscriptionPlan.free,
+              nickname: nickname,
             ),
           ),
         ),
@@ -181,6 +186,12 @@ void main() {
       find.descendant(of: find.byType(AppBar), matching: find.text('Perfil')),
       findsOneWidget,
     );
+    // A capa ocupa o topo; os dados de atleta vêm abaixo dela.
+    await tester.scrollUntilVisible(
+      find.text('Dados de atleta'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Dados de atleta'), findsOneWidget);
     // Os números ficam no painel do Início.
     expect(find.text('Meus números'), findsNothing);
@@ -188,5 +199,20 @@ void main() {
     await tester.tap(find.descendant(of: bar, matching: find.text('Config')));
     await tester.pumpAndSettle();
     expect(find.text('Sair'), findsOneWidget);
+  });
+
+  testWidgets('o topo do Início do jogador mostra o apelido', (tester) async {
+    await _pumpHome(tester, UserRole.player, nickname: 'Aninha');
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Aninha')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Ana Souza'),
+      ),
+      findsNothing,
+    );
   });
 }

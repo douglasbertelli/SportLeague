@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/media/photo_picker.dart';
+import '../../../core/media/picked_image.dart';
 import '../../../core/router/routes.dart';
-import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
+import 'edit_text_sheet.dart';
 
 /// Aba Perfil: a foto, o nome e, do jogador, os dados de atleta. O resto
 /// (Meu código, cor do time, endereço e Sair) fica na aba Config.
@@ -21,125 +22,184 @@ class ProfileTab extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(bottom: 16),
       children: [
-        Center(child: _Avatar(profile: profile)),
-        const SizedBox(height: 12),
+        // O jogador tem a capa, com a foto sobreposta na borda de baixo.
         if (profile.isPlayer)
-          // O jogador troca o próprio nome pelo lápis.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(width: 48),
-              Flexible(
-                child: Text(
-                  profile.fullName,
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Editar nome',
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                onPressed: () => _editName(context, ref, profile),
-              ),
-            ],
-          )
+          _CoverHeader(profile: profile)
         else
-          Text(
-            profile.fullName,
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Center(child: _Avatar(profile: profile)),
           ),
-        const SizedBox(height: 24),
-        if (profile.isPlayer) _AthleteDataCard(profile: profile),
+        const SizedBox(height: 12),
+        // Nome e dados de atleta, com a margem dos lados (a capa vai de
+        // borda a borda).
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _details(context, ref, theme),
+          ),
+        ),
       ],
     );
   }
+
+  List<Widget> _details(BuildContext context, WidgetRef ref, ThemeData theme) {
+    return [
+      if (profile.isPlayer)
+        // O jogador mostra o apelido (ou o nome, sem apelido) e troca pelo
+        // lápis; o nome completo fica em Config.
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 48),
+            Flexible(
+              child: Text(
+                profile.displayName,
+                style: theme.textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            IconButton(
+              tooltip: profile.nickname == null
+                  ? 'Adicionar apelido'
+                  : 'Editar apelido',
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: () => editNickname(context, ref, profile),
+            ),
+          ],
+        )
+      else
+        Text(
+          profile.fullName,
+          style: theme.textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
+      const SizedBox(height: 24),
+      if (profile.isPlayer) _AthleteDataCard(profile: profile),
+    ];
+  }
 }
 
-/// Abre a troca do nome e salva; o perfil é recarregado com o nome novo.
-Future<void> _editName(
-  BuildContext context,
-  WidgetRef ref,
-  Profile profile,
-) async {
-  final name = await showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => _EditNameSheet(initial: profile.fullName),
-  );
-  if (name == null || name == profile.fullName) return;
-  try {
-    await ref.read(profileRepositoryProvider).updateName(profile.id, name);
-    ref.invalidate(currentProfileProvider);
-  } catch (error) {
-    if (context.mounted) {
-      showErrorSnackBar(context, friendlyErrorMessage(error));
+/// Capa do jogador, larga (16:9), com a foto centralizada na borda de baixo,
+/// metade sobre a capa. O jogador toca na capa (ou no botão da câmera) para
+/// enviar, trocar ou remover; a foto continua com o toque dela.
+class _CoverHeader extends ConsumerStatefulWidget {
+  const _CoverHeader({required this.profile});
+
+  final Profile profile;
+
+  @override
+  ConsumerState<_CoverHeader> createState() => _CoverHeaderState();
+}
+
+class _CoverHeaderState extends ConsumerState<_CoverHeader> {
+  /// Raio da foto (o mesmo do [_Avatar]): quanto ela desce abaixo da capa.
+  static const _avatarRadius = 40.0;
+
+  var _saving = false;
+
+  Future<void> _choose() async {
+    final profile = widget.profile;
+    final choice = await chooseImage(
+      context,
+      ref,
+      noun: 'capa',
+      canRemove: profile.coverUrl != null,
+      maxSize: largeImageSize,
+    );
+    if (choice == null) return;
+    setState(() => _saving = true);
+    try {
+      final repository = ref.read(profileRepositoryProvider);
+      switch (choice) {
+        case ImagePicked(:final image):
+          await repository.uploadCover(profile.id, image);
+        case ImageRemoved():
+          await repository.removeCover(profile.id);
+      }
+      ref.invalidate(currentProfileProvider);
+    } catch (_) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Não foi possível salvar a capa.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-  }
-}
-
-/// Campo do nome, acima do teclado; devolve o nome no `pop`.
-class _EditNameSheet extends StatefulWidget {
-  const _EditNameSheet({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_EditNameSheet> createState() => _EditNameSheetState();
-}
-
-class _EditNameSheetState extends State<_EditNameSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop(_controller.text.trim());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        0,
-        16,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Editar nome', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _controller,
-              autofocus: true,
-              maxLength: 120,
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(labelText: 'Nome'),
-              onFieldSubmitted: (_) => _save(),
-              validator: (value) => (value ?? '').trim().length < 2
-                  ? 'Informe o seu nome'
-                  : null,
-            ),
-            const SizedBox(height: 8),
-            FilledButton(onPressed: _save, child: const Text('Salvar')),
-          ],
-        ),
-      ),
+    final colors = Theme.of(context).colorScheme;
+    final coverUrl = widget.profile.coverUrl;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final coverHeight = constraints.maxWidth * 9 / 16;
+        return SizedBox(
+          height: coverHeight + _avatarRadius,
+          child: Stack(
+            children: [
+              SizedBox(
+                height: coverHeight,
+                width: double.infinity,
+                child: Semantics(
+                  button: true,
+                  label: coverUrl == null ? 'Adicionar capa' : 'Trocar capa',
+                  child: InkWell(
+                    onTap: _saving ? null : _choose,
+                    child: Ink(
+                      color: colors.surfaceContainerHigh,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (coverUrl != null)
+                            Image.network(
+                              coverUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  const SizedBox.shrink(),
+                            )
+                          else
+                            Icon(
+                              Icons.image_outlined,
+                              size: 56,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          if (_saving)
+                            const Center(child: CircularProgressIndicator()),
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: colors.surface.withValues(
+                                alpha: 0.85,
+                              ),
+                              child: Icon(
+                                Icons.photo_camera_outlined,
+                                size: 18,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // A foto, metade sobre a capa.
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: _Avatar(profile: widget.profile),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

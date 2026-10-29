@@ -76,7 +76,7 @@ class _PlayerHomePageState extends State<PlayerHomePage> {
   }
 }
 
-/// Foto (ou as iniciais) e nome do jogador, no título do Início.
+/// Foto (ou as iniciais) e apelido do jogador, no título do Início.
 class _PlayerTitle extends StatelessWidget {
   const _PlayerTitle({required this.profile});
 
@@ -101,7 +101,8 @@ class _PlayerTitle extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Flexible(
-          child: Text(profile.fullName, overflow: TextOverflow.ellipsis),
+          // O apelido (ou o nome, sem apelido), como no Perfil.
+          child: Text(profile.displayName, overflow: TextOverflow.ellipsis),
         ),
       ],
     );
