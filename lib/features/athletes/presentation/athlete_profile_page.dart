@@ -29,7 +29,7 @@ class AthleteProfilePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(athlete.name),
+        title: Text(athlete.displayName),
         actions: [
           if (ref.watch(canManageTeamProvider))
             IconButton(
@@ -48,14 +48,14 @@ class AthleteProfilePage extends ConsumerWidget {
               foregroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
               onForegroundImageError: photoUrl == null ? null : (_, _) {},
               child: Text(
-                athlete.name[0].toUpperCase(),
+                athlete.displayName[0].toUpperCase(),
                 style: theme.textTheme.headlineMedium,
               ),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            athlete.name,
+            athlete.displayName,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleLarge,
           ),

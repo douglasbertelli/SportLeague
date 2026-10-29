@@ -23,7 +23,7 @@ class AthleteRepository {
   Future<List<Athlete>> fetchByTeam(String teamId) async {
     final rows = await _client
         .from('team_players')
-        .select('*, profile:profiles(avatar_url)')
+        .select('*, profile:profiles(avatar_url, nickname, full_name)')
         .eq('team_id', teamId)
         .order('name');
     final athletes = rows

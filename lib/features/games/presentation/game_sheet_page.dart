@@ -410,7 +410,7 @@ class _AthleteRow extends StatelessWidget {
     final row = this.row;
     final name = [
       if (athlete.jerseyNumber case final number?) '$number',
-      athlete.name,
+      athlete.displayName,
     ].join(' · ');
 
     return Card(
@@ -424,7 +424,7 @@ class _AthleteRow extends StatelessWidget {
               controlAffinity: ListTileControlAffinity.leading,
               title: Row(
                 children: [
-                  AthleteAvatar(name: athlete.name, photoUrl: athlete.photoUrl),
+                  AthleteAvatar(name: athlete.displayName, photoUrl: athlete.photoUrl),
                   const SizedBox(width: 12),
                   Expanded(child: Text(name)),
                 ],
@@ -578,7 +578,7 @@ class _GoalScorerSheetState extends State<_GoalScorerSheet> {
   Widget build(BuildContext context) {
     String label(Athlete athlete) => [
       if (athlete.jerseyNumber case final number?) '$number',
-      athlete.name,
+      athlete.displayName,
     ].join(' · ');
 
     return AppSheet(

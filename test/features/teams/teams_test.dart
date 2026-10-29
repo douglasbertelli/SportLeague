@@ -1844,6 +1844,55 @@ void main() {
       expect(athletes.updated.single.jerseyNumber, 10);
     });
 
+    testWidgets('o nome do atleta vinculado vem do perfil e não se edita', (
+      tester,
+    ) async {
+      final athletes = FakeAthleteRepository({});
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+      );
+      const linked = Athlete(
+        id: 'a9',
+        teamId: 'team-a',
+        name: 'Bruno Lima',
+        profileId: 'u7',
+        position: 'Meia',
+        jerseyNumber: 8,
+        photoPath: 'u1/team-a/a9',
+        profileNickname: 'Bruninho',
+        profileFullName: 'Bruno Lima Souza',
+      );
+      await _pumpPage(tester, container, const AthleteFormPage(athlete: linked));
+
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(TextFormField).first,
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(field.controller!.text, 'Bruninho');
+      expect(field.enabled, isFalse);
+      expect(find.textContaining('só ele altera'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Salvar'));
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      // O nome cadastrado no time fica como estava.
+      expect(athletes.updated.single.name, 'Bruno Lima');
+
+      // Sem apelido, vale o nome completo do perfil.
+      expect(
+        const Athlete(
+          teamId: 'team-a',
+          name: 'Bruno Lima',
+          profileId: 'u7',
+          profileFullName: 'Bruno Lima Souza',
+        ).displayName,
+        'Bruno Lima Souza',
+      );
+    });
+
     testWidgets('cadastrar atleta exige a foto', (tester) async {
       final athletes = FakeAthleteRepository({});
       final container = await _container(
@@ -2261,6 +2310,20 @@ void main() {
     // repositório resolve a URL mostrada).
     expect(athlete.copyWith(photoUrl: 'assinada').photoUrl, 'assinada');
     expect(athlete.copyWith(photoUrl: 'x').profilePhotoUrl, 'https://fotos/u7.jpg');
+
+    // O apelido do jogador vinculado aparece no lugar do nome do time; o
+    // formulário continua editando o nome cadastrado.
+    final comApelido = Athlete.fromMap({
+      'id': 'a3',
+      'team_id': 'team-a',
+      'name': 'Bruno Lima',
+      'profile_id': 'u7',
+      'profile': {'avatar_url': null, 'nickname': 'Bruninho'},
+    });
+    expect(comApelido.displayName, 'Bruninho');
+    expect(comApelido.name, 'Bruno Lima');
+    expect(comApelido.copyWith(photoUrl: 'x').displayName, 'Bruninho');
+    expect(athlete.displayName, 'Bruno Lima');
 
     final semConta = Athlete.fromMap({
       'id': 'a2',

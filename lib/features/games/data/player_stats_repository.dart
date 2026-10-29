@@ -14,7 +14,10 @@ class PlayerStatsRepository {
   Future<List<PlayerGameStats>> fetchGame(String gameId) async {
     final rows = await _client
         .from('game_player_stats')
-        .select('*, athlete:team_players(name, jersey_number)')
+        .select(
+          '*, athlete:team_players(name, jersey_number, '
+          'profile:profiles(nickname, full_name))',
+        )
         .eq('game_id', gameId);
     return rows.map(PlayerGameStats.fromMap).toList();
   }
