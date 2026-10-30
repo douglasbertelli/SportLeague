@@ -195,10 +195,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             children: [
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'E-mail',
-                  prefixIcon: Icon(Icons.mail_outline),
-                ),
+                decoration: const InputDecoration(labelText: 'E-mail'),
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.next,
@@ -209,7 +206,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Senha',
-                  prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     tooltip: _obscurePassword
                         ? 'Mostrar senha'
