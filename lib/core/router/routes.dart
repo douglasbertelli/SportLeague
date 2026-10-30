@@ -12,6 +12,9 @@ abstract final class Routes {
 
   /// Código pessoal do jogador ou do técnico (aba Config).
   static const myCode = '/home/my-code';
+
+  /// Central de notificações (sino do topo).
+  static const notifications = '/home/notifications';
   static const teams = '/home/teams';
   static const newTeam = '/home/teams/new';
 

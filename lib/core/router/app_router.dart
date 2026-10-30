@@ -22,6 +22,7 @@ import '../../features/home/presentation/home_page.dart';
 import '../../features/invites/presentation/invite_player_page.dart';
 import '../../features/invites/presentation/player_invites_page.dart';
 import '../../features/invites/presentation/team_invites_page.dart';
+import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
 import '../../features/profile/presentation/athlete_data_page.dart';
@@ -170,6 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(path: 'my-code', builder: (_, _) => const MyCodePage()),
+          GoRoute(
+            path: 'notifications',
+            builder: (_, _) => const NotificationsPage(),
+          ),
           GoRoute(
             path: 'athlete-data',
             builder: (_, state) =>

@@ -436,7 +436,9 @@ void main() {
       tester,
       container,
       Scaffold(
-        body: HomeOverview(profile: container.read(currentProfileProvider).value!),
+        body: HomeOverview(
+          profile: container.read(currentProfileProvider).value!,
+        ),
       ),
     );
     expect(find.text('2 pedidos para entrar no Amigos FC'), findsOneWidget);
@@ -468,15 +470,14 @@ void main() {
         ),
       ],
     );
-    final container = await _container(
-      role: UserRole.player,
-      invites: invites,
-    );
+    final container = await _container(role: UserRole.player, invites: invites);
     await _pumpPage(
       tester,
       container,
       Scaffold(
-        body: HomeOverview(profile: container.read(currentProfileProvider).value!),
+        body: HomeOverview(
+          profile: container.read(currentProfileProvider).value!,
+        ),
       ),
     );
     expect(find.text('1 convite de time para responder'), findsOneWidget);

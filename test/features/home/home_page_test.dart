@@ -8,6 +8,8 @@ import 'package:sport_league/core/theme/app_theme.dart';
 import 'package:sport_league/features/address/data/address_repository.dart';
 import 'package:sport_league/features/address/domain/address.dart';
 import 'package:sport_league/features/home/presentation/home_page.dart';
+import 'package:sport_league/features/notifications/data/notification_repository.dart';
+import 'package:sport_league/features/notifications/domain/app_notification.dart';
 import 'package:sport_league/features/profile/data/profile_repository.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
 import 'package:sport_league/features/athletes/data/athlete_repository.dart';
@@ -32,6 +34,26 @@ Future<void> _pumpHome(
         sharedPreferencesProvider.overrideWithValue(preferences),
         currentUserIdProvider.overrideWithValue('u1'),
         teamRepositoryProvider.overrideWithValue(FakeTeamRepository([teamA])),
+        // Sem conexão ao vivo nos testes: duas notificações, uma não lida.
+        myNotificationsProvider.overrideWith(
+          (ref) => Stream.value([
+            AppNotification(
+              id: 'n1',
+              kind: 'request',
+              title: 'Pedido para entrar',
+              body: 'Bruno pediu para entrar no Amigos FC.',
+              createdAt: DateTime(2026, 10, 29),
+            ),
+            AppNotification(
+              id: 'n2',
+              kind: 'game_accepted',
+              title: 'Amistoso aceito',
+              body: 'Real Bairro aceitou o amistoso.',
+              createdAt: DateTime(2026, 10, 28),
+              readAt: DateTime(2026, 10, 28),
+            ),
+          ]),
+        ),
         // Como em `main.dart`: os times seguem o tipo de perfil.
         isPlayerProvider.overrideWithValue(role == UserRole.player),
         athleteRepositoryProvider.overrideWithValue(FakeAthleteRepository({})),
@@ -210,5 +232,12 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  testWidgets('o sino mostra as não lidas', (tester) async {
+    await _pumpHome(tester, UserRole.admin);
+    expect(find.byTooltip('Notificações, 1 não lida'), findsOneWidget);
+    await _pumpHome(tester, UserRole.player);
+    expect(find.byTooltip('Notificações, 1 não lida'), findsOneWidget);
   });
 }

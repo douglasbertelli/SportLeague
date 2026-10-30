@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/widgets/theme_mode_button.dart';
+import '../../notifications/presentation/notifications_page.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
 import '../../profile/presentation/settings_tab.dart';
@@ -48,6 +49,7 @@ class _PlayerHomePageState extends State<PlayerHomePage> {
         },
         actions: const [
           TeamSearchButton(),
+          NotificationBell(),
           ThemeModeButton(),
           AppDrawerButton(),
         ],

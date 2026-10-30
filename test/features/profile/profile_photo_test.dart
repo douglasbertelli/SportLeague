@@ -287,9 +287,7 @@ void main() {
     );
   });
 
-  testWidgets('página Meu código do jogador: JG e gerar outro', (
-    tester,
-  ) async {
+  testWidgets('página Meu código do jogador: JG e gerar outro', (tester) async {
     final profiles = await _pump(
       tester,
       _profile(UserRole.player, code: 'JG7K3M9Q'),
