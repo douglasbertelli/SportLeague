@@ -10,10 +10,17 @@ enum _Provider { google, apple }
 /// Botões "Continuar com Google/Apple". Entram na conta existente ou criam uma
 /// nova; o router leva ao completar cadastro quando falta o tipo de perfil.
 class SocialSignInButtons extends ConsumerStatefulWidget {
-  const SocialSignInButtons({super.key, this.enabled = true});
+  const SocialSignInButtons({
+    super.key,
+    this.enabled = true,
+    this.compact = false,
+  });
 
   /// Desabilita os botões enquanto outra ação da tela está em andamento.
   final bool enabled;
+
+  /// Google e Apple lado a lado, só com o nome (tela de login).
+  final bool compact;
 
   @override
   ConsumerState<SocialSignInButtons> createState() =>
@@ -45,6 +52,38 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && _loading == null;
+    if (widget.compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _OrDivider(),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _SocialButton(
+                  label: 'Google',
+                  tooltip: 'Continuar com Google',
+                  icon: const _BrandMark('assets/images/google.svg'),
+                  loading: _loading == _Provider.google,
+                  onPressed: enabled ? () => _signIn(_Provider.google) : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SocialButton(
+                  label: 'Apple',
+                  tooltip: 'Continuar com Apple',
+                  icon: const _BrandMark('assets/images/apple.svg', size: 24),
+                  loading: _loading == _Provider.apple,
+                  onPressed: enabled ? () => _signIn(_Provider.apple) : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -75,6 +114,7 @@ class _SocialButton extends StatelessWidget {
     required this.icon,
     required this.loading,
     required this.onPressed,
+    this.tooltip,
   });
 
   final String label;
@@ -82,9 +122,13 @@ class _SocialButton extends StatelessWidget {
   final bool loading;
   final VoidCallback? onPressed;
 
+  /// O nome completo da ação quando o rótulo é curto ("Google").
+  final String? tooltip;
+
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
+    final button = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
       onPressed: onPressed,
       icon: loading
           ? const SizedBox.square(
@@ -94,6 +138,8 @@ class _SocialButton extends StatelessWidget {
           : icon,
       label: Text(label),
     );
+    final tooltip = this.tooltip;
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 }
 

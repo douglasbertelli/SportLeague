@@ -200,6 +200,16 @@ configurado.
      num grupo, Meu código (técnico), a cor do time, o **Tema** (claro,
      escuro ou do sistema) e o endereço; o Sair à parte, mais abaixo. O tema
      não fica mais no topo da home (só na tela de login).
+   - **Entrar com biometria** (Perfil e Config, só em aparelhos com digital
+     ou rosto cadastrados; oferecido uma vez logo depois de entrar): ligado,
+     o app abre numa tela de desbloqueio e pede a digital, o rosto ou o PIN
+     do celular, também ao voltar depois de 1 minuto fora. Com ela ligada, o
+     **Sair** guarda a conta: a tela de login mostra "Entrar como ..." e já
+     pede a biometria (funciona também para quem entrou com Google ou Apple,
+     sem guardar senha). "Remover biometria deste aparelho" sai de vez e
+     desliga a biometria; entrar com outra conta também a desliga. A sessão
+     do Supabase fica no cofre do aparelho (Keystore/Keychain), não nas
+     preferências comuns.
    - **Central de notificações** (sino no topo, com o número de não lidas,
      em todos os perfis): convites e pedidos para entrar no time e as
      respostas; amistosos (convite, aceito, recusado, cancelado com o

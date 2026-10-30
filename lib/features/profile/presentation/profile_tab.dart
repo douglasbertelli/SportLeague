@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/security/biometric_tile.dart';
+import '../../../core/security/biometrics.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_color_picker.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../address/data/address_repository.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../auth/data/biometric_sign_in.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 import 'edit_text_sheet.dart';
@@ -102,6 +104,9 @@ class _StaffProfile extends ConsumerWidget {
         ),
       const AppColorTile(),
       const ThemeModeTile(),
+      // Some em aparelhos sem biometria cadastrada.
+      if (ref.watch(biometricsAvailableProvider).value ?? false)
+        const BiometricTile(),
       ListTile(
         leading: const Icon(Icons.location_on_outlined),
         title: const Text('Endereço'),
@@ -164,7 +169,8 @@ class _StaffProfile extends ConsumerWidget {
               'Sair',
               style: TextStyle(color: theme.colorScheme.error),
             ),
-            onTap: () => ref.read(authRepositoryProvider).signOut(),
+            // Com a biometria ligada, guarda a conta para voltar com ela.
+            onTap: () => signOutOrPark(ref),
           ),
         ),
       ],
