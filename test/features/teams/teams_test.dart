@@ -929,7 +929,7 @@ void main() {
     });
 
     testWidgets('a aba Jogos divide o time ativo em Marcados, Pendentes, '
-        'Cancelados e Realizados', (tester) async {
+        'Realizados e Cancelados', (tester) async {
       final now = DateTime(2026, 10, 22, 12);
       final container = await _container(
         teams: FakeTeamRepository([teamA, teamB]),
@@ -986,8 +986,8 @@ void main() {
       for (final label in [
         'Marcados (1)',
         'Pendentes (1)',
-        'Cancelados (1)',
         'Realizados (1)',
+        'Cancelados (1)',
       ]) {
         expect(find.text(label), findsOneWidget);
       }
@@ -2093,8 +2093,8 @@ void main() {
       expect(GameStage.values.map((s) => s.label), [
         'Marcados',
         'Pendentes',
-        'Cancelados',
         'Realizados',
+        'Cancelados',
       ]);
     });
   });

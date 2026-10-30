@@ -156,7 +156,7 @@ configurado.
      time fictício, sempre do próprio time); horário com amistoso
      pendente ou marcado fica ocupado. Horários recorrentes são no fuso de
      Brasília.
-   - a aba Jogos tem as abas **Marcados, Pendentes, Cancelados e Realizados**
+   - a aba Jogos tem as abas **Marcados, Pendentes, Realizados e Cancelados**
      (roláveis na horizontal). Contra time da plataforma, o amistoso fica
      pendente até o adversário **aceitar** ou **recusar**; contra time
      fictício já nasce marcado. Os dois times podem cancelar; marcado com a
