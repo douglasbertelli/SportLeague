@@ -12,7 +12,7 @@ import '../domain/game.dart';
 import 'game_card.dart';
 
 /// Aba Jogos do administrador: amistosos do time ativo divididos em Marcados,
-/// Pendentes, Cancelados e Realizados.
+/// Pendentes, Realizados e Cancelados.
 class GamesTab extends ConsumerWidget {
   const GamesTab({super.key, this.now});
 

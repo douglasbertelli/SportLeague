@@ -18,8 +18,8 @@ enum GameStatus {
 enum GameStage {
   scheduled('Marcados'),
   pending('Pendentes'),
-  canceled('Cancelados'),
-  played('Realizados');
+  played('Realizados'),
+  canceled('Cancelados');
 
   const GameStage(this.label);
 
