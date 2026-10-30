@@ -51,16 +51,18 @@ class ProfileTab extends ConsumerWidget {
 
   List<Widget> _details(BuildContext context, WidgetRef ref, ThemeData theme) {
     return [
-      // O apelido (ou o nome, sem apelido), trocado pelo lápis; o nome
-      // completo fica em Config.
+      // O apelido (ou o nome, sem apelido), trocado pelo lápis; com apelido,
+      // o nome completo vem embaixo, discreto.
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(width: 48),
+          const SizedBox(width: 40),
           Flexible(
             child: Text(
               profile.displayName,
-              style: theme.textTheme.titleLarge,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -68,12 +70,25 @@ class ProfileTab extends ConsumerWidget {
             tooltip: profile.nickname == null
                 ? 'Adicionar apelido'
                 : 'Editar apelido',
-            icon: const Icon(Icons.edit_outlined, size: 20),
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             onPressed: () => editNickname(context, ref, profile),
           ),
         ],
       ),
-      const SizedBox(height: 24),
+      if (profile.nickname != null)
+        Text(
+          profile.fullName,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      const SizedBox(height: 28),
       _AthleteDataCard(profile: profile),
     ];
   }
@@ -191,8 +206,8 @@ class _CoverHeader extends ConsumerStatefulWidget {
 }
 
 class _CoverHeaderState extends ConsumerState<_CoverHeader> {
-  /// Raio da foto (o mesmo do [_Avatar]): quanto ela desce abaixo da capa.
-  static const _avatarRadius = 40.0;
+  /// Raio da foto, com o anel: quanto ela desce abaixo da capa.
+  static const _avatarRadius = 52.0 + _Avatar.ringWidth;
 
   var _saving = false;
 
@@ -263,6 +278,22 @@ class _CoverHeaderState extends ConsumerState<_CoverHeader> {
                               size: 56,
                               color: colors.onSurfaceVariant,
                             ),
+                          // A capa se funde no fundo embaixo, onde fica a
+                          // foto.
+                          if (coverUrl != null)
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const [0.5, 1],
+                                  colors: [
+                                    colors.surface.withValues(alpha: 0),
+                                    colors.surface.withValues(alpha: 0.85),
+                                  ],
+                                ),
+                              ),
+                            ),
                           if (_saving)
                             const Center(child: CircularProgressIndicator()),
                           Positioned(
@@ -289,7 +320,7 @@ class _CoverHeaderState extends ConsumerState<_CoverHeader> {
               // A foto, metade sobre a capa.
               Align(
                 alignment: Alignment.bottomCenter,
-                child: _Avatar(profile: widget.profile),
+                child: _Avatar(profile: widget.profile, radius: 52, ring: true),
               ),
             ],
           ),
@@ -299,8 +330,8 @@ class _CoverHeaderState extends ConsumerState<_CoverHeader> {
   }
 }
 
-/// Dados de atleta do jogador, um por linha, com o Editar. O que não foi
-/// preenchido aparece como "Não informado".
+/// Dados de atleta do jogador em blocos, dois por linha, com o Editar no
+/// título. O que não foi preenchido aparece como "Não informado".
 class _AthleteDataCard extends StatelessWidget {
   const _AthleteDataCard({required this.profile});
 
@@ -309,75 +340,133 @@ class _AthleteDataCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
     final birthDate = profile.birthDate;
-    final rows = [
-      (Icons.sports_soccer, 'Posição', profile.preferredPosition),
-      (
-        Icons.directions_walk,
-        'Pé dominante',
-        switch (profile.preferredFoot) {
+    final age = profile.age();
+    final tiles = [
+      _DataTile(
+        icon: Icons.sports_soccer,
+        label: 'Posição',
+        value: profile.preferredPosition,
+      ),
+      _DataTile(
+        icon: Icons.directions_walk,
+        label: 'Pé dominante',
+        value: switch (profile.preferredFoot) {
           null => null,
           PreferredFoot.both => 'Ambidestro',
           final foot => foot.label,
         },
       ),
-      (
-        Icons.height,
-        'Altura',
-        switch (profile.heightCm) {
+      _DataTile(
+        icon: Icons.height,
+        label: 'Altura',
+        value: switch (profile.heightCm) {
           final height? =>
             '${(height / 100).toStringAsFixed(2).replaceAll('.', ',')} m',
           null => null,
         },
       ),
-      (
-        Icons.cake_outlined,
-        'Nascimento',
-        switch (birthDate) {
+      // A idade em destaque; a data, embaixo.
+      _DataTile(
+        icon: Icons.cake_outlined,
+        label: switch (birthDate) {
           final date? =>
-            '${MaterialLocalizations.of(context).formatCompactDate(date)}'
-                '${profile.age() == null ? '' : ' · ${profile.age()} anos'}',
+            'Nascimento · '
+                '${MaterialLocalizations.of(context).formatCompactDate(date)}',
+          null => 'Nascimento',
+        },
+        value: switch (age) {
+          final years? => '$years anos',
           null => null,
         },
       ),
     ];
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Dados de atleta',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () =>
-                      context.push(Routes.athleteData, extra: profile),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Editar'),
-                ),
-              ],
-            ),
-            for (final (icon, label, value) in rows)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(icon, color: muted),
-                title: Text(label),
-                trailing: Text(
-                  value ?? 'Não informado',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: value == null ? muted : null,
-                  ),
+            Expanded(
+              child: Text(
+                'Dados de atleta',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
+            TextButton.icon(
+              onPressed: () => context.push(Routes.athleteData, extra: profile),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Editar'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (var row = 0; row < tiles.length; row += 2) ...[
+          if (row > 0) const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: tiles[row]),
+                const SizedBox(width: 12),
+                Expanded(child: tiles[row + 1]),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Um dado de atleta: o ícone num círculo, o valor em destaque e o nome
+/// embaixo.
+class _DataTile extends StatelessWidget {
+  const _DataTile({required this.icon, required this.label, this.value});
+
+  final IconData icon;
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final value = this.value;
+    // O mesmo card do Início, na mesma cor.
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              // O tom do botão selecionado (Sim/Não/Talvez, barra de baixo).
+              backgroundColor: colors.secondaryContainer,
+              child: Icon(icon, size: 20, color: colors.onSecondaryContainer),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value ?? 'Não informado',
+              style: value == null
+                  ? theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    )
+                  : theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
@@ -388,9 +477,14 @@ class _AthleteDataCard extends StatelessWidget {
 /// Foto do perfil; o técnico e o jogador tocam para enviar, trocar ou remover
 /// a deles.
 class _Avatar extends ConsumerStatefulWidget {
-  const _Avatar({required this.profile});
+  const _Avatar({required this.profile, this.radius = 40, this.ring = false});
+
+  /// Largura do anel da cor do fundo, que destaca a foto sobre a capa.
+  static const ringWidth = 4.0;
 
   final Profile profile;
+  final double radius;
+  final bool ring;
 
   @override
   ConsumerState<_Avatar> createState() => _AvatarState();
@@ -439,12 +533,22 @@ class _AvatarState extends ConsumerState<_Avatar> {
         .map((part) => part[0].toUpperCase())
         .join();
     final avatarUrl = profile.avatarUrl;
-    final avatar = CircleAvatar(
-      radius: 40,
+    final photo = CircleAvatar(
+      radius: widget.radius,
       foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
       onForegroundImageError: avatarUrl == null ? null : (_, _) {},
       child: Text(initials, style: Theme.of(context).textTheme.headlineSmall),
     );
+    final avatar = widget.ring
+        ? Container(
+            padding: const EdgeInsets.all(_Avatar.ringWidth),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              shape: BoxShape.circle,
+            ),
+            child: photo,
+          )
+        : photo;
     if (!profile.isCoach && !profile.isPlayer) return avatar;
 
     return Semantics(
