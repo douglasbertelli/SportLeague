@@ -199,7 +199,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(profiles.nickname, 'Aninha');
 
-    // Com apelido, ele aparece no lugar do nome.
+    // Com apelido, ele vem em destaque e o nome, embaixo.
     profiles = await _pump(
       tester,
       const Profile(
@@ -211,7 +211,7 @@ void main() {
       ),
     );
     expect(find.text('Aninha'), findsOneWidget);
-    expect(find.text('Ana Souza'), findsNothing);
+    expect(find.text('Ana Souza'), findsOneWidget);
     expect(
       const Profile(
         id: 'u1',
