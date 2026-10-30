@@ -32,6 +32,29 @@ class ThemeModeButton extends ConsumerWidget {
   }
 }
 
+/// Item "Tema" do Perfil (administrador e técnico) e do Config (jogador):
+/// mostra o tema atual e abre a mesma escolha do botão.
+class ThemeModeTile extends ConsumerWidget {
+  const ThemeModeTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+    final option = _options.firstWhere((o) => o.mode == current);
+    return ListTile(
+      leading: Icon(option.icon),
+      title: const Text('Tema'),
+      subtitle: Text(option.label),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (_) => const _ThemeModeSheet(),
+      ),
+    );
+  }
+}
+
 class _ThemeModeSheet extends ConsumerWidget {
   const _ThemeModeSheet();
 

@@ -158,7 +158,15 @@ void main() {
         find.text('Avenida Paulista, 1000 - São Paulo/SP'),
         findsOneWidget,
       );
+      expect(find.text('Tema'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Sair'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text('Sair'), findsOneWidget);
+      // O tema saiu do topo.
+      expect(find.byTooltip('Tema'), findsNothing);
     },
   );
 
@@ -216,6 +224,12 @@ void main() {
 
     await tester.tap(find.descendant(of: bar, matching: find.text('Config')));
     await tester.pumpAndSettle();
+    expect(find.text('Tema'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Sair'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Sair'), findsOneWidget);
   });
 

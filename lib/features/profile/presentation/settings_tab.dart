@@ -5,14 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_color_picker.dart';
+import '../../../core/widgets/theme_mode_button.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
 import 'edit_text_sheet.dart';
 
 /// Aba Config (barra inferior de todos): a conta (e-mail, tipo de perfil e,
-/// do administrador, o plano), Meu código (jogador e técnico), a cor do time, o endereço e, à
-/// parte, o Sair.
+/// do administrador, o plano), Meu código (jogador e técnico), a cor do time,
+/// o tema (claro, escuro ou do sistema), o endereço e, à parte, o Sair.
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({super.key});
 
@@ -42,6 +43,7 @@ class SettingsTab extends ConsumerWidget {
           onTap: () => context.push(Routes.myCode),
         ),
       const AppColorTile(),
+      const ThemeModeTile(),
       ListTile(
         leading: const Icon(Icons.location_on_outlined),
         title: const Text('Endereço'),

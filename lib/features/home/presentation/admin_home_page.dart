@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/theme_mode_button.dart';
 import '../../athletes/presentation/athletes_tab.dart';
 import '../../games/data/games_tab_request.dart';
 import '../../games/presentation/games_tab.dart';
@@ -58,7 +57,6 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
         actions: const [
           TeamSearchButton(),
           NotificationBell(),
-          ThemeModeButton(),
           AppDrawerButton(),
         ],
       ),
