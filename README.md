@@ -193,11 +193,13 @@ configurado.
      dados de atleta (posição, pé dominante, altura e nascimento, com
      Editar). O resto fica na aba **Config** da barra inferior do jogador,
      a tela de **Configurações**: a conta (e-mail e tipo de perfil), o Nome,
-     Meu código, a cor do time, o endereço e, à parte, o Sair.
+     Meu código, a cor do time, o **Tema** (claro, escuro ou do sistema), o
+     endereço e, à parte, o Sair.
    - **Perfil do administrador e do técnico** (sem a aba Config): a foto, o
      nome, o e-mail, o tipo de perfil (e o plano, só do administrador) e,
-     num grupo, Meu código (técnico), a cor do time e o endereço; o Sair à
-     parte, mais abaixo.
+     num grupo, Meu código (técnico), a cor do time, o **Tema** (claro,
+     escuro ou do sistema) e o endereço; o Sair à parte, mais abaixo. O tema
+     não fica mais no topo da home (só na tela de login).
    - **Central de notificações** (sino no topo, com o número de não lidas,
      em todos os perfis): convites e pedidos para entrar no time e as
      respostas; amistosos (convite, aceito, recusado, cancelado com o
@@ -224,7 +226,7 @@ configurado.
      técnicos); o jogador e o técnico, os convites de times para responder e
      os pedidos que ainda esperam o time. Tocar leva a responder. Puxar a
      tela para baixo, ou voltar ao app, busca de novo.
-   - **Menu lateral** (☰ no topo da home, depois do modo claro/escuro; abre
+   - **Menu lateral** (☰ no topo da home, depois do sino; abre
      pela direita), com as funcionalidades extras:
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
        Churrasco ou Outros (dizendo o que vai ser comprado). O administrador define o

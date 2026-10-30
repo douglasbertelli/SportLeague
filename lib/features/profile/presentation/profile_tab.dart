@@ -8,6 +8,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_color_picker.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/theme_mode_button.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
@@ -78,7 +79,8 @@ class ProfileTab extends ConsumerWidget {
 
 /// Perfil do administrador e do técnico, como antes da aba Config: a foto, o
 /// nome, o e-mail e o tipo de perfil (e, do administrador, o plano); num
-/// grupo, Meu código (técnico), a cor do time e o endereço; o Sair à parte.
+/// grupo, Meu código (técnico), a cor do time, o tema e o endereço; o Sair à
+/// parte.
 class _StaffProfile extends ConsumerWidget {
   const _StaffProfile({required this.profile});
 
@@ -99,6 +101,7 @@ class _StaffProfile extends ConsumerWidget {
           onTap: () => context.push(Routes.myCode),
         ),
       const AppColorTile(),
+      const ThemeModeTile(),
       ListTile(
         leading: const Icon(Icons.location_on_outlined),
         title: const Text('Endereço'),
