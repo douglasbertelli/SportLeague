@@ -902,6 +902,13 @@ void main() {
 
       expect(find.text('Carlos Lima'), findsOneWidget);
       expect(find.text('Diego Rocha'), findsNothing);
+      // O dono cadastra ou convida um jogador do app pelo mesmo botão.
+      await tester.tap(find.byTooltip('Adicionar atleta'));
+      await tester.pumpAndSettle();
+      expect(find.text('Novo atleta'), findsOneWidget);
+      expect(find.text('Convidar jogador'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
 
       await container.read(selectedTeamIdProvider.notifier).select('team-b');
       await tester.pumpAndSettle();

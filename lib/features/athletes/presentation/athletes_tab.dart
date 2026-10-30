@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/no_team_placeholder.dart';
@@ -41,13 +42,13 @@ class _AthleteList extends ConsumerWidget {
     final athletes = ref.watch(teamAthletesProvider(teamId));
 
     return Scaffold(
-      // Só o dono cadastra atletas (o técnico vê o elenco).
+      // Só o dono cadastra e convida atletas (o técnico vê o elenco).
       floatingActionButton: ref.watch(canManageTeamProvider)
-          ? FloatingActionButton.extended(
-              heroTag: 'new-athlete',
-              onPressed: () => context.push(Routes.newAthlete),
-              icon: const Icon(Icons.person_add_alt),
-              label: const Text('Novo atleta'),
+          ? FloatingActionButton(
+              heroTag: 'add-athlete',
+              tooltip: 'Adicionar atleta',
+              onPressed: () => _showAddOptions(context),
+              child: const Icon(Icons.person_add_alt),
             )
           : null,
       body: athletes.when(
@@ -63,7 +64,9 @@ class _AthleteList extends ConsumerWidget {
             ? const EmptyState(
                 icon: Icons.groups,
                 title: 'Nenhum atleta neste time',
-                message: 'Cadastre os atletas do time pelo botão abaixo.',
+                message:
+                    'Cadastre os atletas ou convide jogadores do app pelo '
+                    'botão abaixo.',
               )
             : RefreshIndicator(
                 onRefresh: () =>
@@ -104,6 +107,39 @@ class _AthleteList extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Como adicionar: cadastrar o atleta à mão ou convidar um jogador que já usa
+/// o app (pela busca de nome ou código).
+Future<void> _showAddOptions(BuildContext context) async {
+  final route = await showAppSheet<String>(
+    context,
+    builder: (context) => AppSheet(
+      title: 'Adicionar atleta',
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.person_add_alt),
+            title: const Text('Novo atleta'),
+            subtitle: const Text('Cadastre com nome, posição e camisa'),
+            onTap: () => Navigator.of(context).pop(Routes.newAthlete),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.person_search_outlined),
+            title: const Text('Convidar jogador'),
+            subtitle: const Text(
+              'Busque quem já usa o app pelo nome ou código',
+            ),
+            onTap: () => Navigator.of(context).pop(Routes.invitePlayer),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (route != null && context.mounted) context.push(route);
 }
 
 /// Foto do atleta; sem foto (ou se a URL expirar), mostra a inicial do nome.
