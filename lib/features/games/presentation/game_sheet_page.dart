@@ -424,7 +424,10 @@ class _AthleteRow extends StatelessWidget {
               controlAffinity: ListTileControlAffinity.leading,
               title: Row(
                 children: [
-                  AthleteAvatar(name: athlete.displayName, photoUrl: athlete.photoUrl),
+                  AthleteAvatar(
+                    name: athlete.displayName,
+                    photoUrl: athlete.photoUrl,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(name)),
                 ],

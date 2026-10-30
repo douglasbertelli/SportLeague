@@ -1505,9 +1505,7 @@ void main() {
       expect(games.cancelReasons['g1'], 'Campo alagado pela chuva');
     });
 
-    testWidgets('o card do amistoso cancelado mostra o motivo', (
-      tester,
-    ) async {
+    testWidgets('o card do amistoso cancelado mostra o motivo', (tester) async {
       final container = await _container(
         teams: FakeTeamRepository([teamA]),
         games: FakeGameRepository({
@@ -1901,7 +1899,11 @@ void main() {
         profileNickname: 'Bruninho',
         profileFullName: 'Bruno Lima Souza',
       );
-      await _pumpPage(tester, container, const AthleteFormPage(athlete: linked));
+      await _pumpPage(
+        tester,
+        container,
+        const AthleteFormPage(athlete: linked),
+      );
 
       final field = tester.widget<TextField>(
         find.descendant(
@@ -2347,7 +2349,10 @@ void main() {
     // A foto de atleta, se o administrador enviar uma, tem prioridade (o
     // repositório resolve a URL mostrada).
     expect(athlete.copyWith(photoUrl: 'assinada').photoUrl, 'assinada');
-    expect(athlete.copyWith(photoUrl: 'x').profilePhotoUrl, 'https://fotos/u7.jpg');
+    expect(
+      athlete.copyWith(photoUrl: 'x').profilePhotoUrl,
+      'https://fotos/u7.jpg',
+    );
 
     // O apelido do jogador vinculado aparece no lugar do nome do time; o
     // formulário continua editando o nome cadastrado.
@@ -2489,13 +2494,15 @@ void main() {
       int goals() => int.parse(
         tester
             .widget<Text>(
-              find.descendant(
-                of: find.ancestor(
-                  of: find.text('Gols'),
-                  matching: find.byType(StatTile),
-                ),
-                matching: find.byType(Text),
-              ).first,
+              find
+                  .descendant(
+                    of: find.ancestor(
+                      of: find.text('Gols'),
+                      matching: find.byType(StatTile),
+                    ),
+                    matching: find.byType(Text),
+                  )
+                  .first,
             )
             .data!,
       );

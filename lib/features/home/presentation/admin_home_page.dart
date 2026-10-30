@@ -5,6 +5,7 @@ import '../../../core/widgets/theme_mode_button.dart';
 import '../../athletes/presentation/athletes_tab.dart';
 import '../../games/data/games_tab_request.dart';
 import '../../games/presentation/games_tab.dart';
+import '../../notifications/presentation/notifications_page.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
 import '../../teams/presentation/team_search_page.dart';
@@ -42,6 +43,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Um pedido para abrir a aba Jogos (aviso do Início ou uma notificação)
+    // também troca para ela.
+    ref.listen(gamesTabRequestProvider, (_, request) {
+      if (request != null && _index != 1) setState(() => _index = 1);
+    });
     return Scaffold(
       endDrawer: AppDrawer(profile: widget.profile),
       appBar: AppBar(
@@ -51,6 +57,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
             : const TeamSwitcher(),
         actions: const [
           TeamSearchButton(),
+          NotificationBell(),
           ThemeModeButton(),
           AppDrawerButton(),
         ],

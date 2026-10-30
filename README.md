@@ -198,6 +198,27 @@ configurado.
      nome, o e-mail, o tipo de perfil (e o plano, só do administrador) e,
      num grupo, Meu código (técnico), a cor do time e o endereço; o Sair à
      parte, mais abaixo.
+   - **Central de notificações** (sino no topo, com o número de não lidas,
+     em todos os perfis): convites e pedidos para entrar no time e as
+     respostas; amistosos (convite, aceito, recusado, cancelado com o
+     motivo, remarcado) e placar lançado; contestação do placar e a
+     resposta; nova vaquinha e pagamento confirmado. Separadas por time:
+     a central mostra as do time ativo (e as de times de que o usuário não
+     faz parte, como convites); com mais de um time, os chips do topo
+     trocam o time e mostram as não lidas de cada um. Chegam ao vivo; tocar
+     marca como lida e leva ao lugar de responder; arrastar apaga. O que
+     pede ação tem botão no card (Responder convite, Ver pedido, Responder
+     amistoso, Responder contestação, Conferir placar), que abre o time da
+     notificação na página certa (os amistosos, na aba Jogos já em
+     Pendentes ou Realizados).
+   - **Confirmação de presença** nos jogos marcados: o administrador ou o
+     técnico pede pelo ⋮ do card ("Pedir confirmação de presença") e os
+     atletas com conta recebem a notificação (pedir de novo avisa só quem
+     não respondeu). O atleta responde Sim, Não ou Talvez no card da
+     notificação ou no Próximo jogo do Início, e pode mudar até o jogo
+     começar. O card do jogo e o Próximo jogo mostram o resumo (sim · não ·
+     talvez · sem resposta); tocar abre a lista, com a foto e o apelido de
+     cada atleta.
    - **Pendências no Início**, em destaque no topo, para todos: o
      administrador vê os pedidos para entrar no time ativo (jogadores e
      técnicos); o jogador e o técnico, os convites de times para responder e
@@ -255,6 +276,8 @@ supabase/
 | `team_coaches` | Técnicos de cada time (entram pelo convite aceito, com `kind = 'coach'` em `team_invites`); veem os jogos, as fotos dos atletas e lançam escalação e súmula (`private.is_team_staff`). Todos veem os técnicos (foto e nome no perfil do time); só o técnico ou o dono removem |
 | `game_lineups` | Escalação: titulares e reservas de cada time no jogo; o dono ou o técnico montam antes e durante o jogo; quem vê o jogo vê a escalação |
 | `fundraisers` | Vaquinhas do time: item (bola, colete, uniforme, churrasco ou outro, com o que vai ser comprado), valor em centavos (`amount_type`: por pessoa, ou o total do produto, que o app divide entre o dono e os atletas) e se está encerrada. Só o dono do time cria, altera e exclui; o dono, os técnicos e os atletas com conta veem (`private.is_team_member`) |
+| `game_presence` | Confirmação de presença: um registro por atleta chamado (`answer`: `yes`, `no` ou `maybe`; nulo = sem resposta). Escrita só pelas funções `request_presence` (dono ou técnico; avisa quem não respondeu) e `answer_presence` (o próprio atleta), com o jogo marcado e antes de começar; o dono, o técnico e o próprio atleta veem |
+| `notifications` | Central de notificações: criadas por gatilhos do banco (`team_invites`, `games`, `score_disputes`, `fundraisers`, `fundraiser_payments`), nunca para quem fez a ação (menos no amistoso entre dois times do mesmo administrador, em que o outro time é avisado). Cada usuário só vê, marca como lida e apaga as dele; publicada no Realtime para o sino atualizar na hora |
 | `fundraiser_payments` | Quem pagou a vaquinha (um atleta do time ou o dono); sem linha, não pagou. Só o dono marca e desmarca |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de

@@ -16,6 +16,7 @@ import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../games/presentation/lineup_page.dart';
+import '../../games/presentation/presence.dart';
 import '../../profile/presentation/my_numbers_section.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -123,6 +124,7 @@ class TeamDashboard extends ConsumerWidget {
           clock: this.now == null ? null : () => now,
           canManage: canManage,
           isStaff: isStaff,
+          isPlayer: player,
         ),
         if (canManage && disputed > 0) ...[
           const SizedBox(height: 8),
@@ -393,7 +395,11 @@ class _NextGameCard extends StatefulWidget {
     this.clock,
     this.canManage = true,
     this.isStaff = true,
+    this.isPlayer = false,
   });
+
+  /// Atleta do time: responde se vai ao jogo.
+  final bool isPlayer;
 
   /// Dono do time: marca amistosos (o técnico só acompanha).
   final bool canManage;
@@ -521,8 +527,17 @@ class _NextGameCardState extends State<_NextGameCard> {
                       ],
                     ),
                   ],
+                  // O jogador confirma a presença; o dono e o técnico veem
+                  // as respostas.
+                  if (!live && widget.isPlayer) ...[
+                    const SizedBox(height: 16),
+                    Text('Você vai?', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    PresenceButtons(gameId: game.id!, teamId: team.id!),
+                  ],
                   if (!live && widget.isStaff) ...[
                     const SizedBox(height: 8),
+                    PresenceSummary(gameId: game.id!, teamId: team.id!),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(

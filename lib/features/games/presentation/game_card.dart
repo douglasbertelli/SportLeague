@@ -16,6 +16,7 @@ import '../domain/score_dispute.dart';
 import 'contest_score.dart';
 import 'game_sheet_page.dart';
 import 'lineup_page.dart';
+import 'presence.dart';
 
 /// "BAR" para "Barcelona": as 3 primeiras letras do nome, em maiúsculas.
 String teamCode(String name) {
@@ -34,6 +35,7 @@ enum _GameAction {
   contest,
   sheet,
   lineup,
+  presence,
 }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
@@ -69,11 +71,20 @@ class _GameCardState extends ConsumerState<GameCard> {
   /// Dono do time ativo (o técnico só escala e lança a súmula).
   bool get _canManage => ref.watch(canManageTeamProvider);
 
+  /// Marcado que ainda não começou: o dono e o técnico pedem a confirmação
+  /// de presença e acompanham as respostas.
+  bool get _presenceOpen =>
+      ref.watch(isTeamStaffProvider) &&
+      _game.status == GameStatus.scheduled &&
+      widget.stage == GameStage.scheduled &&
+      !_inProgress;
+
   List<_GameAction> _actions(ScoreDispute? dispute) => [
     if (_canManage) ..._statusActions(dispute),
     // Antes e durante o jogo, dono e técnico montam a escalação.
     if (_game.status != GameStatus.canceled && widget.stage != GameStage.played)
       _GameAction.lineup,
+    if (_presenceOpen) _GameAction.presence,
     // Durante e depois do jogo, cada time lança a súmula dos seus atletas.
     if (_game.status == GameStatus.scheduled &&
         (_inProgress || widget.stage == GameStage.played))
@@ -139,6 +150,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.contest => Icons.report_outlined,
                     _GameAction.sheet => Icons.assignment_outlined,
                     _GameAction.lineup => Icons.format_list_numbered,
+                    _GameAction.presence => Icons.how_to_reg_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -152,6 +164,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.contest => 'Contestar placar',
                     _GameAction.sheet => 'Súmula (gols, cartões, craque)',
                     _GameAction.lineup => 'Escalação',
+                    _GameAction.presence => 'Pedir confirmação de presença',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -249,6 +262,17 @@ class _GameCardState extends ConsumerState<GameCard> {
     }
     if (action == _GameAction.lineup) {
       return openLineup(context, game: _game, teamId: widget.viewerTeamId);
+    }
+    if (action == _GameAction.presence) {
+      setState(() => _loading = true);
+      await requestPresence(
+        context,
+        ref,
+        gameId: _game.id!,
+        teamId: widget.viewerTeamId,
+      );
+      if (mounted) setState(() => _loading = false);
+      return;
     }
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
@@ -444,6 +468,10 @@ class _GameCardState extends ConsumerState<GameCard> {
                     if (place != null) ...[
                       const SizedBox(height: 12),
                       _Detail(icon: Icons.location_on_outlined, text: place),
+                    ],
+                    if (_presenceOpen) ...[
+                      const SizedBox(height: 8),
+                      PresenceSummary(gameId: _game.id!, teamId: viewer),
                     ],
                     if (statusLine != null) ...[
                       const SizedBox(height: 12),

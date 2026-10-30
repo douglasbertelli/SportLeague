@@ -43,9 +43,7 @@ class ProfileRepository {
   /// Troca o apelido (vazio tira, e o perfil volta a mostrar o nome).
   Future<void> updateNickname(String userId, String nickname) => _client
       .from('profiles')
-      .update({
-        'nickname': nickname.trim().isEmpty ? null : nickname.trim(),
-      })
+      .update({'nickname': nickname.trim().isEmpty ? null : nickname.trim()})
       .eq('id', userId);
 
   /// Salva os dados de atleta do jogador (nulo limpa o campo).
