@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/security/secure_session_storage.dart';
 import 'core/storage/preferences_provider.dart';
 import 'core/supabase/supabase_providers.dart';
 import 'core/theme/app_color_provider.dart';
@@ -26,6 +27,10 @@ Future<void> main() async {
   await Supabase.initialize(
     url: Env.supabaseUrl,
     publishableKey: Env.supabaseAnonKey,
+    // A sessão fica no cofre do aparelho, não nas preferências comuns.
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureSessionStorage(supabaseUrl: Env.supabaseUrl),
+    ),
   );
 
   final preferences = await SharedPreferences.getInstance();

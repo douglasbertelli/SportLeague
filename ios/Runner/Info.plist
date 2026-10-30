@@ -68,6 +68,8 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Escolha uma imagem da galeria para o logo do seu time.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use o Face ID para entrar no SportLeague.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Tire uma foto para usar como logo do seu time.</string>
 	<key>CFBundleURLTypes</key>

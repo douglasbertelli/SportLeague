@@ -1,5 +1,6 @@
 package com.sportleague.sport_league
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FragmentActivity: exigida pela biometria (local_auth).
+class MainActivity : FlutterFragmentActivity()
