@@ -4,7 +4,8 @@
     <application
         android:label="SportLeague"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -36,6 +37,14 @@
                     android:host="login-callback" />
             </intent-filter>
         </activity>
+        <!-- Push (Firebase): o ícone monocromático da barra de status e a cor
+             de destaque, no lugar do ícone do app (que vira um quadrado). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

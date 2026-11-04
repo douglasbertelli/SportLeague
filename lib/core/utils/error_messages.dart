@@ -32,6 +32,13 @@ String friendlyErrorMessage(Object error) {
       return 'Este e-mail não pode ser usado. Verifique o endereço.';
     }
     if (error is AuthWeakPasswordException || code == 'weak_password') {
+      // Com a proteção contra senhas vazadas ligada no Supabase, a senha
+      // conhecida de vazamentos vem com o motivo 'pwned'.
+      if (error is AuthWeakPasswordException &&
+          error.reasons.contains('pwned')) {
+        return 'Essa senha já apareceu em vazamentos de dados. '
+            'Escolha outra.';
+      }
       return 'Senha fraca. Use pelo menos 8 caracteres.';
     }
     if (error.statusCode == '429') {
