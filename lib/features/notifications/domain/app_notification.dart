@@ -58,6 +58,7 @@ class AppNotification {
     'dispute' || 'dispute_answer' => Icons.report_outlined,
     'fundraiser' || 'fundraiser_paid' => Icons.savings_outlined,
     'presence' => Icons.how_to_reg_outlined,
+    'reminder' => Icons.alarm,
     _ => Icons.notifications_none,
   };
 }

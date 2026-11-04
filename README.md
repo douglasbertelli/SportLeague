@@ -86,6 +86,15 @@ dispara o gatilho `notifications_send_push`, que chama a Edge Function
 `pushed_at` (não repete o push) e apaga os tokens de apps desinstalados.
 Tocar no push abre as Notificações.
 
+**Lembretes automáticos** (`20261104020000_game_reminders.sql`): de 10 em
+10 minutos o `pg_cron` roda `private.send_game_reminders()`, que avisa o dono,
+os técnicos e os atletas com conta dos dois times de cada jogo marcado:
+**Jogo amanhã/hoje** entre 20 e 24 horas antes (só jogos marcados com mais de
+um dia de antecedência) e **Jogo daqui a pouco** entre 1 e 2 horas antes. O
+atleta que ainda não respondeu a presença recebe o lembrete com Sim / Não /
+Talvez; quem respondeu Não não é lembrado. Cada lembrete sai uma vez por data
+do jogo (`private.game_reminders`); remarcado, o jogo ganha lembretes novos.
+
 O app já está ligado ao projeto Firebase (`lib/firebase_options.dart` e
 `android/app/google-services.json`, gerados pelo `flutterfire configure`).
 No Supabase:
