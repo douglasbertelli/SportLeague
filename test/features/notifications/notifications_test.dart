@@ -319,6 +319,35 @@ void main() {
     expect(pumped.repo.read, ['p1']);
   });
 
+  testWidgets('lembrete do jogo: despertador e abre Jogos › Marcados', (
+    tester,
+  ) async {
+    final pumped = await _pump(
+      tester,
+      role: UserRole.admin,
+      notifications: [
+        AppNotification(
+          id: 'r1',
+          kind: 'reminder',
+          title: 'Jogo amanhã',
+          body: 'Amigos FC x Real Bairro às 15:00 · Arena Society Central.',
+          createdAt: DateTime.now(),
+          teamId: 'team-a',
+          gameId: 'g1',
+        ),
+      ],
+    );
+    expect(find.byIcon(Icons.alarm), findsOneWidget);
+    // Não pede ação (sem botão): tocar no card abre o jogo.
+    await tester.tap(find.text('Jogo amanhã'));
+    await tester.pumpAndSettle();
+    expect(pumped.repo.read, ['r1']);
+    expect(
+      pumped.container.read(gamesTabRequestProvider)?.stage,
+      GameStage.scheduled,
+    );
+  });
+
   testWidgets('sem notificações', (tester) async {
     await _pump(tester, notifications: const []);
     expect(find.text('Nenhuma notificação'), findsOneWidget);
