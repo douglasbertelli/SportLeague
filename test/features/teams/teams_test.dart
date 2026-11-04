@@ -1492,6 +1492,61 @@ void main() {
       expect(card, findsNothing);
     });
 
+    testWidgets('jogo de campeonato: faixa do campeonato e só o placar', (
+      tester,
+    ) async {
+      Game championshipGame({required bool played, int? score}) => Game(
+        id: played ? 'g1' : 'g2',
+        teamId: 'team-a',
+        opponent: 'Real Bairro',
+        opponentTeamId: 'team-rival',
+        status: GameStatus.scheduled,
+        modality: Modality.society,
+        scheduledAt: played
+            ? DateTime(2026, 10, 18, 15)
+            : DateTime(2026, 10, 25, 15),
+        teamScore: score,
+        opponentScore: score == null ? null : 0,
+        championship: const GameChampionship(
+          championshipId: 'c1',
+          name: 'Copa do Bairro',
+          stageLabel: 'Rodada 2',
+        ),
+      );
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: FakeGameRepository({
+          'team-a': [
+            championshipGame(played: false),
+            championshipGame(played: true, score: 2),
+          ],
+        }),
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      // Marcado: a faixa do campeonato e nada de editar ou cancelar.
+      expect(find.text('Copa do Bairro · Rodada 2'), findsOneWidget);
+      await tester.tap(find.byTooltip('Ações do jogo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Editar'), findsNothing);
+      expect(find.text('Cancelar amistoso'), findsNothing);
+      expect(find.text('Escalação'), findsOneWidget);
+      await tester.tap(find.text('Fechar'));
+      await tester.pumpAndSettle();
+
+      // Realizado: o mandante corrige o placar.
+      await tester.tap(find.text('Realizados (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Ações do jogo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Corrigir placar'), findsOneWidget);
+      expect(find.text('Contestar placar'), findsNothing);
+    });
+
     testWidgets('quem marcou lança o placar depois do jogo', (tester) async {
       final games = FakeGameRepository({
         'team-a': [

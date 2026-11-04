@@ -101,6 +101,13 @@ class _GameCardState extends ConsumerState<GameCard> {
 
   List<_GameAction> _statusActions(ScoreDispute? dispute) {
     final isHost = _game.isHostedBy(widget.viewerTeamId);
+    // Jogo de campeonato: o organizador marca e muda; o mandante só lança o
+    // placar (durante e depois); ninguém edita, cancela ou contesta.
+    if (_game.isChampionship) {
+      return isHost && (widget.stage == GameStage.played || _inProgress)
+          ? const [_GameAction.score]
+          : const [];
+    }
     return switch (_game.status) {
       GameStatus.canceled => const [],
       GameStatus.pending when isHost => const [
@@ -139,7 +146,9 @@ class _GameCardState extends ConsumerState<GameCard> {
       builder: (context) {
         final colors = Theme.of(context).colorScheme;
         return AppSheet(
-          title: 'Amistoso contra $opponentName',
+          title: _game.isChampionship
+              ? 'Jogo contra $opponentName'
+              : 'Amistoso contra $opponentName',
           message:
               '${formatGameDay(_game.scheduledAt)} às '
               '${formatGameTime(_game.scheduledAt)}',
@@ -396,6 +405,48 @@ class _GameCardState extends ConsumerState<GameCard> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Jogo de campeonato: qual e a fase; tocar abre o campeonato.
+              if (_game.championship case final championship?)
+                Material(
+                  color: colors.secondaryContainer,
+                  child: InkWell(
+                    onTap: () => context.push(
+                      Routes.championship,
+                      extra: championship.championshipId,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.emoji_events_outlined,
+                            size: 18,
+                            color: colors.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${championship.name} · '
+                              '${championship.stageLabel}',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: colors.onSecondaryContainer,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: colors.onSecondaryContainer,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               // Cabeçalho: time ativo × adversário.
               ColoredBox(
                 color: colors.surfaceContainerHigh,
@@ -593,7 +644,9 @@ class _GameCardState extends ConsumerState<GameCard> {
                         ),
                       )
                     : IconButton(
-                        tooltip: 'Ações do amistoso',
+                        tooltip: _game.isChampionship
+                            ? 'Ações do jogo'
+                            : 'Ações do amistoso',
                         icon: Icon(Icons.more_vert, color: colors.primary),
                         onPressed: () => _showActions(actions),
                       ),

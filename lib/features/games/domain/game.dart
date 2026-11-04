@@ -26,6 +26,38 @@ enum GameStage {
   final String label;
 }
 
+/// De qual campeonato e fase é um jogo de campeonato.
+class GameChampionship {
+  const GameChampionship({
+    required this.championshipId,
+    required this.name,
+    required this.stageLabel,
+  });
+
+  /// Nulo para amistoso (sem `championship_match` no select).
+  static GameChampionship? fromMap(Object? value) {
+    if (value is! Map<String, dynamic>) return null;
+    final championship = value['championship'] as Map<String, dynamic>?;
+    if (championship == null) return null;
+    final round = value['round'] as int;
+    return GameChampionship(
+      championshipId: championship['id'] as String,
+      name: championship['name'] as String,
+      stageLabel: switch (value['stage']) {
+        'group' => 'Grupo ${value['group_label']} · Rodada $round',
+        'knockout' => 'Mata-mata',
+        _ => 'Rodada $round',
+      },
+    );
+  }
+
+  final String championshipId;
+  final String name;
+
+  /// "Rodada 3", "Grupo A · Rodada 1" ou "Mata-mata".
+  final String stageLabel;
+}
+
 /// Amistoso marcado pelo time [teamId]. O adversário é um time da plataforma
 /// ([opponentTeamId]) ou um time fictício do administrador
 /// ([opponentGuestId]); [opponent] guarda o nome para exibir mesmo se o time
@@ -56,6 +88,7 @@ class Game {
     this.teamScore,
     this.opponentScore,
     this.clock,
+    this.championship,
   });
 
   factory Game.fromMap(Map<String, dynamic> map) {
@@ -91,8 +124,14 @@ class Game {
       teamScore: map['team_score'] as int?,
       opponentScore: map['opponent_score'] as int?,
       clock: MatchClock.fromMap(map),
+      championship: GameChampionship.fromMap(map['championship_match']),
     );
   }
+
+  /// Jogo de campeonato (o organizador marca; o mandante lança o placar).
+  final GameChampionship? championship;
+
+  bool get isChampionship => championship != null;
 
   /// Nulo antes de o jogo ser salvo.
   final String? id;
