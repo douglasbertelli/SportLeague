@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "181855208023",
+    "project_id": "sportleagueclaude",
+    "storage_bucket": "sportleagueclaude.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:181855208023:android:c3539a5d4751e014631912",
+        "android_client_info": {
+          "package_name": "com.sportleague.sport_league"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPFu45hDxxWFbXqnnlgEWY571LQVbGNsE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
