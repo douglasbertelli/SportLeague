@@ -51,7 +51,10 @@ class PushRegistration {
 
   Future<void> _save(String token) => _client.rpc(
     'register_device_token',
-    params: {'p_token': token, 'p_platform': Platform.isIOS ? 'ios' : 'android'},
+    params: {
+      'p_token': token,
+      'p_platform': Platform.isIOS ? 'ios' : 'android',
+    },
   );
 
   Future<void> unregister() async {

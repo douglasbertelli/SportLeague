@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sport_league/core/maps/open_in_maps.dart';
 import 'package:sport_league/core/media/picked_image.dart';
 import 'package:sport_league/core/media/whistle_player.dart';
 import 'package:sport_league/core/media/square_crop_page.dart';
@@ -85,6 +86,7 @@ Future<ProviderContainer> _container({
   bool coach = false,
   bool player = false,
   CropSquare? cropSquare,
+  Future<bool> Function(Uri)? launchUrl,
   Future<void> Function(Uint8List png, String text)? shareImage,
   Map<String, Object> saved = const {},
 }) async {
@@ -126,6 +128,10 @@ Future<ProviderContainer> _container({
       if (pickImage != null) pickImageProvider.overrideWithValue(pickImage),
       cropSquareProvider.overrideWithValue(
         cropSquare ?? (context, image) async => image,
+      ),
+      // Nenhum link sai do teste.
+      launchExternalUrlProvider.overrideWithValue(
+        launchUrl ?? (_) async => true,
       ),
       // Nada sai do teste para o compartilhamento do sistema.
       shareImageProvider.overrideWithValue(shareImage ?? (_, _) async {}),
@@ -3277,6 +3283,19 @@ void main() {
       );
       _usePhoneScreen(tester);
       await _pumpPage(tester, container, AvailabilityPage(today: saturday));
+      // O calendário tem 5 ou 6 semanas conforme o mês, e a lista só monta o
+      // que está perto da tela: rola até os horários do dia.
+      final page = find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('18:00'),
+        200,
+        scrollable: page,
+      );
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('18:00'), findsOneWidget);
       // Tira a lista de baixo do botão "Adicionar horário".
@@ -3819,6 +3838,53 @@ void main() {
       await tapVisible(tester, find.text('Cadastrar local'));
       expect(find.text('Esse local já existe?'), findsNothing);
       expect(venues.created.single.name, 'Ginásio Municipal');
+    });
+
+    testWidgets('o local do card abre no Google Maps ou no Waze', (
+      tester,
+    ) async {
+      final launched = <Uri>[];
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: FakeGameRepository({
+          'team-a': [
+            Game(
+              id: 'g1',
+              teamId: 'team-a',
+              opponent: 'Real Bairro',
+              status: GameStatus.scheduled,
+              scheduledAt: DateTime(2026, 10, 25, 15),
+              venueId: arena.id,
+              venue: arena,
+            ),
+          ],
+        }),
+        launchUrl: (uri) async {
+          launched.add(uri);
+          return true;
+        },
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      await tester.tap(find.text('Arena Society Central · Campinas/SP'));
+      await tester.pumpAndSettle();
+      // A folha mostra o endereço completo do local.
+      expect(find.text(arena.address), findsOneWidget);
+      await tester.tap(find.text('Abrir no Google Maps'));
+      await tester.pumpAndSettle();
+      expect(launched.single.host, 'www.google.com');
+      expect(launched.single.queryParameters['query'], arena.address);
+
+      await tester.tap(find.text('Arena Society Central · Campinas/SP'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Abrir no Waze'));
+      await tester.pumpAndSettle();
+      expect(launched.last.host, 'waze.com');
+      expect(launched.last.queryParameters['q'], arena.address);
     });
   });
 }
