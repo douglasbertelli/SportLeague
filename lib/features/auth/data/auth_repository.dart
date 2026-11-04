@@ -8,6 +8,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/push/push_notifications.dart';
 import '../../../core/supabase/supabase_providers.dart';
 
 /// Deep link de retorno do login social feito pelo navegador. Precisa estar
@@ -25,9 +26,12 @@ bool get _isApple =>
         defaultTargetPlatform == TargetPlatform.macOS);
 
 class AuthRepository {
-  AuthRepository(this._auth);
+  AuthRepository(this._auth, {this.beforeSignOut});
 
   final GoTrueClient _auth;
+
+  /// Roda ainda logado, antes de sair (tira o aparelho do push).
+  final Future<void> Function()? beforeSignOut;
   Future<void>? _googleInit;
 
   /// Cria a conta. O perfil é criado no banco pelo trigger `handle_new_user`
@@ -145,6 +149,7 @@ class AuthRepository {
       _auth.resetPasswordForEmail(email.trim());
 
   Future<void> signOut() async {
+    await beforeSignOut?.call();
     if (_googleInit != null) {
       // Sem isso o Android reaproveita a última conta sem mostrar a escolha.
       await GoogleSignIn.instance.signOut().catchError((_) {});
@@ -154,5 +159,8 @@ class AuthRepository {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(ref.watch(supabaseClientProvider).auth),
+  (ref) => AuthRepository(
+    ref.watch(supabaseClientProvider).auth,
+    beforeSignOut: () => ref.read(pushRegistrationProvider).unregister(),
+  ),
 );

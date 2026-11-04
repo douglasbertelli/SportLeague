@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -12,6 +16,7 @@ import 'core/supabase/supabase_providers.dart';
 import 'core/theme/app_color_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/profile/data/profile_repository.dart';
+import 'firebase_options.dart';
 import 'features/teams/data/team_repository.dart';
 
 Future<void> main() async {
@@ -32,6 +37,13 @@ Future<void> main() async {
       localStorage: SecureSessionStorage(supabaseUrl: Env.supabaseUrl),
     ),
   );
+
+  // Firebase só para o push, no Android e no iOS.
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   final preferences = await SharedPreferences.getInstance();
 

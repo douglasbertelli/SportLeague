@@ -76,6 +76,37 @@ Por fim, preencha `GOOGLE_WEB_CLIENT_ID` e `GOOGLE_IOS_CLIENT_ID` no
 `env.json`. Sem o client ID Web, o botão do Google avisa que o login não está
 configurado.
 
+### Notificações push
+
+As notificações do sino também chegam como push no Android e no iOS, pelo
+**Firebase Cloud Messaging**. Ao entrar, o app pede a permissão e guarda o
+token do aparelho (`device_tokens`); ao sair, tira. Cada notificação nova
+dispara o gatilho `notifications_send_push`, que chama a Edge Function
+`send-push` (`supabase/functions/send-push`); ela envia pelo FCM, marca
+`pushed_at` (não repete o push) e apaga os tokens de apps desinstalados.
+Tocar no push abre as Notificações.
+
+O app já está ligado ao projeto Firebase (`lib/firebase_options.dart` e
+`android/app/google-services.json`, gerados pelo `flutterfire configure`).
+No Supabase:
+
+1. Rode a migration `20261104010000_push_notifications.sql`.
+2. Guarde a URL do projeto no Vault (SQL Editor), uma vez:
+
+   ```sql
+   select vault.create_secret('https://<projeto>.supabase.co', 'project_url');
+   ```
+
+3. Publique a função sem exigir login (ela mesma se protege):
+   `supabase functions deploy send-push --no-verify-jwt`.
+4. Em **Edge Functions → Secrets**, crie `FIREBASE_SERVICE_ACCOUNT` com o JSON
+   da conta de serviço (Firebase → Configurações do projeto → Contas de
+   serviço → Gerar nova chave privada). Não versione esse arquivo.
+
+No **iOS**, falta ainda: enviar a chave APNs (`.p8`) em Firebase →
+Configurações do projeto → Cloud Messaging e ligar a capability **Push
+Notifications** no target Runner pelo Xcode.
+
 ## Fluxo atual
 
 1. **Cadastro** com nome, e-mail e senha, ou **login social** com Google ou Apple.

@@ -11,6 +11,8 @@ dependencies:
   confetti: ^0.8.0
   crop_your_image: ^2.0.1
   crypto: ^3.0.7
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
   flutter:
     sdk: flutter
   flutter_localizations:
