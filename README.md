@@ -254,7 +254,8 @@ Notifications** no target Runner pelo Xcode.
      em todos os perfis): convites e pedidos para entrar no time e as
      respostas; amistosos (convite, aceito, recusado, cancelado com o
      motivo, remarcado) e placar lançado; contestação do placar e a
-     resposta; nova vaquinha e pagamento confirmado. Separadas por time:
+     resposta; nova vaquinha e pagamento confirmado; mensalidade (criada,
+     alterada, paga, vencimento e atraso); lembretes de jogo. Separadas por time:
      a central mostra as do time ativo (e as de times de que o usuário não
      faz parte, como convites); com mais de um time, os chips do topo
      trocam o time e mostram as não lidas de cada um. Chegam ao vivo; tocar
@@ -286,6 +287,16 @@ Notifications** no target Runner pelo Xcode.
        vaquinha mostra o total arrecadado de quanto é esperado. O técnico e
        os atletas acompanham. Vaquinhas antigas são encerradas (e podem ser
        reabertas).
+     - **Mensalidade**: o administrador configura o valor por mês, o dia do
+       vencimento (1 a 28) e, opcional, a chave PIX, e marca mês a mês quais
+       atletas pagaram (setas passam pelos meses, desde o primeiro cobrado).
+       Cada atleta aparece como Pago, Em aberto ou Atrasado (depois do
+       vencimento), com o total arrecadado do mês. O técnico e os atletas
+       acompanham; o atleta vê no topo se está em dia ou quais meses deve e
+       copia a chave PIX. Entra nas notificações: mensalidade criada e
+       alterada (atletas e técnicos), pagamento confirmado (o atleta) e, todo
+       dia às 9h, o lembrete de vencimento no dia e de atraso 3 dias depois
+       para quem não pagou.
 
 ## Estrutura
 
@@ -302,6 +313,7 @@ lib/
     games/     jogos de cada time
     venues/    locais das partidas (cadastro, pesquisa e foto)
     fundraisers/ vaquinhas do time e quem pagou
+    dues/      mensalidade do time e quem pagou cada mês
     splash/    carregamento inicial
 supabase/
   migrations/  schema do banco (tabelas, RLS e triggers)
@@ -329,8 +341,10 @@ supabase/
 | `game_lineups` | Escalação: titulares e reservas de cada time no jogo; o dono ou o técnico montam antes e durante o jogo; quem vê o jogo vê a escalação |
 | `fundraisers` | Vaquinhas do time: item (bola, colete, uniforme, churrasco ou outro, com o que vai ser comprado), valor em centavos (`amount_type`: por pessoa, ou o total do produto, que o app divide entre o dono e os atletas) e se está encerrada. Só o dono do time cria, altera e exclui; o dono, os técnicos e os atletas com conta veem (`private.is_team_member`) |
 | `game_presence` | Confirmação de presença: um registro por atleta chamado (`answer`: `yes`, `no` ou `maybe`; nulo = sem resposta). Escrita só pelas funções `request_presence` (dono ou técnico; avisa quem não respondeu) e `answer_presence` (o próprio atleta), com o jogo marcado e antes de começar; o dono, o técnico e o próprio atleta veem |
-| `notifications` | Central de notificações: criadas por gatilhos do banco (`team_invites`, `games`, `score_disputes`, `fundraisers`, `fundraiser_payments`), nunca para quem fez a ação (menos no amistoso entre dois times do mesmo administrador, em que o outro time é avisado). Cada usuário só vê, marca como lida e apaga as dele; publicada no Realtime para o sino atualizar na hora |
+| `notifications` | Central de notificações: criadas por gatilhos do banco (`team_invites`, `games`, `score_disputes`, `fundraisers`, `fundraiser_payments`, `team_dues`, `team_due_payments`) e pelos lembretes do `pg_cron` (jogos e mensalidade), nunca para quem fez a ação (menos no amistoso entre dois times do mesmo administrador, em que o outro time é avisado). Cada usuário só vê, marca como lida e apaga as dele; publicada no Realtime para o sino atualizar na hora |
 | `fundraiser_payments` | Quem pagou a vaquinha (um atleta do time ou o dono); sem linha, não pagou. Só o dono marca e desmarca |
+| `team_dues` | Mensalidade do time (uma por time): valor em centavos, dia do vencimento (1 a 28), chave PIX opcional e o primeiro mês cobrado. Só o dono configura, altera e remove; o dono, os técnicos e os atletas com conta veem. Criar ou alterar avisa os atletas e os técnicos |
+| `team_due_payments` | Quem pagou a mensalidade de cada mês (atleta e dia 1 do mês); sem linha, em aberto. Só o dono marca (atletas do próprio time) e desmarca; marcar avisa o atleta. O `pg_cron` (`dues-reminders`, 9h de Brasília) lembra no vencimento e 3 dias depois quem não pagou |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda

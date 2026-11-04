@@ -121,6 +121,13 @@ Future<_Pumped> _pump(
         path: Routes.playerInvites,
         builder: (_, _) => const Scaffold(body: Text('Tela de convites')),
       ),
+      GoRoute(
+        path: Routes.dues,
+        builder: (_, _) => Scaffold(
+          appBar: AppBar(),
+          body: const Text('Tela da mensalidade'),
+        ),
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -346,6 +353,43 @@ void main() {
       pumped.container.read(gamesTabRequestProvider)?.stage,
       GameStage.scheduled,
     );
+  });
+
+  testWidgets('mensalidade: o vencimento tem botão; os avisos abrem ao tocar', (
+    tester,
+  ) async {
+    AppNotification note(String id, String kind, String title) =>
+        AppNotification(
+          id: id,
+          kind: kind,
+          title: title,
+          body: '…',
+          createdAt: DateTime.now(),
+          teamId: 'team-a',
+        );
+    final pumped = await _pump(
+      tester,
+      notifications: [
+        note('d1', 'dues', 'Mensalidade vence hoje'),
+        note('d2', 'dues_paid', 'Pagamento confirmado'),
+        note('d3', 'dues_new', 'Mensalidade do time'),
+      ],
+    );
+    // Só o vencimento pede ação.
+    expect(find.text('Ver mensalidade'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+
+    await tester.tap(find.text('Ver mensalidade'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tela da mensalidade'), findsOneWidget);
+    expect(pumped.repo.read, ['d1']);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pagamento confirmado'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tela da mensalidade'), findsOneWidget);
+    expect(pumped.repo.read, ['d1', 'd2']);
   });
 
   testWidgets('sem notificações', (tester) async {

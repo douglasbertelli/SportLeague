@@ -18,7 +18,7 @@ class AppDrawerButton extends StatelessWidget {
 }
 
 /// Menu lateral (☰ no topo da home): as funcionalidades extras do app.
-/// Por enquanto, a vaquinha.
+/// A vaquinha e a mensalidade.
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, required this.profile});
 
@@ -81,6 +81,13 @@ class AppDrawer extends StatelessWidget {
           title: const Text('Vaquinha'),
           subtitle: const Text('Dinheiro do time para bola, coletes e mais'),
           onTap: () => _open(context, Routes.fundraisers),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.payments_outlined),
+          title: const Text('Mensalidade'),
+          subtitle: const Text('Quem pagou o mês e quem está devendo'),
+          onTap: () => _open(context, Routes.dues),
         ),
       ],
     );

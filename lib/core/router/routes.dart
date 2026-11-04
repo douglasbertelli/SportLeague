@@ -77,4 +77,7 @@ abstract final class Routes {
 
   /// Uma vaquinha e quem pagou; recebe `FundraiserArgs` em `extra`.
   static const fundraiser = '/home/fundraisers/detail';
+
+  /// Mensalidade do time (menu lateral).
+  static const dues = '/home/dues';
 }

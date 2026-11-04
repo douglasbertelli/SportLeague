@@ -11,6 +11,7 @@ import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
+import '../../features/dues/presentation/dues_page.dart';
 import '../../features/fundraisers/domain/fundraiser.dart';
 import '../../features/fundraisers/presentation/fundraiser_form_page.dart';
 import '../../features/fundraisers/presentation/fundraiser_page.dart';
@@ -184,6 +185,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'my-invites',
             builder: (_, _) => const PlayerInvitesPage(),
           ),
+          GoRoute(path: 'dues', builder: (_, _) => const DuesPage()),
           GoRoute(
             path: 'fundraisers',
             builder: (_, _) => const FundraisersPage(),
