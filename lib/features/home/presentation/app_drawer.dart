@@ -18,7 +18,7 @@ class AppDrawerButton extends StatelessWidget {
 }
 
 /// Menu lateral (☰ no topo da home): as funcionalidades extras do app.
-/// A vaquinha e a mensalidade.
+/// Os campeonatos, a vaquinha e a mensalidade.
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, required this.profile});
 
@@ -75,6 +75,13 @@ class AppDrawer extends StatelessWidget {
           ),
         ),
         const Divider(indent: 28, endIndent: 28),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.emoji_events_outlined),
+          title: const Text('Campeonatos'),
+          subtitle: const Text('Pontos corridos, mata-mata ou grupos'),
+          onTap: () => _open(context, Routes.championships),
+        ),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.savings_outlined),
