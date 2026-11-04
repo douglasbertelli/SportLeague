@@ -80,4 +80,18 @@ abstract final class Routes {
 
   /// Mensalidade do time (menu lateral).
   static const dues = '/home/dues';
+
+  /// Campeonatos do usuário (menu lateral).
+  static const championships = '/home/championships';
+
+  /// Cria ou edita (antes de começar); recebe o `Championship` em `extra`
+  /// para editar.
+  static const championshipForm = '/home/championships/form';
+
+  /// Um campeonato; recebe o id em `extra`.
+  static const championship = '/home/championships/detail';
+
+  /// Escolha de um time para o campeonato; recebe
+  /// `ChampionshipTeamPickerArgs` em `extra`.
+  static const championshipTeamPicker = '/home/championships/pick-team';
 }

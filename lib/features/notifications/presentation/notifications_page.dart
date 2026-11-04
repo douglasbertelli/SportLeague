@@ -137,6 +137,21 @@ class NotificationsPage extends ConsumerWidget {
         Routes.dues,
         needsAction: true,
       ),
+      // Campeonato: o convite pede resposta (botão); os outros abrem ao tocar.
+      'championship_invite' ||
+      'championship_answer' ||
+      'championship_started' ||
+      'championship_match' ||
+      'championship_result' when notification.championshipId != null =>
+        NotificationAction.page(
+          notification.kind == 'championship_invite'
+              ? 'Responder convite'
+              : 'Ver campeonato',
+          Icons.emoji_events_outlined,
+          Routes.championship,
+          extra: notification.championshipId,
+          needsAction: notification.kind == 'championship_invite',
+        ),
       // Mensalidade criada, alterada ou paga: tocar abre a mensalidade.
       'dues_new' ||
       'dues_changed' ||
@@ -195,8 +210,8 @@ class NotificationsPage extends ConsumerWidget {
     }
     if (!context.mounted) return;
     switch (action) {
-      case NotificationAction(:final route?):
-        await context.push(route);
+      case NotificationAction(:final route?, :final extra):
+        await context.push(route, extra: extra);
       case NotificationAction(:final stage?):
         // A aba Jogos, na aba de dentro certa (Pendentes, Realizados…).
         ref.read(gamesTabRequestProvider.notifier).open(stage);
@@ -356,6 +371,7 @@ class NotificationAction {
     this.icon,
     String this.route, {
     this.needsAction = false,
+    this.extra,
   }) : stage = null;
 
   const NotificationAction.games(
@@ -363,11 +379,15 @@ class NotificationAction {
     this.icon,
     GameStage this.stage, {
     this.needsAction = false,
-  }) : route = null;
+  }) : route = null,
+       extra = null;
 
   final String label;
   final IconData icon;
   final String? route;
+
+  /// O que a página recebe em `extra` (o id do campeonato, por exemplo).
+  final Object? extra;
   final GameStage? stage;
   final bool needsAction;
 }

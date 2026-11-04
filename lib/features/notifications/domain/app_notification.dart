@@ -12,6 +12,7 @@ class AppNotification {
     this.teamId,
     this.gameId,
     this.fundraiserId,
+    this.championshipId,
     this.readAt,
   });
 
@@ -24,6 +25,7 @@ class AppNotification {
     teamId: map['team_id'] as String?,
     gameId: map['game_id'] as String?,
     fundraiserId: map['fundraiser_id'] as String?,
+    championshipId: map['championship_id'] as String?,
     readAt: switch (map['read_at']) {
       final String at => DateTime.parse(at).toLocal(),
       _ => null,
@@ -35,7 +37,9 @@ class AppNotification {
   /// invite, request, invite_answer, request_answer, game_invite,
   /// game_accepted, game_declined, game_canceled, game_rescheduled,
   /// game_score, dispute, dispute_answer, fundraiser, fundraiser_paid,
-  /// presence.
+  /// presence, reminder, dues, dues_new, dues_changed, dues_paid,
+  /// championship_invite, championship_answer, championship_started,
+  /// championship_match, championship_result.
   final String kind;
   final String title;
   final String body;
@@ -43,6 +47,7 @@ class AppNotification {
   final String? teamId;
   final String? gameId;
   final String? fundraiserId;
+  final String? championshipId;
   final DateTime? readAt;
 
   bool get isRead => readAt != null;
@@ -61,6 +66,11 @@ class AppNotification {
     'reminder' => Icons.alarm,
     'dues' || 'dues_new' || 'dues_changed' => Icons.payments_outlined,
     'dues_paid' => Icons.check_circle_outline,
+    'championship_invite' ||
+    'championship_answer' ||
+    'championship_started' ||
+    'championship_match' ||
+    'championship_result' => Icons.emoji_events_outlined,
     _ => Icons.notifications_none,
   };
 }

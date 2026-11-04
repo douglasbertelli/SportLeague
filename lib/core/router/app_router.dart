@@ -11,6 +11,11 @@ import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
+import '../../features/championships/domain/championship.dart';
+import '../../features/championships/presentation/championship_form_page.dart';
+import '../../features/championships/presentation/championship_page.dart';
+import '../../features/championships/presentation/championship_team_picker_page.dart';
+import '../../features/championships/presentation/championships_page.dart';
 import '../../features/dues/presentation/dues_page.dart';
 import '../../features/fundraisers/domain/fundraiser.dart';
 import '../../features/fundraisers/presentation/fundraiser_form_page.dart';
@@ -186,6 +191,35 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const PlayerInvitesPage(),
           ),
           GoRoute(path: 'dues', builder: (_, _) => const DuesPage()),
+          GoRoute(
+            path: 'championships',
+            builder: (_, _) => const ChampionshipsPage(),
+            routes: [
+              GoRoute(
+                path: 'form',
+                builder: (_, state) => ChampionshipFormPage(
+                  championship: state.extra as Championship?,
+                ),
+              ),
+              GoRoute(
+                path: 'detail',
+                builder: (_, state) =>
+                    ChampionshipPage(championshipId: state.extra! as String),
+              ),
+              GoRoute(
+                path: 'pick-team',
+                builder: (_, state) {
+                  final (:modality, :teamIds, :guestIds) =
+                      state.extra! as ChampionshipTeamPickerArgs;
+                  return ChampionshipTeamPickerPage(
+                    modality: modality,
+                    teamIds: teamIds,
+                    guestIds: guestIds,
+                  );
+                },
+              ),
+            ],
+          ),
           GoRoute(
             path: 'fundraisers',
             builder: (_, _) => const FundraisersPage(),
