@@ -298,7 +298,14 @@ Notifications** no target Runner pelo Xcode.
        campeão (vencedor da final ou líder dos pontos corridos, ao encerrar)
        aparece em destaque. Os times inscritos acompanham e recebem os avisos
        (uma vez por pessoa): convite e resposta, campeonato começou, jogo
-       marcado e resultado.
+       marcado e resultado. Com os dois times e a data, o jogo do campeonato
+       entra na aba **Jogos** dos times da plataforma (faixa com o campeonato
+       e a fase, que abre o campeonato), com relógio, placar ao vivo, súmula,
+       escalação, presença e lembretes. O mandante da plataforma (ou o
+       visitante, se o mandante é fictício) controla o relógio e lança o
+       placar, que volta sozinho para a classificação e avança o mata-mata;
+       a data, o local e o placar do organizador vão para o jogo. Os times
+       não editam, cancelam nem contestam jogos de campeonato.
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
        Churrasco ou Outros (dizendo o que vai ser comprado). O administrador define o
        valor por pessoa ou o valor total do produto (o app divide pelo
@@ -368,7 +375,7 @@ supabase/
 | `team_due_payments` | Quem pagou a mensalidade de cada mês (atleta e dia 1 do mês); sem linha, em aberto. Só o dono marca (atletas do próprio time) e desmarca; marcar avisa o atleta. O `pg_cron` (`dues-reminders`, 9h de Brasília) lembra no vencimento e 3 dias depois quem não pagou |
 | `championships` | Campeonatos: organizador (`owner_id`, um administrador), nome, modalidade, formato (`league`, `knockout` ou `groups`), turno e returno, grupos e classificados por grupo, e situação (`draft`, `running`, `finished`). Veem o organizador e os membros dos times da plataforma inscritos (`private.can_see_championship`); só o organizador altera |
 | `championship_teams` | Times inscritos (da plataforma ou fictícios do organizador), com o nome guardado (os fictícios só o dono vê), a situação (`invited`, `accepted`, `declined`; o banco confirma os times do organizador e os fictícios) e o grupo sorteado. O dono do time convidado responde por `respond_championship_invite` |
-| `championship_matches` | Jogos: fase (`league`, `group`, `knockout`), rodada, posição no chaveamento, grupo, mandante e visitante (nulos no mata-mata até a fase anterior acabar), data, local, placar e pênaltis. Só o organizador gera, marca e lança; marcar e lançar avisam os dois times |
+| `championship_matches` | Jogos: fase (`league`, `group`, `knockout`), rodada, posição no chaveamento, grupo, mandante e visitante (nulos no mata-mata até a fase anterior acabar), data, local, placar e pênaltis. Só o organizador gera, marca e lança; marcar e lançar avisam os dois times. Com os dois times e a data vira um jogo em `games` (`type = 'championship'`, `championship_match_id`), sincronizado nos dois sentidos; no mata-mata o banco avança o vencedor e encerra o campeonato na final |
 
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
