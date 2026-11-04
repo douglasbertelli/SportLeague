@@ -17,6 +17,7 @@ import 'contest_score.dart';
 import 'game_sheet_page.dart';
 import 'lineup_page.dart';
 import 'presence.dart';
+import 'share_result.dart';
 
 /// "BAR" para "Barcelona": as 3 primeiras letras do nome, em maiúsculas.
 String teamCode(String name) {
@@ -36,6 +37,7 @@ enum _GameAction {
   sheet,
   lineup,
   presence,
+  share,
 }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
@@ -89,6 +91,11 @@ class _GameCardState extends ConsumerState<GameCard> {
     if (_game.status == GameStatus.scheduled &&
         (_inProgress || widget.stage == GameStage.played))
       _GameAction.sheet,
+    // Jogo terminado com placar: o resultado vira imagem para as redes.
+    if (_game.status == GameStatus.scheduled &&
+        widget.stage == GameStage.played &&
+        _game.hasScore)
+      _GameAction.share,
   ];
 
   List<_GameAction> _statusActions(ScoreDispute? dispute) {
@@ -151,6 +158,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.sheet => Icons.assignment_outlined,
                     _GameAction.lineup => Icons.format_list_numbered,
                     _GameAction.presence => Icons.how_to_reg_outlined,
+                    _GameAction.share => Icons.share_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -165,6 +173,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.sheet => 'Súmula (gols, cartões, craque)',
                     _GameAction.lineup => 'Escalação',
                     _GameAction.presence => 'Pedir confirmação de presença',
+                    _GameAction.share => 'Compartilhar resultado',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -277,6 +286,15 @@ class _GameCardState extends ConsumerState<GameCard> {
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
       return;
+    }
+    if (action == _GameAction.share) {
+      return shareGameResult(
+        context,
+        ref,
+        game: _game,
+        viewerTeamId: widget.viewerTeamId,
+        myTeam: ref.read(selectedTeamProvider).value,
+      );
     }
 
     final opponentName = _game.opponentNameFor(widget.viewerTeamId);

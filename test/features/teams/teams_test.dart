@@ -29,6 +29,7 @@ import 'package:sport_league/features/games/data/lineup_repository.dart';
 import 'package:sport_league/features/games/presentation/lineup_page.dart';
 import 'package:sport_league/features/athletes/presentation/athlete_profile_page.dart';
 import 'package:sport_league/features/games/domain/player_stats.dart';
+import 'package:sport_league/features/games/presentation/share_result.dart';
 import 'package:sport_league/features/games/presentation/game_sheet_page.dart';
 import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/games_tab_request.dart';
@@ -84,6 +85,7 @@ Future<ProviderContainer> _container({
   bool coach = false,
   bool player = false,
   CropSquare? cropSquare,
+  Future<void> Function(Uint8List png, String text)? shareImage,
   Map<String, Object> saved = const {},
 }) async {
   SharedPreferences.setMockInitialValues(saved);
@@ -125,6 +127,8 @@ Future<ProviderContainer> _container({
       cropSquareProvider.overrideWithValue(
         cropSquare ?? (context, image) async => image,
       ),
+      // Nada sai do teste para o compartilhamento do sistema.
+      shareImageProvider.overrideWithValue(shareImage ?? (_, _) async {}),
     ],
   );
   addTearDown(container.dispose);
@@ -1403,6 +1407,83 @@ void main() {
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
       }
+    });
+
+    testWidgets('o resultado vira imagem para compartilhar', (tester) async {
+      final shared = <({Uint8List png, String text})>[];
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        games: FakeGameRepository({
+          'team-a': [
+            Game(
+              id: 'g1',
+              teamId: 'team-a',
+              opponent: 'Real Bairro',
+              opponentTeamId: 'team-rival',
+              status: GameStatus.scheduled,
+              modality: Modality.society,
+              scheduledAt: DateTime(2026, 10, 18, 15),
+              teamScore: 3,
+              opponentScore: 1,
+            ),
+          ],
+        }),
+        playerStats: FakePlayerStatsRepository(
+          stats: const [
+            PlayerGameStats(
+              gameId: 'g1',
+              teamId: 'team-a',
+              athleteId: 'a1',
+              athleteName: 'Bruno',
+              goals: 2,
+              bestPlayer: true,
+            ),
+            PlayerGameStats(
+              gameId: 'g1',
+              teamId: 'team-a',
+              athleteId: 'a2',
+              athleteName: 'Carlos',
+              goals: 1,
+            ),
+          ],
+        ),
+        shareImage: (png, text) async => shared.add((png: png, text: text)),
+      );
+      await _pumpTab(
+        tester,
+        container,
+        GamesTab(now: DateTime(2026, 10, 22, 12)),
+      );
+
+      await tester.tap(find.text('Realizados (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Ações do amistoso'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Compartilhar resultado'));
+      await tester.pumpAndSettle();
+
+      // A prévia: placar, vitória, quem fez os gols e o craque.
+      final card = find.byType(GameResultCard);
+      expect(card, findsOneWidget);
+      Finder inCard(String text) =>
+          find.descendant(of: card, matching: find.text(text));
+      expect(inCard('3 × 1'), findsOneWidget);
+      expect(inCard('VITÓRIA'), findsOneWidget);
+      expect(inCard('Bruno (2)'), findsOneWidget);
+      expect(inCard('Carlos'), findsOneWidget);
+      expect(inCard('Craque do jogo: Bruno'), findsOneWidget);
+
+      // A imagem só é gerada com o relógio real.
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Compartilhar'));
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+      final png = shared.single.png;
+      // Assinatura de PNG.
+      expect(png.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+      expect(shared.single.text, contains('3 × 1 Real Bairro'));
+      expect(card, findsNothing);
     });
 
     testWidgets('quem marcou lança o placar depois do jogo', (tester) async {
