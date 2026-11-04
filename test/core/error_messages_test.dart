@@ -28,6 +28,18 @@ void main() {
     expect(friendlyErrorMessage(error), contains('Senha fraca'));
   });
 
+  test('senha que apareceu em vazamentos', () {
+    final error = AuthWeakPasswordException(
+      message: 'Password is known to be weak and easy to guess.',
+      statusCode: '422',
+      reasons: const ['pwned'],
+    );
+    expect(
+      friendlyErrorMessage(error),
+      'Essa senha já apareceu em vazamentos de dados. Escolha outra.',
+    );
+  });
+
   test('e-mail recusado pelo Supabase', () {
     const error = AuthApiException(
       'Email address "ana@teste.dev" is invalid',

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#111111</color>
+    <!-- Destaque das notificações: o verde SportLeague (#07F469) um pouco
+         mais escuro, para ler bem também na cortina clara. -->
+    <color name="notification_color">#05A847</color>
 </resources>

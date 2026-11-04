@@ -123,10 +123,8 @@ Future<_Pumped> _pump(
       ),
       GoRoute(
         path: Routes.dues,
-        builder: (_, _) => Scaffold(
-          appBar: AppBar(),
-          body: const Text('Tela da mensalidade'),
-        ),
+        builder: (_, _) =>
+            Scaffold(appBar: AppBar(), body: const Text('Tela da mensalidade')),
       ),
     ],
   );
