@@ -166,14 +166,31 @@ class _StaffProfile extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Card(
-          child: Column(
-            children: [
-              for (final (index, item) in items.indexed) ...[
-                if (index > 0) const Divider(height: 1),
-                item,
+        // Itens mais altos, com folga em volta do ícone e do texto (como na
+        // aba Config), e o separador discreto, quase na cor do card.
+        ListTileTheme(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 6,
+          ),
+          minVerticalPadding: 12,
+          horizontalTitleGap: 20,
+          child: Card(
+            child: Column(
+              children: [
+                for (final (index, item) in items.indexed) ...[
+                  if (index > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: theme.colorScheme.outlineVariant.withValues(
+                        alpha: 0.35,
+                      ),
+                    ),
+                  item,
+                ],
               ],
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 32),
