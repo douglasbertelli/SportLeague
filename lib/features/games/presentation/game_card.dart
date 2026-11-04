@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/maps/open_in_maps.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
@@ -467,7 +468,18 @@ class _GameCardState extends ConsumerState<GameCard> {
                     ),
                     if (place != null) ...[
                       const SizedBox(height: 12),
-                      _Detail(icon: Icons.location_on_outlined, text: place),
+                      // Toca para abrir no Google Maps ou no Waze: o
+                      // endereço do local cadastrado ou o texto digitado.
+                      _Detail(
+                        icon: Icons.location_on_outlined,
+                        text: place,
+                        onTap: () => openInMaps(
+                          context,
+                          ref,
+                          title: _game.venue?.name ?? 'Local do jogo',
+                          address: _game.venue?.address ?? place,
+                        ),
+                      ),
                     ],
                     if (_presenceOpen) ...[
                       const SizedBox(height: 8),
@@ -647,21 +659,46 @@ class _TeamSide extends StatelessWidget {
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.icon, required this.text});
+  const _Detail({required this.icon, required this.text, this.onTap});
 
   final IconData icon;
   final String text;
 
+  /// Com toque, ganha o ícone de rota no fim (o local abre no mapa).
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final colors = theme.colorScheme;
+    final onTap = this.onTap;
+    final row = Row(
+      mainAxisSize: onTap == null ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+        Icon(icon, size: 20, color: colors.onSurfaceVariant),
         const SizedBox(width: 8),
-        Flexible(child: Text(text, style: theme.textTheme.bodyLarge)),
+        Flexible(
+          fit: onTap == null ? FlexFit.loose : FlexFit.tight,
+          child: Text(text, style: theme.textTheme.bodyLarge),
+        ),
+        if (onTap != null) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.directions_outlined, size: 20, color: colors.primary),
+        ],
       ],
+    );
+    if (onTap == null) return row;
+    return Semantics(
+      button: true,
+      hint: 'Abrir no mapa',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: row,
+        ),
+      ),
     );
   }
 }
