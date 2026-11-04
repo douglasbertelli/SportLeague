@@ -3196,6 +3196,19 @@ void main() {
       );
       _usePhoneScreen(tester);
       await _pumpPage(tester, container, AvailabilityPage(today: saturday));
+      // O calendário tem 5 ou 6 semanas conforme o mês, e a lista só monta o
+      // que está perto da tela: rola até os horários do dia.
+      final page = find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('18:00'),
+        200,
+        scrollable: page,
+      );
       expect(find.text('15:00'), findsOneWidget);
       expect(find.text('18:00'), findsOneWidget);
       // Tira a lista de baixo do botão "Adicionar horário".
