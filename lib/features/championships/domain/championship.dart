@@ -166,6 +166,43 @@ class ChampionshipTeam {
   bool get isGuest => guestTeamId != null;
 }
 
+/// Números de um atleta no campeonato (soma da súmula dos jogos).
+class ChampionshipPlayerTotal {
+  const ChampionshipPlayerTotal({
+    required this.athleteId,
+    required this.name,
+    required this.teamName,
+    this.logoUrl,
+    this.goals = 0,
+    this.assists = 0,
+    this.games = 0,
+    this.bestPlayer = 0,
+  });
+
+  factory ChampionshipPlayerTotal.fromMap(Map<String, dynamic> map) =>
+      ChampionshipPlayerTotal(
+        athleteId: map['athlete_id'] as String,
+        name: map['name'] as String,
+        teamName: map['team_name'] as String,
+        logoUrl: map['logo_url'] as String?,
+        goals: map['goals'] as int? ?? 0,
+        assists: map['assists'] as int? ?? 0,
+        games: map['games'] as int? ?? 0,
+        bestPlayer: map['best_player'] as int? ?? 0,
+      );
+
+  final String athleteId;
+  final String name;
+  final String teamName;
+  final String? logoUrl;
+  final int goals;
+  final int assists;
+  final int games;
+
+  /// Vezes em que foi o craque do jogo.
+  final int bestPlayer;
+}
+
 enum MatchStage { league, group, knockout }
 
 class ChampionshipMatch {

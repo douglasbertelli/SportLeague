@@ -375,8 +375,8 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
         : 'Classificação';
 
     return DefaultTabController(
-      length: 3,
-      initialIndex: draft ? 2 : 0,
+      length: 4,
+      initialIndex: draft ? 3 : 0,
       child: Scaffold(
         appBar: AppBar(
           title: Text(championship.name),
@@ -403,9 +403,12 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
               ),
           ],
           bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: tableLabel),
               const Tab(text: 'Jogos'),
+              const Tab(text: 'Artilharia'),
               Tab(text: 'Times (${teams.length})'),
             ],
           ),
@@ -432,6 +435,7 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
                       _startKnockout(championship, teams, matches),
                   onFinish: _finishLeague,
                 ),
+                _ScorersTab(championshipId: _id),
                 _TeamsTab(
                   championship: championship,
                   teams: teams,
@@ -1137,6 +1141,162 @@ class _ScoreSheetState extends State<_ScoreSheet> {
           ),
           const SheetBackButton(),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Artilharia
+// ---------------------------------------------------------------------------
+
+/// Artilheiros e garçons do campeonato, da súmula dos jogos.
+class _ScorersTab extends ConsumerWidget {
+  const _ScorersTab({required this.championshipId});
+
+  final String championshipId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final totals = ref.watch(championshipPlayerTotalsProvider(championshipId));
+    return totals.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
+        child: TextButton.icon(
+          onPressed: () =>
+              ref.invalidate(championshipPlayerTotalsProvider(championshipId)),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Erro ao carregar. Tentar novamente'),
+        ),
+      ),
+      data: (totals) {
+        // Mais gols (ou assistências) primeiro; empate, quem jogou menos.
+        List<ChampionshipPlayerTotal> ranked(
+          int Function(ChampionshipPlayerTotal) value,
+        ) => totals.where((t) => value(t) > 0).toList()
+          ..sort((a, b) {
+            final byValue = value(b).compareTo(value(a));
+            if (byValue != 0) return byValue;
+            final byGames = a.games.compareTo(b.games);
+            return byGames != 0 ? byGames : a.name.compareTo(b.name);
+          });
+        final scorers = ranked((t) => t.goals);
+        final assisters = ranked((t) => t.assists);
+        if (scorers.isEmpty && assisters.isEmpty) {
+          return const EmptyState(
+            icon: Icons.sports_soccer,
+            title: 'Sem gols ainda',
+            message:
+                'A artilharia vem da súmula dos jogos do campeonato, lançada '
+                'pelos times.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(
+            championshipPlayerTotalsProvider(championshipId).future,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              if (scorers.isNotEmpty)
+                _RankingCard(
+                  title: 'Artilheiros',
+                  unit: ('gol', 'gols'),
+                  totals: scorers,
+                  value: (t) => t.goals,
+                ),
+              if (assisters.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _RankingCard(
+                  title: 'Garçons',
+                  unit: ('assistência', 'assistências'),
+                  totals: assisters,
+                  value: (t) => t.assists,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RankingCard extends StatelessWidget {
+  const _RankingCard({
+    required this.title,
+    required this.unit,
+    required this.totals,
+    required this.value,
+  });
+
+  final String title;
+
+  /// Singular e plural ("gol", "gols").
+  final (String, String) unit;
+  final List<ChampionshipPlayerTotal> totals;
+  final int Function(ChampionshipPlayerTotal) value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            for (final (index, total) in totals.indexed)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Text(
+                        '${index + 1}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: index == 0 ? colors.primary : null,
+                          fontWeight: index == 0 ? FontWeight.w700 : null,
+                        ),
+                      ),
+                    ),
+                    TeamLogo.url(logoUrl: total.logoUrl, radius: 14),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            total.name,
+                            style: theme.textTheme.bodyLarge,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            total.teamName,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${value(total)} '
+                      '${value(total) == 1 ? unit.$1 : unit.$2}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
