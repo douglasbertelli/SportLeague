@@ -234,7 +234,8 @@ void main() {
       page: const Scaffold(body: SettingsTab()),
     );
     expect(find.text('Nome'), findsOneWidget);
-    await tester.tap(find.text('Ana Souza'));
+    // O nome aparece no cabeçalho e no item; toca no item.
+    await tester.tap(find.text('Nome'));
     await tester.pumpAndSettle();
 
     final field = find.widgetWithText(TextFormField, 'Nome');
@@ -272,18 +273,18 @@ void main() {
     expect(top('Meu código'), lessThan(top('Cor do app')));
     expect(top('Cor do app'), lessThan(top('Endereço')));
     expect(top('Endereço'), lessThan(top('Sair')));
-    // Um card por item, com espaço entre eles.
+    // Os itens num só card; o Sair à parte.
     Finder cardOf(String text) =>
-        find.ancestor(of: find.text(text), matching: find.byType(Card));
-    for (final other in ['Cor do app', 'Endereço', 'Sair']) {
+        find.ancestor(of: find.text(text), matching: find.byType(Card)).first;
+    for (final other in ['Cor do app', 'Endereço']) {
       expect(
         find.descendant(of: cardOf('Meu código'), matching: find.text(other)),
-        findsNothing,
+        findsOneWidget,
       );
     }
     expect(
-      tester.getTopLeft(cardOf('Cor do app')).dy,
-      greaterThan(tester.getBottomLeft(cardOf('Meu código')).dy),
+      find.descendant(of: cardOf('Meu código'), matching: find.text('Sair')),
+      findsNothing,
     );
   });
 

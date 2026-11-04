@@ -94,10 +94,8 @@ class ProfileTab extends ConsumerWidget {
   }
 }
 
-/// Perfil do administrador e do técnico, como antes da aba Config: a foto, o
-/// nome, o e-mail e o tipo de perfil (e, do administrador, o plano); num
-/// grupo, Meu código (técnico), a cor do time, o tema e o endereço; o Sair à
-/// parte.
+/// Perfil do administrador e do técnico: o cabeçalho compacto; num grupo,
+/// Meu código (técnico), a cor do time, o tema e o endereço; o Sair à parte.
 class _StaffProfile extends ConsumerWidget {
   const _StaffProfile({required this.profile});
 
@@ -139,60 +137,9 @@ class _StaffProfile extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Center(child: _Avatar(profile: profile)),
-        const SizedBox(height: 12),
-        Text(
-          profile.fullName,
-          style: theme.textTheme.titleLarge,
-          textAlign: TextAlign.center,
-        ),
-        if (email != null)
-          Text(
-            email,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        const SizedBox(height: 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8,
-          children: [
-            if (profile.role case final role?) Chip(label: Text(role.label)),
-            // Só o administrador tem plano.
-            if (profile.isAdmin)
-              Chip(label: Text('Plano ${profile.plan.label}')),
-          ],
-        ),
-        const SizedBox(height: 24),
-        // Itens mais altos, com folga em volta do ícone e do texto (como na
-        // aba Config), e o separador discreto, quase na cor do card.
-        ListTileTheme(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 6,
-          ),
-          minVerticalPadding: 12,
-          horizontalTitleGap: 20,
-          child: Card(
-            child: Column(
-              children: [
-                for (final (index, item) in items.indexed) ...[
-                  if (index > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: theme.colorScheme.outlineVariant.withValues(
-                        alpha: 0.35,
-                      ),
-                    ),
-                  item,
-                ],
-              ],
-            ),
-          ),
-        ),
+        ProfileHeader(profile: profile, email: email),
+        const SizedBox(height: 16),
+        SettingsGroup(items: items),
         const SizedBox(height: 32),
         Card(
           child: ListTile(
@@ -206,6 +153,179 @@ class _StaffProfile extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Itens de configuração num só card, mais altos (com folga em volta do ícone
+/// e do texto) e com o separador discreto, quase na cor do card. Usado no
+/// Perfil do administrador e do técnico e na aba Config do jogador.
+class SettingsGroup extends StatelessWidget {
+  const SettingsGroup({super.key, required this.items});
+
+  final List<Widget> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListTileTheme(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      minVerticalPadding: 12,
+      horizontalTitleGap: 20,
+      child: Card(
+        child: Column(
+          children: [
+            for (final (index, item) in items.indexed) ...[
+              if (index > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: colors.outlineVariant.withValues(alpha: 0.35),
+                ),
+              item,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cabeçalho compacto do perfil (administrador, técnico e, na aba Config, o
+/// jogador): a foto, o nome e o e-mail numa linha; embaixo, em selos com
+/// ícone, o tipo de perfil e (do administrador) o plano.
+class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({super.key, required this.profile, this.email});
+
+  final Profile profile;
+  final String? email;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final email = this.email;
+
+    // Compacto e discreto, no mesmo card dos itens: a foto, o nome e o
+    // e-mail juntos numa linha e, embaixo, os selos dividindo a largura toda.
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                _Avatar(profile: profile, radius: 26),
+                const SizedBox(width: 14),
+                Expanded(child: _identity(theme, colors, email)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                if (profile.role case final role?)
+                  Expanded(
+                    child: _Badge(
+                      icon: profile.isAdmin
+                          ? Icons.admin_panel_settings_outlined
+                          : Icons.sports_outlined,
+                      label: role.label,
+                    ),
+                  ),
+                // Só o administrador tem plano.
+                if (profile.isAdmin) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _Badge(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Plano ${profile.plan.label}',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// O nome e, embaixo, o e-mail com o ícone.
+  Widget _identity(ThemeData theme, ColorScheme colors, String? email) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          profile.fullName,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (email != null)
+          Row(
+            children: [
+              Icon(
+                Icons.mail_outline,
+                size: 14,
+                color: colors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  email,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// Selo tonal com ícone, no tom do botão selecionado.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    // Ocupa a largura que receber, com o conteúdo centralizado.
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: colors.onSecondaryContainer),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -273,6 +393,7 @@ class _CoverHeaderState extends ConsumerState<_CoverHeader> {
                 height: coverHeight,
                 width: double.infinity,
                 child: Semantics(
+                  container: true,
                   button: true,
                   label: coverUrl == null ? 'Adicionar capa' : 'Trocar capa',
                   child: InkWell(
@@ -568,7 +689,9 @@ class _AvatarState extends ConsumerState<_Avatar> {
         : photo;
     if (!profile.isCoach && !profile.isPlayer) return avatar;
 
+    // Nó próprio, para o botão não se fundir com o card em volta.
     return Semantics(
+      container: true,
       button: true,
       label: avatarUrl == null ? 'Adicionar foto' : 'Trocar foto',
       child: InkWell(
