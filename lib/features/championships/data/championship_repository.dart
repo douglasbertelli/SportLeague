@@ -149,6 +149,20 @@ class ChampionshipRepository {
           .update({home ? 'home_id' : 'away_id': teamId})
           .eq('id', matchId);
 
+  /// Gols, assistências, jogos e craque de cada atleta no campeonato.
+  Future<List<ChampionshipPlayerTotal>> fetchPlayerTotals(
+    String championshipId,
+  ) async {
+    final rows = await _client.rpc(
+      'championship_player_totals',
+      params: {'p_championship': championshipId},
+    );
+    return [
+      for (final row in rows as List)
+        ChampionshipPlayerTotal.fromMap(row as Map<String, dynamic>),
+    ];
+  }
+
   Future<void> setStatus(String championshipId, ChampionshipStatus status) =>
       _client
           .from('championships')
@@ -177,4 +191,11 @@ final championshipTeamsProvider = FutureProvider.autoDispose
 final championshipMatchesProvider = FutureProvider.autoDispose
     .family<List<ChampionshipMatch>, String>(
       (ref, id) => ref.watch(championshipRepositoryProvider).fetchMatches(id),
+    );
+
+/// Artilharia e garçons do campeonato.
+final championshipPlayerTotalsProvider = FutureProvider.autoDispose
+    .family<List<ChampionshipPlayerTotal>, String>(
+      (ref, id) =>
+          ref.watch(championshipRepositoryProvider).fetchPlayerTotals(id),
     );

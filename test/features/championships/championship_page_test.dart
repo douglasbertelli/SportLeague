@@ -19,7 +19,12 @@ class FakeChampionshipRepository implements ChampionshipRepository {
   final List<ChampionshipTeam> teams;
   final matches = <ChampionshipMatch>[];
   final responses = <(String, bool)>[];
+  var totals = <ChampionshipPlayerTotal>[];
   var _next = 0;
+
+  @override
+  Future<List<ChampionshipPlayerTotal>> fetchPlayerTotals(String id) async =>
+      totals;
 
   @override
   Future<Championship> fetch(String id) async => championship;
@@ -317,6 +322,56 @@ void main() {
     await tester.tap(find.text('Aceitar'));
     await tester.pumpAndSettle();
     expect(repository.responses, [('x', true)]);
+  });
+
+  testWidgets('artilharia e garçons do campeonato', (tester) async {
+    final repository =
+        FakeChampionshipRepository(
+            _championship(ChampionshipFormat.league)
+                .copyWith(status: ChampionshipStatus.running),
+            [_entry('a'), _entry('b'), _entry('c')],
+          )
+          ..totals = const [
+            ChampionshipPlayerTotal(
+              athleteId: 'p1',
+              name: 'Bruno',
+              teamName: 'Time a',
+              goals: 3,
+              assists: 1,
+              games: 2,
+            ),
+            ChampionshipPlayerTotal(
+              athleteId: 'p2',
+              name: 'Caio',
+              teamName: 'Time b',
+              goals: 1,
+              games: 1,
+            ),
+            ChampionshipPlayerTotal(
+              athleteId: 'p3',
+              name: 'Davi',
+              teamName: 'Time c',
+              assists: 2,
+              games: 2,
+            ),
+          ];
+    await _pump(tester, repository);
+    await tester.tap(find.text('Artilharia'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Artilheiros'), findsOneWidget);
+    expect(find.text('3 gols'), findsOneWidget);
+    expect(find.text('1 gol'), findsOneWidget);
+    expect(find.text('Garçons'), findsOneWidget);
+    expect(find.text('2 assistências'), findsOneWidget);
+    expect(find.text('1 assistência'), findsOneWidget);
+    // Quem só deu assistência não entra nos artilheiros (e vice-versa).
+    expect(find.text('Davi'), findsOneWidget);
+    expect(find.text('Caio'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Bruno').first).dy,
+      lessThan(tester.getTopLeft(find.text('Caio')).dy),
+    );
   });
 
   testWidgets('sem times suficientes não gera', (tester) async {

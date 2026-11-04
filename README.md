@@ -305,7 +305,10 @@ Notifications** no target Runner pelo Xcode.
        visitante, se o mandante é fictício) controla o relógio e lança o
        placar, que volta sozinho para a classificação e avança o mata-mata;
        a data, o local e o placar do organizador vão para o jogo. Os times
-       não editam, cancelam nem contestam jogos de campeonato.
+       não editam, cancelam nem contestam jogos de campeonato. A aba
+       **Artilharia** mostra os artilheiros e os garçons do campeonato, da
+       súmula de todos os jogos (`championship_player_totals`, para quem vê
+       o campeonato).
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
        Churrasco ou Outros (dizendo o que vai ser comprado). O administrador define o
        valor por pessoa ou o valor total do produto (o app divide pelo
