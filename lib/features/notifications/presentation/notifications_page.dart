@@ -130,6 +130,21 @@ class NotificationsPage extends ConsumerWidget {
         Icons.groups_outlined,
         Routes.playerInvites,
       ),
+      // Vencimento ou atraso: pede para pagar (botão no card).
+      'dues' => const NotificationAction.page(
+        'Ver mensalidade',
+        Icons.payments_outlined,
+        Routes.dues,
+        needsAction: true,
+      ),
+      // Mensalidade criada, alterada ou paga: tocar abre a mensalidade.
+      'dues_new' ||
+      'dues_changed' ||
+      'dues_paid' => const NotificationAction.page(
+        'Ver mensalidade',
+        Icons.payments_outlined,
+        Routes.dues,
+      ),
       'fundraiser' || 'fundraiser_paid' => const NotificationAction.page(
         'Ver vaquinha',
         Icons.savings_outlined,

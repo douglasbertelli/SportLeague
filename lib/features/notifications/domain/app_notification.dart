@@ -59,6 +59,8 @@ class AppNotification {
     'fundraiser' || 'fundraiser_paid' => Icons.savings_outlined,
     'presence' => Icons.how_to_reg_outlined,
     'reminder' => Icons.alarm,
+    'dues' || 'dues_new' || 'dues_changed' => Icons.payments_outlined,
+    'dues_paid' => Icons.check_circle_outline,
     _ => Icons.notifications_none,
   };
 }
