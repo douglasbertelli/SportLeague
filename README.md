@@ -308,7 +308,10 @@ Notifications** no target Runner pelo Xcode.
        não editam, cancelam nem contestam jogos de campeonato. A aba
        **Artilharia** mostra os artilheiros e os garçons do campeonato, da
        súmula de todos os jogos (`championship_player_totals`, para quem vê
-       o campeonato).
+       o campeonato). Na aba Times, o organizador toca num time fictício
+       para enviar, trocar ou remover o **símbolo** (recorte em quadrado),
+       que aparece na classificação, nos jogos e na artilharia. O ⋮ do topo
+       abre um bottom sheet com Editar (antes da tabela) e Excluir.
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
        Churrasco ou Outros (dizendo o que vai ser comprado). O administrador define o
        valor por pessoa ou o valor total do produto (o app divide pelo
@@ -363,7 +366,7 @@ supabase/
 | `team_availability_skips` | Dias pulados de um horário recorrente (imprevistos); só o dono altera |
 | `team_follows`  | Time segue time (o dono do time que segue altera); todos veem. A função `team_profile_stats` devolve seguidores, estatísticas, últimos resultados e próximos jogos de qualquer time |
 | `venues`        | Locais das partidas (nome, endereço com CEP e foto no Storage `venue-photos`); todos veem, só quem cadastrou altera. A função `similar_venues` sugere os parecidos antes de cadastrar |
-| `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê |
+| `guest_teams`   | Times fictícios (adversários fora da plataforma) de cada administrador; só ele vê. Símbolo opcional (`logo_url`, no Storage `team-logos`, na pasta dele); as inscrições em campeonatos guardam uma cópia do nome e do símbolo, atualizada quando ele muda |
 | `team_invites`  | Pedidos do jogador para entrar no time (o dono aceita ou recusa; o jogador cancela) e convites; aceito, o jogador vira atleta do time. A entrada com código (`join_team_with_code`) fica registrada como pedido aceito |
 | `team_invite_codes` | Código de convite de cada time; só o dono vê e gera outro (`regenerate_invite_code`) |
 | `score_disputes` | Contestações do placar feitas pelo adversário depois do jogo (placar proposto e motivo); os dois times veem e quem marcou responde por `resolve_score_dispute` (aceitar muda o placar do jogo). Uma aberta por jogo |

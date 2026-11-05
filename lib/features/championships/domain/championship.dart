@@ -147,7 +147,10 @@ class ChampionshipTeam {
         name: map['name'] as String,
         status: EntryStatus.fromName(map['status'] as String),
         groupLabel: map['group_label'] as String?,
-        logoUrl: (map['team'] as Map<String, dynamic>?)?['logo_url'] as String?,
+        // Da plataforma, o logo do time; do fictício, a cópia na inscrição.
+        logoUrl:
+            (map['team'] as Map<String, dynamic>?)?['logo_url'] as String? ??
+            map['logo_url'] as String?,
         ownerId: (map['team'] as Map<String, dynamic>?)?['owner_id'] as String?,
       );
 

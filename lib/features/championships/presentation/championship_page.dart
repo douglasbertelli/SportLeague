@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/media/photo_picker.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
@@ -65,6 +66,70 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Ações do organizador (⋮ do topo) num bottom sheet: editar, antes de
+  /// começar, e excluir.
+  Future<void> _showActions(Championship championship) async {
+    final action = await showAppSheet<String>(
+      context,
+      builder: (context) {
+        final colors = Theme.of(context).colorScheme;
+        return AppSheet(
+          title: championship.name,
+          message: championship.summary,
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (championship.status == ChampionshipStatus.draft)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Editar campeonato'),
+                  subtitle: const Text('Nome, modalidade e formato'),
+                  onTap: () => Navigator.of(context).pop('edit'),
+                ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.delete_outline),
+                iconColor: colors.error,
+                textColor: colors.error,
+                title: const Text('Excluir campeonato'),
+                subtitle: const Text('Apaga os times inscritos e os jogos'),
+                onTap: () => Navigator.of(context).pop('delete'),
+              ),
+            ],
+          ),
+          actions: const [SheetBackButton(label: 'Fechar')],
+        );
+      },
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'edit':
+        await context.push(Routes.championshipForm, extra: championship);
+        _refresh();
+      case 'delete':
+        await _delete(championship);
+    }
+  }
+
+  /// Envia, troca ou remove o símbolo de um time fictício.
+  Future<void> _changeGuestLogo(ChampionshipTeam entry) async {
+    final choice = await chooseImage(
+      context,
+      ref,
+      noun: 'símbolo',
+      canRemove: entry.logoUrl != null,
+      cropSquare: true,
+    );
+    if (choice == null) return;
+    await _run(
+      () => _repository.setGuestLogo(entry.guestTeamId!, switch (choice) {
+        ImagePicked(:final image) => image,
+        ImageRemoved() => null,
+      }),
+    );
   }
 
   Future<void> _addTeam(
@@ -382,24 +447,10 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
           title: Text(championship.name),
           actions: [
             if (isOwner)
-              PopupMenuButton<String>(
+              IconButton(
                 tooltip: 'Ações do campeonato',
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    await context.push(
-                      Routes.championshipForm,
-                      extra: championship,
-                    );
-                    _refresh();
-                  } else {
-                    await _delete(championship);
-                  }
-                },
-                itemBuilder: (_) => [
-                  if (draft)
-                    const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                  const PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                ],
+                icon: const Icon(Icons.more_vert),
+                onPressed: () => _showActions(championship),
               ),
           ],
           bottom: TabBar(
@@ -447,6 +498,7 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
                       _run(() => _repository.removeTeam(entry.id)),
                   onRespond: (entry, accept) =>
                       _run(() => _repository.respond(entry.id, accept: accept)),
+                  onGuestLogo: _changeGuestLogo,
                 ),
               ],
             ),
@@ -1316,6 +1368,7 @@ class _TeamsTab extends StatelessWidget {
     required this.onStart,
     required this.onRemove,
     required this.onRespond,
+    required this.onGuestLogo,
   });
 
   final Championship championship;
@@ -1326,6 +1379,9 @@ class _TeamsTab extends StatelessWidget {
   final VoidCallback onStart;
   final ValueChanged<ChampionshipTeam> onRemove;
   final void Function(ChampionshipTeam entry, bool accept) onRespond;
+
+  /// O organizador troca o símbolo de um time fictício.
+  final ValueChanged<ChampionshipTeam> onGuestLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -1393,7 +1449,38 @@ class _TeamsTab extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: TeamLogo.url(logoUrl: entry.logoUrl),
+                    // O organizador toca no fictício para enviar o símbolo
+                    // (o selo da câmera mostra que dá).
+                    onTap: isOwner && entry.isGuest
+                        ? () => onGuestLogo(entry)
+                        : null,
+                    leading: isOwner && entry.isGuest
+                        ? Semantics(
+                            button: true,
+                            label: entry.logoUrl == null
+                                ? 'Enviar símbolo do ${entry.name}'
+                                : 'Trocar símbolo do ${entry.name}',
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                TeamLogo.url(logoUrl: entry.logoUrl),
+                                Positioned(
+                                  right: -4,
+                                  bottom: -4,
+                                  child: CircleAvatar(
+                                    radius: 9,
+                                    backgroundColor: colors.primary,
+                                    child: Icon(
+                                      Icons.photo_camera,
+                                      size: 11,
+                                      color: colors.onPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : TeamLogo.url(logoUrl: entry.logoUrl),
                     title: Text(entry.name),
                     subtitle: Text(
                       [
