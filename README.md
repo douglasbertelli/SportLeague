@@ -311,7 +311,10 @@ Notifications** no target Runner pelo Xcode.
        o campeonato). Na aba Times, o organizador toca num time fictício
        para enviar, trocar ou remover o **símbolo** (recorte em quadrado),
        que aparece na classificação, nos jogos e na artilharia. O ⋮ do topo
-       abre um bottom sheet com Editar (antes da tabela) e Excluir.
+       abre um bottom sheet com Editar (antes da tabela) e Excluir. Com a
+       tabela gerada, **Compartilhar** (para todos) gera uma imagem 4:5 do
+       campeonato: a classificação (pontos corridos e grupos) ou a final
+       (mata-mata) e, ao acabar, o campeão em destaque.
      - **Vaquinha**: cada time tem as suas, para Bola, Colete, Uniforme,
        Churrasco ou Outros (dizendo o que vai ser comprado). O administrador define o
        valor por pessoa ou o valor total do produto (o app divide pelo
