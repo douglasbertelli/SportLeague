@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../plans/data/plan_repository.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
@@ -58,15 +61,24 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       if (widget.championship != null) await repository.update(championship);
       if (mounted) context.pop(saved);
     } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+      if (mounted && !handlePlanLimitError(context, error)) {
+        showErrorSnackBar(context, friendlyErrorMessage(error));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Formato que o plano não libera (o que o campeonato já tem continua).
+  bool _locked(ChampionshipFormat format, PlanStatus plan) =>
+      format != ChampionshipFormat.league &&
+      format != widget.championship?.format &&
+      !plan.has(PlanFeature.advancedFormats);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final plan = ref.watch(planStatusProvider).value ?? PlanStatus.unrestricted;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -105,14 +117,28 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
             const SizedBox(height: 8),
             RadioGroup<ChampionshipFormat>(
               groupValue: _format,
-              onChanged: (value) => setState(() => _format = value!),
+              onChanged: (value) {
+                if (_locked(value!, plan)) {
+                  showPremiumSheet(context, PlanFeature.advancedFormats);
+                  return;
+                }
+                setState(() => _format = value);
+              },
               child: Column(
                 children: [
                   for (final format in ChampionshipFormat.values)
                     Card(
                       child: RadioListTile<ChampionshipFormat>(
                         value: format,
-                        title: Text(format.label),
+                        title: Row(
+                          children: [
+                            Flexible(child: Text(format.label)),
+                            if (_locked(format, plan)) ...[
+                              const SizedBox(width: 8),
+                              const PremiumBadge(),
+                            ],
+                          ],
+                        ),
                         subtitle: Text(format.description),
                       ),
                     ),

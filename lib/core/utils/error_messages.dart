@@ -47,6 +47,10 @@ String friendlyErrorMessage(Object error) {
     return error.message;
   }
   if (error is PostgrestException) {
+    // Limite do plano (private.require_feature): "plan_limit:<recurso>".
+    if (error.message.contains('plan_limit:')) {
+      return 'Esse recurso é do plano Premium.';
+    }
     // Número de camisa repetido no time (índice team_players_unique_number).
     if (error.code == '23505' &&
         error.message.contains('team_players_unique_number')) {

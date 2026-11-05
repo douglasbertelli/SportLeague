@@ -115,6 +115,15 @@ class _StaffProfile extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.myCode),
         ),
+      // Só o administrador tem plano.
+      if (profile.isAdmin)
+        ListTile(
+          leading: const Icon(Icons.workspace_premium_outlined),
+          title: const Text('Planos'),
+          subtitle: Text('Você está no plano ${profile.plan.label}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.plans),
+        ),
       const AppColorTile(),
       const ThemeModeTile(),
       // Some em aparelhos sem biometria cadastrada.

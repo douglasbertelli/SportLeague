@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../data/team_repository.dart';
 import 'no_team_placeholder.dart';
 import 'team_logo.dart';
@@ -24,7 +26,15 @@ class TeamsPage extends ConsumerWidget {
       floatingActionButton: coach
           ? null
           : FloatingActionButton.extended(
-              onPressed: () => context.push(Routes.newTeam),
+              onPressed: () async {
+                final allowed = await ensurePlanAllows(
+                  context,
+                  ref,
+                  PlanFeature.teams,
+                  adding: true,
+                );
+                if (allowed && context.mounted) context.push(Routes.newTeam);
+              },
               icon: const Icon(Icons.add),
               label: const Text('Novo time'),
             ),

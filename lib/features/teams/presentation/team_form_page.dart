@@ -13,6 +13,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/router/routes.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import '../../venues/domain/venue.dart';
@@ -339,7 +340,9 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
     } catch (error) {
       // Mesmo com erro, o time pode ter sido criado antes das imagens.
       ref.invalidate(myTeamsProvider);
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+      if (mounted && !handlePlanLimitError(context, error)) {
+        showErrorSnackBar(context, friendlyErrorMessage(error));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -1,0 +1,134 @@
+import '../../profile/domain/profile.dart';
+
+/// Funcionalidades que dependem do plano. A chave é a da tabela
+/// `plan_features` do banco, onde ficam os limites de cada plano.
+enum PlanFeature {
+  teams('teams', 'Times', 'Times na sua conta'),
+  championships(
+    'championships',
+    'Campeonatos',
+    'Campeonatos em andamento ao mesmo tempo',
+  ),
+  advancedFormats(
+    'advanced_formats',
+    'Mata-mata e grupos',
+    'Campeonatos no formato mata-mata ou grupos + mata-mata',
+  ),
+  dues('dues', 'Mensalidade', 'Controle da mensalidade com lembretes');
+
+  const PlanFeature(this.key, this.label, this.description);
+
+  final String key;
+  final String label;
+  final String description;
+
+  static PlanFeature? fromKey(String key) =>
+      values.where((feature) => feature.key == key).firstOrNull;
+}
+
+/// Limite de uma funcionalidade: nulo = sem limite, 0 = bloqueada.
+typedef Quota = int?;
+
+/// Plano do usuário, os limites dele e quanto já usa.
+class PlanStatus {
+  const PlanStatus({
+    required this.plan,
+    this.quotas = const {},
+    this.usage = const {},
+  });
+
+  factory PlanStatus.fromMap(Map<String, dynamic> map) {
+    final quotas = <PlanFeature, Quota>{};
+    (map['quotas'] as Map<String, dynamic>? ?? {}).forEach((key, value) {
+      final feature = PlanFeature.fromKey(key);
+      if (feature != null) quotas[feature] = (value as num?)?.toInt();
+    });
+    final usage = <PlanFeature, int>{};
+    (map['usage'] as Map<String, dynamic>? ?? {}).forEach((key, value) {
+      final feature = PlanFeature.fromKey(key);
+      if (feature != null) usage[feature] = (value as num).toInt();
+    });
+    return PlanStatus(
+      plan: SubscriptionPlan.fromName(map['plan'] as String),
+      quotas: quotas,
+      usage: usage,
+    );
+  }
+
+  /// Sem restrição (enquanto carrega ou para quem não tem plano): o banco
+  /// continua barrando o que não for permitido.
+  static const unrestricted = PlanStatus(plan: SubscriptionPlan.free);
+
+  final SubscriptionPlan plan;
+
+  /// Sem chave = sem limite.
+  final Map<PlanFeature, Quota> quotas;
+  final Map<PlanFeature, int> usage;
+
+  Quota quota(PlanFeature feature) => quotas[feature];
+
+  /// A funcionalidade está liberada (o limite não é zero).
+  bool has(PlanFeature feature) => (quota(feature) ?? 1) > 0;
+
+  /// Ainda dá para criar mais um (times, campeonatos).
+  bool canAdd(PlanFeature feature) {
+    final limit = quota(feature);
+    return limit == null || (usage[feature] ?? 0) < limit;
+  }
+}
+
+/// Linha da tabela de planos (para a comparação).
+class PlanFeatureRow {
+  const PlanFeatureRow({
+    required this.plan,
+    required this.feature,
+    required this.quota,
+  });
+
+  factory PlanFeatureRow.fromMap(Map<String, dynamic> map) => PlanFeatureRow(
+    plan: SubscriptionPlan.fromName(map['plan'] as String),
+    feature: PlanFeature.fromKey(map['feature'] as String),
+    quota: (map['quota'] as num?)?.toInt(),
+  );
+
+  final SubscriptionPlan plan;
+
+  /// Nulo quando o banco tem uma funcionalidade que esta versão não conhece.
+  final PlanFeature? feature;
+  final Quota quota;
+}
+
+/// "Ilimitado", "Não incluso", "1 time"…
+String describeQuota(PlanFeature feature, Quota quota) {
+  if (quota == 0) return 'Não incluso';
+  return switch (feature) {
+    PlanFeature.teams when quota != null =>
+      quota == 1 ? '1 time' : '$quota times',
+    PlanFeature.championships when quota != null =>
+      quota == 1 ? '1 por vez' : '$quota por vez',
+    PlanFeature.teams || PlanFeature.championships => 'Ilimitado',
+    _ => quota == null ? 'Incluso' : 'Até $quota',
+  };
+}
+
+/// Mensagem quando o limite do plano é atingido.
+String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
+  PlanFeature.teams =>
+    'Seu plano permite ${describeQuota(feature, quota).toLowerCase()}. '
+        'Com o Premium você organiza mais times na mesma conta.',
+  PlanFeature.championships =>
+    'Seu plano permite ${quota ?? 0} campeonato em andamento por vez. '
+        'Finalize o atual ou passe para o Premium para ter mais.',
+  PlanFeature.advancedFormats =>
+    'Os formatos mata-mata e grupos + mata-mata são do plano Premium. '
+        'No plano Grátis, o campeonato é por pontos corridos.',
+  PlanFeature.dues =>
+    'O controle da mensalidade, com lembretes automáticos para quem não '
+        'pagou, é do plano Premium.',
+};
+
+/// Funcionalidade do erro `plan_limit:<chave>` que o banco devolve.
+PlanFeature? planLimitFeature(String message) {
+  final match = RegExp(r'plan_limit:([a-z_]+)').firstMatch(message);
+  return match == null ? null : PlanFeature.fromKey(match.group(1)!);
+}

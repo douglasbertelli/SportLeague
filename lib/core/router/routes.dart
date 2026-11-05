@@ -81,6 +81,9 @@ abstract final class Routes {
   /// Mensalidade do time (menu lateral).
   static const dues = '/home/dues';
 
+  /// Planos (Gratuito e Premium) e o que cada um libera.
+  static const plans = '/home/plans';
+
   /// Campeonatos do usuário (menu lateral).
   static const championships = '/home/championships';
 

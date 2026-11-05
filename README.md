@@ -411,6 +411,37 @@ O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
 conta nova começa sem papel até o usuário escolher.
 
+### Planos (Gratuito e Premium)
+
+O plano é do administrador e vale para os times dele; jogadores e técnicos
+não têm plano. O que cada plano libera fica na tabela `plan_features`
+(`plan`, `feature`, `quota`): `quota` nula = sem limite, 0 = bloqueado,
+n = até n; sem linha = sem limite. Mudar um limite ou mover uma
+funcionalidade de plano é alterar a linha: vale na hora, sem versão nova do
+app (a tela Planos também lê dessa tabela).
+
+| Funcionalidade | Chave | Gratuito | Premium |
+|---|---|---|---|
+| Times na conta | `teams` | 1 | 5 |
+| Campeonatos em andamento | `championships` | 1 | sem limite |
+| Mata-mata e grupos | `advanced_formats` | bloqueado | liberado |
+| Mensalidade | `dues` | bloqueada | liberada |
+
+O banco barra (gatilhos com `private.require_feature`, erro
+`plan_limit:<chave>`) e o app avisa antes (`plan_status()`, com o plano, os
+limites e o uso). Quem perde o acesso não perde dados: o que existe continua
+visível; só criar e editar fica bloqueado, e os lembretes de mensalidade
+param. Uma funcionalidade nova que dependa do plano precisa do bloqueio no
+código uma vez; depois, é só a tabela.
+
+Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
+tudo de uma vez):
+
+```sql
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+update public.profiles set plan = 'premium' where id = '<id do usuário>';
+```
+
 ## Testes
 
 ```sh

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/router/routes.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
@@ -13,6 +16,9 @@ import '../../fundraisers/domain/fundraiser.dart' show formatMoney, parseMoney;
 import '../../fundraisers/presentation/fundraisers_page.dart'
     show fundraiserTeamsProvider;
 import '../../games/presentation/game_sheet_page.dart' show AthleteAvatar;
+import '../../plans/data/plan_repository.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
@@ -173,6 +179,13 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
   @override
   Widget build(BuildContext context) {
     final isOwner = widget.team.ownerId == ref.watch(currentUserIdProvider);
+    // O plano do dono não libera a mensalidade: o que existe continua
+    // visível, mas configurar e marcar pagamentos fica bloqueado.
+    final locked =
+        isOwner &&
+        !(ref.watch(planStatusProvider).value ?? PlanStatus.unrestricted).has(
+          PlanFeature.dues,
+        );
     final dues = ref.watch(teamDuesProvider(_teamId));
     final athletes = ref.watch(teamAthletesProvider(_teamId));
     final payments = ref.watch(duePaymentsProvider(_teamId));
@@ -198,12 +211,17 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
         message: isOwner
             ? 'Cobre um valor por mês dos atletas e marque quem pagou. '
                   'Quem não pagou recebe lembrete no vencimento.'
+                  '${locked ? '\n\nRecurso do plano Premium.' : ''}'
             : 'Quando o administrador configurar a mensalidade do time, ela '
                   'aparece aqui.',
         action: isOwner
             ? FilledButton.icon(
-                onPressed: () => _configure(null),
-                icon: const Icon(Icons.add),
+                onPressed: locked
+                    ? () => showPremiumSheet(context, PlanFeature.dues)
+                    : () => _configure(null),
+                icon: Icon(
+                  locked ? Icons.workspace_premium_outlined : Icons.add,
+                ),
                 label: const Text('Configurar mensalidade'),
               )
             : null,
@@ -213,7 +231,7 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
         AsyncData(value: final athletes),
         AsyncData(value: final payments),
       ) =>
-        _content(dues, athletes, payments, isOwner: isOwner),
+        _content(dues, athletes, payments, isOwner: isOwner, locked: locked),
       _ => const Center(child: CircularProgressIndicator()),
     };
   }
@@ -223,7 +241,9 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
     List<Athlete> athletes,
     DuePayments payments, {
     required bool isOwner,
+    required bool locked,
   }) {
+    void premium() => showPremiumSheet(context, PlanFeature.dues);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final months = dues.monthsUntil(widget.today);
@@ -284,7 +304,9 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
                 if (isOwner)
                   PopupMenuButton<bool>(
                     tooltip: 'Ações da mensalidade',
-                    onSelected: (edit) => edit ? _configure(dues) : _remove(),
+                    onSelected: (edit) => edit
+                        ? (locked ? premium() : _configure(dues))
+                        : _remove(),
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: true, child: Text('Editar')),
                       PopupMenuItem(
@@ -297,6 +319,25 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
             ),
           ),
         ),
+        if (locked) ...[
+          const SizedBox(height: 8),
+          Card(
+            color: colors.tertiaryContainer,
+            child: ListTile(
+              leading: Icon(
+                Icons.workspace_premium_outlined,
+                color: colors.onTertiaryContainer,
+              ),
+              title: const Text('Mensalidade pausada'),
+              subtitle: const Text(
+                'A mensalidade é do plano Premium. Os pagamentos continuam '
+                'aqui, mas marcar, editar e os lembretes estão pausados.',
+              ),
+              textColor: colors.onTertiaryContainer,
+              onTap: () => context.push(Routes.plans),
+            ),
+          ),
+        ],
         if (me != null) ...[
           const SizedBox(height: 8),
           Card(
@@ -395,9 +436,11 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
                 ? _DueStatus.late
                 : _DueStatus.open,
             saving: _saving.contains(athlete.id),
-            onChanged: isOwner
-                ? (value) => _setPaid(athlete, month, value)
-                : null,
+            onChanged: !isOwner
+                ? null
+                : locked
+                ? (_) => premium()
+                : (value) => _setPaid(athlete, month, value),
           ),
       ],
     );

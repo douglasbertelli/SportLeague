@@ -31,9 +31,7 @@ class NoTeamPlaceholder extends ConsumerWidget {
     return EmptyState(
       icon: Icons.shield_outlined,
       title: 'Crie seu primeiro time',
-      message:
-          'Os atletas e os jogos ficam separados por time. Você pode ter '
-          'quantos times quiser.',
+      message: 'Os atletas e os jogos ficam separados por time.',
       action: FilledButton.icon(
         onPressed: () => context.push(Routes.newTeam),
         icon: const Icon(Icons.add),

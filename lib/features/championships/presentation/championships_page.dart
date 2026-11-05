@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../../profile/data/profile_repository.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
@@ -26,6 +28,13 @@ class ChampionshipsPage extends ConsumerWidget {
           ? FloatingActionButton.extended(
               heroTag: null,
               onPressed: () async {
+                final allowed = await ensurePlanAllows(
+                  context,
+                  ref,
+                  PlanFeature.championships,
+                  adding: true,
+                );
+                if (!allowed || !context.mounted) return;
                 final created = await context.push<Championship>(
                   Routes.championshipForm,
                 );
