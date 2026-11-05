@@ -1,9 +1,13 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sport_league/core/media/picked_image.dart';
+import 'package:sport_league/core/media/square_crop_page.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
 import 'package:sport_league/features/championships/data/championship_repository.dart';
 import 'package:sport_league/features/championships/domain/championship.dart';
@@ -20,7 +24,27 @@ class FakeChampionshipRepository implements ChampionshipRepository {
   final matches = <ChampionshipMatch>[];
   final responses = <(String, bool)>[];
   var totals = <ChampionshipPlayerTotal>[];
+  final guestLogos = <String, PickedImage?>{};
+  var deleted = false;
   var _next = 0;
+
+  @override
+  Future<void> setGuestLogo(String guestTeamId, PickedImage? image) async {
+    guestLogos[guestTeamId] = image;
+    final i = teams.indexWhere((t) => t.guestTeamId == guestTeamId);
+    final t = teams[i];
+    teams[i] = ChampionshipTeam(
+      id: t.id,
+      championshipId: t.championshipId,
+      guestTeamId: t.guestTeamId,
+      name: t.name,
+      status: t.status,
+      logoUrl: image == null ? null : 'https://logo/$guestTeamId.png',
+    );
+  }
+
+  @override
+  Future<void> delete(String id) async => deleted = true;
 
   @override
   Future<List<ChampionshipPlayerTotal>> fetchPlayerTotals(String id) async =>
@@ -183,6 +207,7 @@ Future<void> _pump(
   WidgetTester tester,
   FakeChampionshipRepository repository, {
   String userId = 'u1',
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 2.6;
@@ -190,6 +215,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ...overrides,
         currentUserIdProvider.overrideWithValue(userId),
         championshipRepositoryProvider.overrideWithValue(repository),
       ],
@@ -372,6 +398,67 @@ void main() {
       tester.getTopLeft(find.text('Bruno').first).dy,
       lessThan(tester.getTopLeft(find.text('Caio')).dy),
     );
+  });
+
+  testWidgets('o organizador envia o símbolo do time fictício', (tester) async {
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league),
+      [_entry('a'), _entry('x', teamId: 't-x', ownerId: 'u1')],
+    );
+    await _pump(
+      tester,
+      repository,
+      overrides: [
+        pickImageProvider.overrideWithValue(
+          (source, {maxSize = smallImageSize}) async => PickedImage(
+            bytes: Uint8List.fromList([1, 2, 3]),
+            contentType: 'image/png',
+          ),
+        ),
+        cropSquareProvider.overrideWithValue((context, image) async => image),
+      ],
+    );
+    // Só o fictício tem o selo da câmera.
+    expect(find.bySemanticsLabel('Enviar símbolo do Time a'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('símbolo do Time x')), findsNothing);
+
+    await tester.tap(find.text('Time a'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher da galeria'));
+    await tester.pumpAndSettle();
+    expect(repository.guestLogos['g-a']?.contentType, 'image/png');
+    expect(find.bySemanticsLabel('Trocar símbolo do Time a'), findsOneWidget);
+  });
+
+  testWidgets('menu do topo em bottom sheet: editar e excluir', (tester) async {
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league),
+      [_entry('a')],
+    );
+    await _pump(tester, repository);
+    await tester.tap(find.byTooltip('Ações do campeonato'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Editar campeonato'), findsOneWidget);
+
+    await tester.tap(find.text('Excluir campeonato'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await tester.pumpAndSettle();
+    expect(repository.deleted, isTrue);
+  });
+
+  testWidgets('em andamento, o menu só tem excluir', (tester) async {
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league)
+          .copyWith(status: ChampionshipStatus.running),
+      [_entry('a')],
+    );
+    await _pump(tester, repository);
+    await tester.tap(find.byTooltip('Ações do campeonato'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar campeonato'), findsNothing);
+    expect(find.text('Excluir campeonato'), findsOneWidget);
   });
 
   testWidgets('sem times suficientes não gera', (tester) async {
