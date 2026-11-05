@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
   const { data: devices, error: devicesError } = await supabase
     .from("device_tokens")
-    .select("token")
+    .select("token, kind")
     .eq("user_id", notification.recipient_id);
   if (devicesError) return json({ error: devicesError.message }, 500);
   if (!devices?.length) return json({ sent: 0 });
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
   let sent = 0;
   const stale: string[] = [];
-  for (const { token } of devices) {
+  for (const { token, kind } of devices) {
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -106,7 +106,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         message: {
-          token,
+          // O app novo registra o ID de instalação (FID); os aparelhos com
+          // o app antigo ainda têm o token clássico (campo obsoleto no FCM).
+          ...(kind === "fid" ? { fid: token } : { token }),
           notification: { title: notification.title, body: notification.body },
           data,
           android: { priority: "high", notification: { sound: "default" } },
@@ -122,7 +124,7 @@ Deno.serve(async (req) => {
     const code = failure?.error?.details?.find(
       (detail: { errorCode?: string }) => detail.errorCode,
     )?.errorCode;
-    // O app foi desinstalado ou o token expirou: esquece o aparelho.
+    // O app foi desinstalado ou o ID expirou: esquece o aparelho.
     if (response.status === 404 || code === "UNREGISTERED") stale.push(token);
     else console.error("FCM", response.status, JSON.stringify(failure));
   }

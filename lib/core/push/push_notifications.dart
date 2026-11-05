@@ -20,14 +20,18 @@ bool get pushSupported =>
     (Platform.isAndroid || Platform.isIOS) &&
     Firebase.apps.isNotEmpty;
 
-/// Liga o aparelho à conta para receber push: pede a permissão, guarda o
-/// token no Supabase (e o renovado, quando o Firebase trocar) e tira o token
-/// ao sair da conta.
+/// Liga o aparelho à conta para receber push: pede a permissão, registra o
+/// app no Firebase e guarda no Supabase o ID de instalação (FID) que ele
+/// devolve (e o novo, se o Firebase trocar); ao sair da conta, tira o FID.
+/// A Edge Function `send-push` envia para o FID (campo `fid` da API HTTP v1).
 class PushRegistration {
   PushRegistration(this._client);
 
   final SupabaseClient _client;
-  StreamSubscription<String>? _refresh;
+  StreamSubscription<String>? _registered;
+
+  /// O último FID que o Firebase devolveu (para tirar ao sair).
+  String? _fid;
 
   Future<void> register() async {
     if (!pushSupported) return;
@@ -35,41 +39,42 @@ class PushRegistration {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-      // O token clássico do FCM, que a Edge Function `send-push` usa na API
-      // HTTP v1. O register()/onRegistered novo devolve o ID de instalação
-      // (FID), outro alvo de envio; trocar exige mudar a função junto.
-      // ignore: deprecated_member_use
-      final token = await messaging.getToken();
-      if (token != null) await _save(token);
-      // ignore: deprecated_member_use
-      _refresh ??= messaging.onTokenRefresh.listen(_save);
+      // O FID chega pelo onRegistered (agora e quando o Firebase trocar).
+      _registered ??= messaging.onRegistered.listen(_save);
+      await messaging.register();
     } catch (error) {
       // Sem push o app continua funcionando (as notificações ficam no sino).
       debugPrint('Push: não foi possível registrar o aparelho: $error');
     }
   }
 
-  Future<void> _save(String token) => _client.rpc(
-    'register_device_token',
-    params: {
-      'p_token': token,
-      'p_platform': Platform.isIOS ? 'ios' : 'android',
-    },
-  );
+  Future<void> _save(String fid) async {
+    _fid = fid;
+    try {
+      await _client.rpc(
+        'register_device_token',
+        params: {
+          'p_token': fid,
+          'p_platform': Platform.isIOS ? 'ios' : 'android',
+          'p_kind': 'fid',
+        },
+      );
+    } catch (error) {
+      debugPrint('Push: não foi possível salvar o aparelho: $error');
+    }
+  }
 
   Future<void> unregister() async {
     if (!pushSupported) return;
-    await _refresh?.cancel();
-    _refresh = null;
+    await _registered?.cancel();
+    _registered = null;
+    final fid = _fid;
+    _fid = null;
+    if (fid == null) return;
     try {
-      // ignore: deprecated_member_use
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) {
-        await _client.rpc(
-          'unregister_device_token',
-          params: {'p_token': token},
-        );
-      }
+      // Só tira o aparelho desta conta; o registro no Firebase continua
+      // para a próxima conta que entrar.
+      await _client.rpc('unregister_device_token', params: {'p_token': fid});
     } catch (error) {
       debugPrint('Push: não foi possível tirar o aparelho: $error');
     }
