@@ -80,7 +80,10 @@ configurado.
 
 As notificações do sino também chegam como push no Android e no iOS, pelo
 **Firebase Cloud Messaging**. Ao entrar, o app pede a permissão e guarda o
-token do aparelho (`device_tokens`); ao sair, tira. Cada notificação nova
+ID de instalação do Firebase (FID, por `register()`/`onRegistered`) em
+`device_tokens` (`kind = 'fid'`); ao sair, tira. A função envia com o campo
+`fid` da API HTTP v1 (e com `token` para aparelhos com o app antigo, até
+atualizarem; ao registrar o FID, o token antigo do aparelho sai). Cada notificação nova
 dispara o gatilho `notifications_send_push`, que chama a Edge Function
 `send-push` (`supabase/functions/send-push`); ela envia pelo FCM, marca
 `pushed_at` (não repete o push) e apaga os tokens de apps desinstalados.
