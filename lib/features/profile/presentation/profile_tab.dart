@@ -13,6 +13,9 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/biometric_sign_in.dart';
+import '../../plans/data/plan_repository.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 import 'edit_text_sheet.dart';
@@ -120,7 +123,12 @@ class _StaffProfile extends ConsumerWidget {
         ListTile(
           leading: const Icon(Icons.workspace_premium_outlined),
           title: const Text('Planos'),
-          subtitle: Text('Você está no plano ${profile.plan.label}'),
+          subtitle: Text(switch (ref.watch(planStatusProvider).value) {
+            PlanStatus(trialEndsAt: final ends?) =>
+              'Teste do Premium até ${formatDayMonth(ends)}',
+            final status? => 'Você está no plano ${status.plan.label}',
+            null => 'Você está no plano ${profile.plan.label}',
+          }),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.plans),
         ),
@@ -246,9 +254,13 @@ class ProfileHeader extends StatelessWidget {
                 if (profile.isAdmin) ...[
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _Badge(
-                      icon: Icons.workspace_premium_outlined,
-                      label: 'Plano ${profile.plan.label}',
+                    // O plano que vale agora (o Premium durante o teste).
+                    child: Consumer(
+                      builder: (context, ref, _) => _Badge(
+                        icon: Icons.workspace_premium_outlined,
+                        label:
+                            'Plano ${(ref.watch(planStatusProvider).value?.plan ?? profile.plan).label}',
+                      ),
                     ),
                   ),
                 ],

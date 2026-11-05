@@ -66,6 +66,7 @@ class AppNotification {
     'reminder' => Icons.alarm,
     'dues' || 'dues_new' || 'dues_changed' => Icons.payments_outlined,
     'dues_paid' => Icons.check_circle_outline,
+    'plan' => Icons.workspace_premium_outlined,
     'championship_invite' ||
     'championship_answer' ||
     'championship_started' ||

@@ -152,6 +152,12 @@ class NotificationsPage extends ConsumerWidget {
           extra: notification.championshipId,
           needsAction: notification.kind == 'championship_invite',
         ),
+      // Teste do Premium acabando ou terminado: tocar abre os planos.
+      'plan' => const NotificationAction.page(
+        'Ver planos',
+        Icons.workspace_premium_outlined,
+        Routes.plans,
+      ),
       // Mensalidade criada, alterada ou paga: tocar abre a mensalidade.
       'dues_new' ||
       'dues_changed' ||

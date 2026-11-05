@@ -422,7 +422,7 @@ app (a tela Planos também lê dessa tabela).
 
 | Funcionalidade | Chave | Gratuito | Premium |
 |---|---|---|---|
-| Times na conta | `teams` | 1 | 5 |
+| Times na conta | `teams` | 1 | sem limite |
 | Campeonatos em andamento | `championships` | 1 | sem limite |
 | Mata-mata e grupos | `advanced_formats` | bloqueado | liberado |
 | Mensalidade | `dues` | bloqueada | liberada |
@@ -433,6 +433,17 @@ limites e o uso). Quem perde o acesso não perde dados: o que existe continua
 visível; só criar e editar fica bloqueado, e os lembretes de mensalidade
 param. Uma funcionalidade nova que dependa do plano precisa do bloqueio no
 código uma vez; depois, é só a tabela.
+
+**Preço** (tabela `plans`): o Premium custa `monthly_cents` (R$ 30,00) por
+mês com 1 time, mais `extra_team_cents` (R$ 10,00) por time a mais. A tela
+Planos mostra o total com os times que o administrador já tem.
+
+**Teste grátis**: `trial_days` (15) dias de Premium, uma vez por conta, para
+o administrador no Gratuito; ele começa pelo app (`start_premium_trial()`,
+guardado em `private.premium_trials`). Enquanto dura, o plano que vale é o
+Premium (`private.effective_plan`). O cron `trial-reminders` (9h de
+Brasília) avisa faltando até 3 dias e quando termina. Sem `trial_days`, o
+teste some do app.
 
 Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
 tudo de uma vez):

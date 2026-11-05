@@ -33,6 +33,9 @@ typedef Quota = int?;
 class PlanStatus {
   const PlanStatus({
     required this.plan,
+    this.paidPlan,
+    this.trialEndsAt,
+    this.trialAvailable = false,
     this.quotas = const {},
     this.usage = const {},
   });
@@ -50,6 +53,15 @@ class PlanStatus {
     });
     return PlanStatus(
       plan: SubscriptionPlan.fromName(map['plan'] as String),
+      paidPlan: switch (map['paid_plan']) {
+        final String name => SubscriptionPlan.fromName(name),
+        _ => null,
+      },
+      trialEndsAt: switch (map['trial_ends_at']) {
+        final String at => DateTime.parse(at).toLocal(),
+        _ => null,
+      },
+      trialAvailable: map['trial_available'] == true,
       quotas: quotas,
       usage: usage,
     );
@@ -59,7 +71,19 @@ class PlanStatus {
   /// continua barrando o que não for permitido.
   static const unrestricted = PlanStatus(plan: SubscriptionPlan.free);
 
+  /// O plano que vale agora (o Premium durante o teste).
   final SubscriptionPlan plan;
+
+  /// O plano assinado (o Gratuito durante o teste).
+  final SubscriptionPlan? paidPlan;
+
+  /// Fim do teste do Premium em andamento.
+  final DateTime? trialEndsAt;
+
+  /// Ainda pode começar o teste (uma vez por conta).
+  final bool trialAvailable;
+
+  bool get onTrial => trialEndsAt != null;
 
   /// Sem chave = sem limite.
   final Map<PlanFeature, Quota> quotas;
@@ -131,4 +155,38 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
 PlanFeature? planLimitFeature(String message) {
   final match = RegExp(r'plan_limit:([a-z_]+)').firstMatch(message);
   return match == null ? null : PlanFeature.fromKey(match.group(1)!);
+}
+
+/// Preço e teste grátis de um plano (tabela `plans`).
+class PlanPrice {
+  const PlanPrice({
+    required this.plan,
+    this.monthlyCents = 0,
+    this.extraTeamCents = 0,
+    this.trialDays,
+  });
+
+  factory PlanPrice.fromMap(Map<String, dynamic> map) => PlanPrice(
+    plan: SubscriptionPlan.fromName(map['plan'] as String),
+    monthlyCents: (map['monthly_cents'] as num).toInt(),
+    extraTeamCents: (map['extra_team_cents'] as num).toInt(),
+    trialDays: (map['trial_days'] as num?)?.toInt(),
+  );
+
+  final SubscriptionPlan plan;
+
+  /// Mensalidade com o primeiro time.
+  final int monthlyCents;
+
+  /// Cada time a mais.
+  final int extraTeamCents;
+
+  /// Dias do teste grátis; nulo = sem teste.
+  final int? trialDays;
+
+  bool get isFree => monthlyCents == 0 && extraTeamCents == 0;
+
+  /// Total por mês com [teams] times (o primeiro já está na mensalidade).
+  int totalFor(int teams) =>
+      monthlyCents + extraTeamCents * (teams > 1 ? teams - 1 : 0);
 }

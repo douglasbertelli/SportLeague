@@ -61,4 +61,43 @@ void main() {
     );
     expect(planLimitFeature('outro erro'), isNull);
   });
+
+  test('teste do Premium: vale o Premium, assinado o Gratuito', () {
+    final trial = PlanStatus.fromMap({
+      'plan': 'premium',
+      'paid_plan': 'free',
+      'trial_ends_at': '2026-11-20T12:00:00Z',
+      'trial_available': false,
+      'quotas': {'dues': null},
+    });
+    expect(trial.plan, SubscriptionPlan.premium);
+    expect(trial.paidPlan, SubscriptionPlan.free);
+    expect(trial.onTrial, isTrue);
+    expect(trial.has(PlanFeature.dues), isTrue);
+    expect(free.onTrial, isFalse);
+    expect(free.trialAvailable, isFalse);
+  });
+
+  test('preço: R\$ 30 com 1 time e R\$ 10 por time a mais', () {
+    final premium = PlanPrice.fromMap({
+      'plan': 'premium',
+      'monthly_cents': 3000,
+      'extra_team_cents': 1000,
+      'trial_days': 15,
+    });
+    expect(premium.totalFor(0), 3000);
+    expect(premium.totalFor(1), 3000);
+    expect(premium.totalFor(4), 6000);
+    expect(premium.trialDays, 15);
+    expect(premium.isFree, isFalse);
+    expect(
+      PlanPrice.fromMap({
+        'plan': 'free',
+        'monthly_cents': 0,
+        'extra_team_cents': 0,
+        'trial_days': null,
+      }).isFree,
+      isTrue,
+    );
+  });
 }
