@@ -20,8 +20,13 @@ class GameRepository {
           '*, host:teams!games_team_id_fkey(name, logo_url, city), '
           'opponent_team:teams!games_opponent_team_id_fkey(logo_url, city), '
           'venue:venues(*), '
+          'opponent_guest:guest_teams(logo_url), '
           'championship_match:championship_matches(round, stage, '
-          'group_label, championship:championships(id, name))',
+          'group_label, championship:championships(id, name), '
+          'home:championship_teams!championship_matches_home_id_fkey'
+          '(logo_url, guest_team_id), '
+          'away:championship_teams!championship_matches_away_id_fkey'
+          '(logo_url, guest_team_id))',
         )
         .or('team_id.eq.$teamId,opponent_team_id.eq.$teamId')
         .order('scheduled_at');
