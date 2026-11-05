@@ -32,6 +32,7 @@ class GameChampionship {
     required this.championshipId,
     required this.name,
     required this.stageLabel,
+    this.guestLogoUrl,
   });
 
   /// Nulo para amistoso (sem `championship_match` no select).
@@ -40,6 +41,12 @@ class GameChampionship {
     final championship = value['championship'] as Map<String, dynamic>?;
     if (championship == null) return null;
     final round = value['round'] as int;
+    // O lado fictício (se houver): o símbolo vem da inscrição, que os dois
+    // times veem (o fictício em si só o dono vê).
+    final guest = [value['home'], value['away']]
+        .whereType<Map<String, dynamic>>()
+        .where((side) => side['guest_team_id'] != null)
+        .firstOrNull;
     return GameChampionship(
       championshipId: championship['id'] as String,
       name: championship['name'] as String,
@@ -48,6 +55,7 @@ class GameChampionship {
         'knockout' => 'Mata-mata',
         _ => 'Rodada $round',
       },
+      guestLogoUrl: guest?['logo_url'] as String?,
     );
   }
 
@@ -56,6 +64,9 @@ class GameChampionship {
 
   /// "Rodada 3", "Grupo A · Rodada 1" ou "Mata-mata".
   final String stageLabel;
+
+  /// Símbolo do time fictício do jogo (o adversário de quem joga em casa).
+  final String? guestLogoUrl;
 }
 
 /// Amistoso marcado pelo time [teamId]. O adversário é um time da plataforma
@@ -101,7 +112,13 @@ class Game {
       hostTeamName: host?['name'] as String?,
       hostLogoUrl: host?['logo_url'] as String?,
       hostCity: host?['city'] as String?,
-      opponentLogoUrl: opponentTeam?['logo_url'] as String?,
+      // Time da plataforma; senão o fictício (o dono vê o dele) ou, em jogo
+      // de campeonato, o símbolo guardado na inscrição.
+      opponentLogoUrl:
+          opponentTeam?['logo_url'] as String? ??
+          (map['opponent_guest'] as Map<String, dynamic>?)?['logo_url']
+              as String? ??
+          GameChampionship.fromMap(map['championship_match'])?.guestLogoUrl,
       opponentCity: opponentTeam?['city'] as String?,
       status: GameStatus.fromName(map['status'] as String? ?? 'scheduled'),
       canceledByTeamId: map['canceled_by_team_id'] as String?,
