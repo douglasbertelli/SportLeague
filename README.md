@@ -386,6 +386,24 @@ supabase/
 | `championship_teams` | Times inscritos (da plataforma ou fictícios do organizador), com o nome guardado (os fictícios só o dono vê), a situação (`invited`, `accepted`, `declined`; o banco confirma os times do organizador e os fictícios) e o grupo sorteado. O dono do time convidado responde por `respond_championship_invite` |
 | `championship_matches` | Jogos: fase (`league`, `group`, `knockout`), rodada, posição no chaveamento, grupo, mandante e visitante (nulos no mata-mata até a fase anterior acabar), data, local, placar e pênaltis. Só o organizador gera, marca e lança; marcar e lançar avisam os dois times. Com os dois times e a data vira um jogo em `games` (`type = 'championship'`, `championship_match_id`), sincronizado nos dois sentidos; no mata-mata o banco avança o vencedor e encerra o campeonato na final |
 
+### Imagens no Storage
+
+Buckets: `team-logos` (logo, capa e uniformes dos times e símbolo dos
+fictícios), `athlete-photos` (privado), `profile-photos` (foto e capa) e
+`venue-photos`, cada um na pasta de quem envia. Para não acumular arquivos:
+
+- **Trocar** grava no mesmo caminho (sobrescreve); a URL ganha um `?t=` novo
+  para o app não mostrar a imagem antiga do cache. Os uniformes, que têm um
+  arquivo por foto, apagam os que saíram ao salvar o time.
+- **Remover** a imagem e **excluir** time (com as fotos dos atletas), atleta
+  ou local apagam os arquivos pelo app.
+- **Limpeza diária** (`pg_cron` `storage-cleanup`, 4h de Brasília): a Edge
+  Function `storage-cleanup` apaga os arquivos que nenhuma tabela usa mais
+  (`storage_orphans`, só para a service role), criados há mais de um dia.
+  Pega o que sobrou de uma falha de rede ou de exclusões em cascata feitas
+  pelo banco (conta excluída). Publique-a com
+  `supabase functions deploy storage-cleanup --no-verify-jwt`.
+
 O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
 conta nova começa sem papel até o usuário escolher.
