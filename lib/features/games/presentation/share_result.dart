@@ -79,7 +79,7 @@ Future<void> shareGameResult(
       actions: [
         FilledButton.icon(
           onPressed: () async {
-            final png = await _capture(boundary);
+            final png = await capturePng(boundary);
             if (png == null) {
               if (sheetContext.mounted) {
                 showErrorSnackBar(
@@ -102,7 +102,7 @@ Future<void> shareGameResult(
 }
 
 /// A imagem PNG do que está dentro do [boundary], em alta resolução.
-Future<Uint8List?> _capture(GlobalKey boundary) async {
+Future<Uint8List?> capturePng(GlobalKey boundary) async {
   final render = boundary.currentContext?.findRenderObject();
   if (render is! RenderRepaintBoundary) return null;
   try {

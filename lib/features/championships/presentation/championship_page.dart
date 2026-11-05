@@ -20,6 +20,7 @@ import '../data/championship_repository.dart';
 import '../domain/championship.dart';
 import '../domain/championship_rules.dart';
 import 'championship_team_picker_page.dart';
+import 'share_championship.dart';
 
 /// Um campeonato: classificação (ou chaveamento), jogos e times. O
 /// organizador inscreve os times, gera a tabela, marca data e local e lança
@@ -446,6 +447,20 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
         appBar: AppBar(
           title: Text(championship.name),
           actions: [
+            // Com a tabela gerada, todos compartilham (classificação, final
+            // e o campeão).
+            if (!draft)
+              IconButton(
+                tooltip: 'Compartilhar campeonato',
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () => shareChampionship(
+                  context,
+                  ref,
+                  championship: championship,
+                  teams: teams,
+                  matches: matches,
+                ),
+              ),
             if (isOwner)
               IconButton(
                 tooltip: 'Ações do campeonato',
@@ -514,29 +529,6 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
       ),
     );
   }
-}
-
-/// O campeão: o vencedor da final ou o líder dos pontos corridos.
-String? championOf(
-  Championship championship,
-  List<ChampionshipTeam> teams,
-  List<ChampionshipMatch> matches,
-) {
-  if (championship.status != ChampionshipStatus.finished) return null;
-  final names = {for (final t in teams) t.id: t.name};
-  if (championship.format == ChampionshipFormat.league) {
-    final ids = [
-      for (final t in teams)
-        if (t.status == EntryStatus.accepted) t.id,
-    ];
-    final table = standings(ids, matches, names: names);
-    return table.isEmpty ? null : names[table.first.teamId];
-  }
-  final knockout = matches.where((m) => m.stage == MatchStage.knockout);
-  if (knockout.isEmpty) return null;
-  final lastRound = knockout.map((m) => m.round).reduce(max);
-  final finalMatch = knockout.firstWhere((m) => m.round == lastRound);
-  return names[finalMatch.winnerId];
 }
 
 class _ChampionBanner extends StatelessWidget {

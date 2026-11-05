@@ -13,6 +13,8 @@ import 'package:sport_league/features/championships/data/championship_repository
 import 'package:sport_league/features/championships/domain/championship.dart';
 import 'package:sport_league/features/championships/domain/championship_rules.dart';
 import 'package:sport_league/features/championships/presentation/championship_page.dart';
+import 'package:sport_league/features/championships/presentation/share_championship.dart';
+import 'package:sport_league/features/games/presentation/share_result.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 
 /// Campeonato em memória, com as mesmas regras do banco que a tela usa.
@@ -459,6 +461,70 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Editar campeonato'), findsNothing);
     expect(find.text('Excluir campeonato'), findsOneWidget);
+  });
+
+  testWidgets('compartilha a classificação e o campeão', (tester) async {
+    final shared = <({Uint8List png, String text})>[];
+    ChampionshipMatch played(String id, String h, String a, int hs, int as_) =>
+        ChampionshipMatch(
+          id: id,
+          championshipId: 'c1',
+          stage: MatchStage.league,
+          round: 1,
+          homeId: h,
+          awayId: a,
+          homeScore: hs,
+          awayScore: as_,
+        );
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league)
+          .copyWith(status: ChampionshipStatus.finished),
+      [_entry('a'), _entry('b'), _entry('c')],
+    );
+    repository.matches.addAll([
+      played('m1', 'a', 'b', 2, 0),
+      played('m2', 'b', 'c', 1, 1),
+      played('m3', 'c', 'a', 0, 3),
+    ]);
+    await _pump(
+      tester,
+      repository,
+      overrides: [
+        shareImageProvider.overrideWithValue(
+          (png, text) async => shared.add((png: png, text: text)),
+        ),
+      ],
+    );
+
+    await tester.tap(find.byTooltip('Compartilhar campeonato'));
+    await tester.pumpAndSettle();
+    final card = find.byType(ChampionshipShareCard);
+    expect(card, findsOneWidget);
+    expect(
+      find.descendant(of: card, matching: find.text('CAMPEÃO')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('Time a')),
+      findsNWidgets(2), // no destaque e na classificação
+    );
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Compartilhar'));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    expect(shared.single.png.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+    expect(shared.single.text, 'Time a é campeão do Copa do Bairro!');
+  });
+
+  testWidgets('antes da tabela não há compartilhar', (tester) async {
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league),
+      [_entry('a')],
+    );
+    await _pump(tester, repository);
+    expect(find.byTooltip('Compartilhar campeonato'), findsNothing);
   });
 
   testWidgets('sem times suficientes não gera', (tester) async {
