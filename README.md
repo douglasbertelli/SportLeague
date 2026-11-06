@@ -439,7 +439,7 @@ param. Uma funcionalidade nova que dependa do plano precisa do bloqueio no
 código uma vez; depois, é só a tabela.
 
 **Preço** (tabela `plans`): o Premium custa `monthly_cents` (R$ 30,00) por
-mês com 1 time, mais `extra_team_cents` (R$ 10,00) por time a mais. A tela
+mês com 1 time, mais `extra_team_cents` (R$ 15,00) por time a mais. A tela
 Planos mostra o total com os times que o administrador já tem.
 
 **Teste grátis**: `trial_days` (15) dias de Premium, uma vez por conta, para
