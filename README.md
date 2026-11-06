@@ -420,7 +420,7 @@ n = até n; sem linha = sem limite. Mudar um limite ou mover uma
 funcionalidade de plano é alterar a linha: vale na hora, sem versão nova do
 app (a tela Planos também lê dessa tabela). `description` é o texto do item
 naquele plano na tela Planos; nulo usa o texto padrão do app. Item não
-incluso (`quota` 0) mostra só o nome.
+incluso (`quota` 0) não aparece no cartão daquele plano.
 
 | Funcionalidade | Chave | Gratuito | Premium |
 |---|---|---|---|

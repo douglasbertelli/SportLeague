@@ -201,12 +201,14 @@ class _PlanCard extends ConsumerWidget {
                 ),
             ],
             const SizedBox(height: 8),
+            // Só o que o plano inclui (o não incluso fica de fora).
             for (final feature in PlanFeature.values)
-              _FeatureLine(
-                feature: feature,
-                quota: _row(feature)?.quota,
-                description: _row(feature)?.description,
-              ),
+              if (_row(feature)?.quota != 0)
+                _FeatureLine(
+                  feature: feature,
+                  quota: _row(feature)?.quota,
+                  description: _row(feature)?.description,
+                ),
             if (premium && status?.paidPlan != SubscriptionPlan.premium) ...[
               const SizedBox(height: 16),
               if (canTry) ...[
@@ -270,15 +272,12 @@ class _FeatureLine extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(feature.label, style: theme.textTheme.bodyLarge),
-                // O que não está incluso mostra só o nome (o texto fica no
-                // plano que tem).
-                if (included)
-                  Text(
-                    description ?? feature.description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                Text(
+                  description ?? feature.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
+                ),
               ],
             ),
           ),
