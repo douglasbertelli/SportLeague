@@ -270,12 +270,15 @@ class _FeatureLine extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(feature.label, style: theme.textTheme.bodyLarge),
-                Text(
-                  description ?? feature.description,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+                // O que não está incluso mostra só o nome (o texto fica no
+                // plano que tem).
+                if (included)
+                  Text(
+                    description ?? feature.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
