@@ -208,6 +208,7 @@ class _PlanCard extends ConsumerWidget {
                   feature: feature,
                   quota: _row(feature)?.quota,
                   description: _row(feature)?.description,
+                  extraTeamCents: price?.extraTeamCents ?? 0,
                 ),
             if (premium && status?.paidPlan != SubscriptionPlan.premium) ...[
               const SizedBox(height: 16),
@@ -244,6 +245,7 @@ class _FeatureLine extends StatelessWidget {
     required this.feature,
     required this.quota,
     this.description,
+    this.extraTeamCents = 0,
   });
 
   final PlanFeature feature;
@@ -251,6 +253,9 @@ class _FeatureLine extends StatelessWidget {
 
   /// Texto do plano (do banco); nulo usa o padrão da funcionalidade.
   final String? description;
+
+  /// Preço de cada time a mais (para o rótulo de Times).
+  final int extraTeamCents;
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +288,7 @@ class _FeatureLine extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            describeQuota(feature, quota),
+            describeQuota(feature, quota, extraTeamCents: extraTeamCents),
             style: theme.textTheme.labelLarge?.copyWith(
               color: included ? null : scheme.outline,
             ),

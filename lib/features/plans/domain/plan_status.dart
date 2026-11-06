@@ -1,3 +1,4 @@
+import '../../fundraisers/domain/fundraiser.dart' show formatMoney;
 import '../../profile/domain/profile.dart';
 
 /// Funcionalidades que dependem do plano. A chave é a da tabela
@@ -129,14 +130,23 @@ class PlanFeatureRow {
 }
 
 /// "Ilimitado", "Não incluso", "1 time"…
-String describeQuota(PlanFeature feature, Quota quota) {
+/// Times sem limite mostram o preço de cada time a mais ([extraTeamCents]),
+/// para não parecer que mais times saem de graça.
+String describeQuota(
+  PlanFeature feature,
+  Quota quota, {
+  int extraTeamCents = 0,
+}) {
   if (quota == 0) return 'Não incluso';
   return switch (feature) {
     PlanFeature.teams when quota != null =>
       quota == 1 ? '1 time' : '$quota times',
+    PlanFeature.teams when extraTeamCents > 0 =>
+      '+ ${formatMoney(extraTeamCents)} por time',
+    PlanFeature.teams => 'Vários times',
     PlanFeature.championships when quota != null =>
       quota == 1 ? '1 por vez' : '$quota por vez',
-    PlanFeature.teams || PlanFeature.championships => 'Ilimitado',
+    PlanFeature.championships => 'Ilimitado',
     _ => quota == null ? 'Incluso' : 'Até $quota',
   };
 }

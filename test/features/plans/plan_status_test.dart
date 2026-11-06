@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sport_league/features/fundraisers/domain/fundraiser.dart'
+    show formatMoney;
 import 'package:sport_league/features/plans/domain/plan_status.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
 
@@ -44,6 +46,11 @@ void main() {
     expect(describeQuota(PlanFeature.teams, 1), '1 time');
     expect(describeQuota(PlanFeature.teams, 5), '5 times');
     expect(describeQuota(PlanFeature.championships, null), 'Ilimitado');
+    expect(
+      describeQuota(PlanFeature.teams, null, extraTeamCents: 1000),
+      '+ ${formatMoney(1000)} por time',
+    );
+    expect(describeQuota(PlanFeature.teams, null), 'Vários times');
     expect(describeQuota(PlanFeature.dues, 0), 'Não incluso');
     expect(describeQuota(PlanFeature.dues, null), 'Incluso');
   });
