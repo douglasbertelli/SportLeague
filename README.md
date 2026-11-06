@@ -423,9 +423,12 @@ app (a tela Planos também lê dessa tabela).
 | Funcionalidade | Chave | Gratuito | Premium |
 |---|---|---|---|
 | Times na conta | `teams` | 1 | sem limite |
-| Campeonatos em andamento | `championships` | 1 | sem limite |
+| Organizar campeonatos (em andamento) | `championships` | bloqueado | sem limite |
 | Mata-mata e grupos | `advanced_formats` | bloqueado | liberado |
 | Mensalidade | `dues` | bloqueada | liberada |
+
+No Gratuito o time participa dos campeonatos para os quais for convidado;
+só organizar é do Premium.
 
 O banco barra (gatilhos com `private.require_feature`, erro
 `plan_limit:<chave>`) e o app avisa antes (`plan_status()`, com o plano, os

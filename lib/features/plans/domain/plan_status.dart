@@ -140,12 +140,15 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
   PlanFeature.teams =>
     'Seu plano permite ${describeQuota(feature, quota).toLowerCase()}. '
         'Com o Premium você organiza mais times na mesma conta.',
+  PlanFeature.championships when quota != null && quota > 0 =>
+    'Seu plano permite '
+        '${quota == 1 ? '1 campeonato' : '$quota campeonatos'} em andamento '
+        'por vez. Finalize um ou passe para o Premium para ter mais.',
   PlanFeature.championships =>
-    'Seu plano permite ${quota ?? 0} campeonato em andamento por vez. '
-        'Finalize o atual ou passe para o Premium para ter mais.',
+    'Organizar campeonatos é do plano Premium. Seu time continua '
+        'participando dos campeonatos para os quais for convidado.',
   PlanFeature.advancedFormats =>
-    'Os formatos mata-mata e grupos + mata-mata são do plano Premium. '
-        'No plano Grátis, o campeonato é por pontos corridos.',
+    'Os formatos mata-mata e grupos + mata-mata são do plano Premium.',
   PlanFeature.dues =>
     'O controle da mensalidade, com lembretes automáticos para quem não '
         'pagou, é do plano Premium.',

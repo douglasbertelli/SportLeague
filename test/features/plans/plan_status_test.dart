@@ -100,4 +100,21 @@ void main() {
       isTrue,
     );
   });
+
+  test('campeonato bloqueado no Gratuito', () {
+    const blocked = PlanStatus(
+      plan: SubscriptionPlan.free,
+      quotas: {PlanFeature.championships: 0},
+    );
+    expect(blocked.canAdd(PlanFeature.championships), isFalse);
+    expect(describeQuota(PlanFeature.championships, 0), 'Não incluso');
+    expect(
+      planLimitMessage(PlanFeature.championships, 0),
+      startsWith('Organizar campeonatos é do plano Premium'),
+    );
+    expect(
+      planLimitMessage(PlanFeature.championships, 2),
+      contains('2 campeonatos em andamento'),
+    );
+  });
 }
