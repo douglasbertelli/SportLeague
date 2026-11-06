@@ -24,6 +24,23 @@ enum ChampionshipFormat {
       values.firstWhere((format) => format.name == value);
 }
 
+/// Grupos + mata-mata: como completar o mata-mata quando os classificados
+/// diretos não fecham 2, 4, 8, 16 ou 32 times.
+enum KnockoutFill {
+  /// Entram os melhores colocados da posição seguinte (ex.: melhores 3º).
+  bestPlaced('best_placed'),
+
+  /// Os melhores classificados folgam e passam direto para a fase seguinte.
+  byes('byes');
+
+  const KnockoutFill(this.key);
+
+  final String key;
+
+  static KnockoutFill? fromKey(String? key) =>
+      values.where((fill) => fill.key == key).firstOrNull;
+}
+
 enum ChampionshipStatus {
   draft('Inscrições'),
   running('Em andamento'),
@@ -47,6 +64,9 @@ class Championship {
     this.doubleRound = false,
     this.groupCount,
     this.qualifiersPerGroup,
+    this.teamCount,
+    this.groupSize,
+    this.knockoutFill,
     this.status = ChampionshipStatus.draft,
   });
 
@@ -59,6 +79,9 @@ class Championship {
     doubleRound: map['double_round'] as bool? ?? false,
     groupCount: map['group_count'] as int?,
     qualifiersPerGroup: map['qualifiers_per_group'] as int?,
+    teamCount: map['team_count'] as int?,
+    groupSize: map['group_size'] as int?,
+    knockoutFill: KnockoutFill.fromKey(map['knockout_fill'] as String?),
     status: ChampionshipStatus.fromName(map['status'] as String),
   );
 
@@ -72,6 +95,12 @@ class Championship {
   final bool doubleRound;
   final int? groupCount;
   final int? qualifiersPerGroup;
+
+  /// Grupos + mata-mata: quantos times o campeonato tem, o máximo por grupo
+  /// e como completar o mata-mata (nulo quando os classificados fecham).
+  final int? teamCount;
+  final int? groupSize;
+  final KnockoutFill? knockoutFill;
   final ChampionshipStatus status;
 
   /// "Pontos corridos · turno e returno", "Grupos + mata-mata · 2 grupos".
@@ -80,9 +109,15 @@ class Championship {
       '${format.label} · ${doubleRound ? 'turno e returno' : 'turno único'}',
     ChampionshipFormat.knockout => format.label,
     ChampionshipFormat.groups =>
-      '${format.label} · $groupCount grupos, '
+      '${format.label} · ${teamCount == null ? '' : '$teamCount times, '}'
+          '$groupCount grupos, '
           '${qualifiersPerGroup == 1 ? 'passa 1' : 'passam $qualifiersPerGroup'} '
-          'de cada',
+          'de cada'
+          '${switch (knockoutFill) {
+            KnockoutFill.bestPlaced => ' + melhores ${(qualifiersPerGroup ?? 0) + 1}º',
+            KnockoutFill.byes => ' + folgas',
+            null => '',
+          }}',
   };
 
   Map<String, dynamic> toMap() => {
@@ -94,6 +129,11 @@ class Championship {
     'group_count': format == ChampionshipFormat.groups ? groupCount : null,
     'qualifiers_per_group': format == ChampionshipFormat.groups
         ? qualifiersPerGroup
+        : null,
+    'team_count': format == ChampionshipFormat.groups ? teamCount : null,
+    'group_size': format == ChampionshipFormat.groups ? groupSize : null,
+    'knockout_fill': format == ChampionshipFormat.groups
+        ? knockoutFill?.key
         : null,
     'status': status.name,
   };
@@ -107,6 +147,9 @@ class Championship {
     doubleRound: doubleRound,
     groupCount: groupCount,
     qualifiersPerGroup: qualifiersPerGroup,
+    teamCount: teamCount,
+    groupSize: groupSize,
+    knockoutFill: knockoutFill,
     status: status ?? this.status,
   );
 }
