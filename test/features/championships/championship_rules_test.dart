@@ -197,8 +197,159 @@ void main() {
     expect(cannotGenerate(_champ(ChampionshipFormat.league), 3), isNull);
     expect(cannotGenerate(_champ(ChampionshipFormat.knockout), 6), isNotNull);
     expect(cannotGenerate(_champ(ChampionshipFormat.knockout), 8), isNull);
-    final groups = _champ(ChampionshipFormat.groups, groups: 2, qualifiers: 2);
-    expect(cannotGenerate(groups, 5), contains('pelo menos 6'));
+    const groups = Championship(
+      ownerId: 'u1',
+      name: 'Copa',
+      modality: Modality.society,
+      format: ChampionshipFormat.groups,
+      groupCount: 2,
+      qualifiersPerGroup: 2,
+      teamCount: 6,
+      groupSize: 3,
+    );
+    expect(cannotGenerate(groups, 5), contains('exatamente 6'));
     expect(cannotGenerate(groups, 6), isNull);
+  });
+
+  group('grupos flexíveis', () {
+    test('divide o mais parelho possível e descreve', () {
+      final even = GroupsLayout.fromMax(
+        teams: 8,
+        maxPerGroup: 4,
+        qualifiers: 2,
+      );
+      expect(even.groups, 2);
+      expect(even.sizes, [4, 4]);
+      expect(even.groupsText, '2 grupos de 4');
+      expect(even.missing, 0);
+      expect(even.effectiveFill, isNull);
+      expect(even.error, isNull);
+
+      final uneven = GroupsLayout.fromMax(
+        teams: 10,
+        maxPerGroup: 4,
+        qualifiers: 2,
+      );
+      expect(uneven.sizes, [4, 3, 3]);
+      expect(uneven.groupsText, '3 grupos: A com 4, B e C com 3');
+      expect(uneven.direct, 6);
+      expect(uneven.bracket, 8);
+      expect(uneven.missing, 2);
+    });
+
+    test('completa com os melhores colocados ou com folgas', () {
+      final best = GroupsLayout.fromMax(
+        teams: 12,
+        maxPerGroup: 4,
+        qualifiers: 2,
+        fill: KnockoutFill.bestPlaced,
+      );
+      expect(best.effectiveFill, KnockoutFill.bestPlaced);
+      // 5 grupos com 1 classificado: 5 no chaveamento de 8, faltam 3 (há 5
+      // segundos colocados).
+      final five = GroupsLayout.fromMax(
+        teams: 15,
+        maxPerGroup: 3,
+        qualifiers: 1,
+        fill: KnockoutFill.bestPlaced,
+      );
+      expect(five.missing, 3);
+      expect(five.canUseBestPlaced, isTrue);
+      // 3 grupos com 3 classificados: 9 no de 16, faltam 7 e só há 3
+      // quartos colocados: só dá com folgas.
+      final nine = GroupsLayout.fromMax(
+        teams: 15,
+        maxPerGroup: 5,
+        qualifiers: 3,
+        fill: KnockoutFill.bestPlaced,
+      );
+      expect(nine.canUseBestPlaced, isFalse);
+      expect(nine.effectiveFill, KnockoutFill.byes);
+    });
+
+    test('formatos inválidos', () {
+      expect(
+        GroupsLayout.fromMax(teams: 8, maxPerGroup: 8, qualifiers: 2).error,
+        contains('2 grupos'),
+      );
+      expect(
+        GroupsLayout.fromMax(teams: 8, maxPerGroup: 4, qualifiers: 4).error,
+        contains('menor grupo'),
+      );
+      expect(
+        GroupsLayout.fromMax(teams: 3, maxPerGroup: 2, qualifiers: 1).error,
+        contains('de 4 a 64'),
+      );
+    });
+
+    test('cabeças de chave: 1ª e 2ª só na final', () {
+      expect(seedOrder(4), [1, 4, 2, 3]);
+      expect(seedOrder(8), [1, 8, 4, 5, 2, 7, 3, 6]);
+    });
+
+    StandingRow row(String id, {int wins = 0, int played = 2}) =>
+        StandingRow(id)
+          ..played = played
+          ..wins = wins
+          ..losses = played - wins;
+
+    test('melhores colocados entram e ninguém do mesmo grupo se cruza', () {
+      // 3 grupos, 2 classificados + os 2 melhores 3º = 8.
+      final byGroup = [
+        [row('a1', wins: 2), row('a2', wins: 1), row('a3', wins: 1)],
+        [row('b1', wins: 2), row('b2', wins: 1), row('b3')],
+        [row('c1', wins: 1), row('c2', wins: 1), row('c3', wins: 1)],
+      ];
+      final bracket = knockoutFromGroups(
+        byGroup,
+        2,
+        fill: KnockoutFill.bestPlaced,
+      );
+      expect(bracket, hasLength(8));
+      expect(bracket.whereType<String>().toSet(), {
+        'a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'a3', 'c3', // b3 fica de fora
+      });
+      String group(String? id) => id![0];
+      for (var i = 0; i < 8; i += 2) {
+        expect(group(bracket[i]), isNot(group(bracket[i + 1])));
+      }
+    });
+
+    test('folga: os melhores passam direto para a fase seguinte', () {
+      // 3 grupos com 2 classificados = 6 no chaveamento de 8: 2 folgas.
+      final byGroup = [
+        [row('a1', wins: 2), row('a2', wins: 1), row('a3')],
+        [row('b1', wins: 1), row('b2', wins: 1), row('b3')],
+        [row('c1', wins: 2), row('c2'), row('c3')],
+      ];
+      final bracket = knockoutFromGroups(byGroup, 2, fill: KnockoutFill.byes);
+      expect(bracket.where((id) => id == null), hasLength(2));
+      final matches = knockoutBracket(bracket, firstRound: 4);
+      final first = matches.where((m) => m.round == 4).toList();
+      final second = matches.where((m) => m.round == 5).toList();
+      expect(first, hasLength(2));
+      expect(second, hasLength(2));
+      // Os dois melhores 1º (a1 e c1) folgam e já estão na semifinal.
+      final waiting = {
+        for (final m in second) ...[m.homeId, m.awayId],
+      }.whereType<String>();
+      expect(waiting.toSet(), {'a1', 'c1'});
+      expect(matches.where((m) => m.round == 6), hasLength(1));
+    });
+
+    test('nome da fase conta as folgas', () {
+      ChampionshipMatch ko(int round, int slot) => ChampionshipMatch(
+        id: '$round-$slot',
+        championshipId: 'c1',
+        stage: MatchStage.knockout,
+        round: round,
+        slot: slot,
+      );
+      // Quartas com só 1 jogo (3 folgas), semifinal e final.
+      final matches = [ko(2, 0), ko(3, 0), ko(3, 1), ko(4, 0)];
+      expect(knockoutRoundNameOf(2, matches), 'Quartas de final');
+      expect(knockoutRoundNameOf(3, matches), 'Semifinal');
+      expect(knockoutRoundNameOf(4, matches), 'Final');
+    });
   });
 }

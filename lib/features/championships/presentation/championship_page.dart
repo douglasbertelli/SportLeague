@@ -167,21 +167,38 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
       return;
     }
     final pending = teams.where((t) => t.status == EntryStatus.invited);
-    final ok = await confirmAction(
-      context,
-      title: 'Gerar a tabela?',
-      message:
-          'O app sorteia ${championship.format == ChampionshipFormat.groups ? 'os grupos e ' : ''}'
-          'os jogos dos ${confirmed.length} times confirmados. Depois não '
-          'dá para incluir nem tirar times.'
-          '${pending.isEmpty ? '' : ' Os convites sem resposta são cancelados.'}',
-      confirmLabel: 'Gerar tabela',
-    );
-    if (!ok) return;
     final ids = [for (final t in confirmed) t.id];
-    final groups = championship.format == ChampionshipFormat.groups
-        ? drawGroups(ids, championship.groupCount!, widget.random)
-        : const <String, String>{};
+    final pendingNote = pending.isEmpty
+        ? ''
+        : ' Os convites sem resposta são cancelados.';
+    Map<String, String> groups = const {};
+    if (championship.format == ChampionshipFormat.groups) {
+      // Mostra o sorteio; o organizador pode sortear de novo até confirmar.
+      final drawn = await showAppSheet<Map<String, String>>(
+        context,
+        builder: (_) => _DrawSheet(
+          ids: ids,
+          names: {for (final t in confirmed) t.id: t.name},
+          logos: {for (final t in confirmed) t.id: t.logoUrl},
+          groupCount: championship.groupCount!,
+          note: pendingNote,
+          random: widget.random,
+        ),
+      );
+      if (drawn == null) return;
+      groups = drawn;
+    } else {
+      final ok = await confirmAction(
+        context,
+        title: 'Gerar a tabela?',
+        message:
+            'O app sorteia os jogos dos ${confirmed.length} times '
+            'confirmados. Depois não dá para incluir nem tirar times.'
+            '$pendingNote',
+        confirmLabel: 'Gerar tabela',
+      );
+      if (!ok) return;
+    }
     final planned = planChampionship(
       championship,
       ids,
@@ -214,9 +231,11 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
           names: names,
         ),
     ];
+    final layout = GroupsLayout.of(championship, confirmed: teams.length);
     final bracket = knockoutFromGroups(
       byGroup,
       championship.qualifiersPerGroup!,
+      fill: layout.effectiveFill,
     );
     final rounds = matches
         .where((m) => m.stage == MatchStage.group)
@@ -630,6 +649,33 @@ class _TableTab extends StatelessWidget {
                     logos: logos,
                   ),
                 ),
+              // Completa o mata-mata com os melhores da posição seguinte:
+              // a comparação entre os grupos.
+              if (GroupsLayout.of(championship, confirmed: teams.length)
+                  case final layout
+                  when layout.effectiveFill == KnockoutFill.bestPlaced)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _StandingsTable(
+                    title:
+                        'Melhores ${layout.qualifiers + 1}º colocados '
+                        '(passam ${layout.missing})',
+                    qualifiers: layout.missing,
+                    rows: bestAtPosition([
+                      for (final label in groupLabels.take(layout.groups))
+                        standings(
+                          [
+                            for (final t in teams)
+                              if (t.groupLabel == label) t.id,
+                          ],
+                          matches.where((m) => m.groupLabel == label),
+                          names: names,
+                        ),
+                    ], layout.qualifiers),
+                    names: names,
+                    logos: logos,
+                  ),
+                ),
             ],
           ),
           ChampionshipFormat.knockout => const SizedBox.shrink(),
@@ -775,7 +821,7 @@ class _Bracket extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
             child: Text(
-              knockoutRoundName(matches.where((m) => m.round == round).length),
+              knockoutRoundNameOf(round, matches),
               style: theme.textTheme.titleSmall,
             ),
           ),
@@ -868,13 +914,7 @@ class _MatchesTab extends StatelessWidget {
   String _section(ChampionshipMatch match) => switch (match.stage) {
     MatchStage.league => 'Rodada ${match.round}',
     MatchStage.group => 'Grupo ${match.groupLabel} · Rodada ${match.round}',
-    MatchStage.knockout => knockoutRoundName(
-      matches
-          .where(
-            (m) => m.stage == MatchStage.knockout && m.round == match.round,
-          )
-          .length,
-    ),
+    MatchStage.knockout => knockoutRoundNameOf(match.round, matches),
   };
 
   @override
@@ -1383,6 +1423,10 @@ class _TeamsTab extends StatelessWidget {
     final confirmed = teams
         .where((t) => t.status == EntryStatus.accepted)
         .length;
+    // Grupos + mata-mata: o campeonato tem um número certo de times.
+    final total = championship.format == ChampionshipFormat.groups
+        ? championship.teamCount
+        : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -1393,7 +1437,7 @@ class _TeamsTab extends StatelessWidget {
             title: Text(championship.summary),
             subtitle: Text(
               '${championship.modality.label} · ${championship.status.label}'
-              '${draft ? ' · $confirmed confirmados' : ''}',
+              '${draft ? ' · $confirmed${total == null ? '' : ' de $total'} confirmados' : ''}',
             ),
           ),
         ),
@@ -1413,7 +1457,11 @@ class _TeamsTab extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onStart,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Gerar tabela'),
+                  label: Text(
+                    championship.format == ChampionshipFormat.groups
+                        ? 'Sortear grupos'
+                        : 'Gerar tabela',
+                  ),
                 ),
               ),
             ],
@@ -1526,6 +1574,103 @@ class _TeamsTab extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Sorteio dos grupos: mostra como ficou e deixa sortear de novo até o
+/// organizador confirmar. Fecha devolvendo os grupos (time -> letra).
+class _DrawSheet extends StatefulWidget {
+  const _DrawSheet({
+    required this.ids,
+    required this.names,
+    required this.logos,
+    required this.groupCount,
+    required this.note,
+    this.random,
+  });
+
+  final List<String> ids;
+  final Map<String, String> names;
+  final Map<String, String?> logos;
+  final int groupCount;
+
+  /// Aviso extra (convites sem resposta).
+  final String note;
+  final Random? random;
+
+  @override
+  State<_DrawSheet> createState() => _DrawSheetState();
+}
+
+class _DrawSheetState extends State<_DrawSheet> {
+  late var _groups = _draw();
+
+  Map<String, String> _draw() =>
+      drawGroups(widget.ids, widget.groupCount, widget.random);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppSheet(
+      title: 'Sorteio dos grupos',
+      message:
+          'Confira os grupos. Ao confirmar, o app gera os jogos e não dá mais '
+          'para incluir nem tirar times.${widget.note}',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final label in groupLabels.take(widget.groupCount))
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Grupo $label', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 6),
+                    for (final id in widget.ids)
+                      if (_groups[id] == label)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            children: [
+                              TeamLogo.url(
+                                logoUrl: widget.logos[id],
+                                radius: 12,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  widget.names[id] ?? '',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(_groups),
+          icon: const Icon(Icons.check),
+          label: const Text('Confirmar e gerar jogos'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => setState(() => _groups = _draw()),
+          icon: const Icon(Icons.shuffle),
+          label: const Text('Sortear de novo'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
       ],
     );
   }

@@ -538,4 +538,43 @@ void main() {
     expect(find.textContaining('4, 8, 16 ou 32'), findsOneWidget);
     expect(repository.matches, isEmpty);
   });
+
+  testWidgets('grupos: mostra o sorteio, sorteia de novo e gera os jogos', (
+    tester,
+  ) async {
+    final repository = FakeChampionshipRepository(
+      const Championship(
+        id: 'c1',
+        ownerId: 'u1',
+        name: 'Copa do Bairro',
+        modality: Modality.society,
+        format: ChampionshipFormat.groups,
+        groupCount: 2,
+        qualifiersPerGroup: 1,
+        teamCount: 6,
+        groupSize: 3,
+      ),
+      [for (final id in 'abcdef'.split('')) _entry(id)],
+    );
+    await _pump(tester, repository);
+    expect(find.textContaining('6 de 6 confirmados'), findsOneWidget);
+
+    await tester.tap(find.text('Sortear grupos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sorteio dos grupos'), findsOneWidget);
+    expect(find.text('Grupo A'), findsOneWidget);
+    expect(find.text('Grupo B'), findsOneWidget);
+
+    await tester.tap(find.text('Sortear de novo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar e gerar jogos'));
+    await tester.pumpAndSettle();
+
+    expect(repository.championship.status, ChampionshipStatus.running);
+    // 2 grupos de 3: 3 jogos em cada.
+    expect(repository.matches, hasLength(6));
+    final labels = [for (final t in repository.teams) t.groupLabel];
+    expect(labels.where((l) => l == 'A'), hasLength(3));
+    expect(labels.where((l) => l == 'B'), hasLength(3));
+  });
 }

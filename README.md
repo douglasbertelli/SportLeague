@@ -285,8 +285,18 @@ Notifications** no target Runner pelo Xcode.
      pela direita), com as funcionalidades extras:
      - **Campeonatos**: o administrador cria e escolhe o formato: **pontos
        corridos** (turno único ou turno e returno), **mata-mata** (4, 8, 16
-       ou 32 times, empate nos pênaltis) ou **grupos + mata-mata** (2, 4 ou 8
-       grupos, passa 1 ou 2 de cada, ida e volta opcional). Inscreve times da
+       ou 32 times, empate nos pênaltis) ou **grupos + mata-mata**: o
+       organizador escolhe quantos times (4 a 64), o máximo por grupo (o app
+       divide o mais parelho possível, até 16 grupos) e quantos passam de
+       cada grupo, com ida e volta opcional. Quando os classificados não
+       fecham 2, 4, 8, 16 ou 32, escolhe como completar o mata-mata: com os
+       **melhores colocados** da posição seguinte (comparados entre os grupos
+       por pontos, saldo e gols por jogo) ou com **folga** para os melhores
+       classificados, que passam direto para a fase seguinte. Os
+       classificados viram cabeças de chave (1º colocados, depois 2º…), e
+       times do mesmo grupo não se cruzam na primeira fase quando dá. Com
+       os times confirmados, "Sortear grupos" mostra o sorteio, que pode ser
+       refeito antes de gerar os jogos. Inscreve times da
        plataforma da modalidade (o dono de outro time recebe o convite e
        aceita ou recusa; os times dele entram confirmados) e times fictícios.
        "Gerar tabela" sorteia os grupos ou o chaveamento e cria as rodadas

@@ -9,6 +9,7 @@ import '../../plans/presentation/plan_gate.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
+import '../domain/championship_rules.dart';
 
 /// Cria o campeonato (ou edita, antes de começar): nome, modalidade e o
 /// formato, com as opções de cada um. Fecha devolvendo o campeonato salvo.
@@ -28,8 +29,11 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
   late var _modality = widget.championship?.modality ?? Modality.society;
   late var _format = widget.championship?.format ?? ChampionshipFormat.league;
   late var _doubleRound = widget.championship?.doubleRound ?? false;
-  late var _groupCount = widget.championship?.groupCount ?? 2;
+  // Grupos + mata-mata.
+  late var _teams = widget.championship?.teamCount ?? 8;
+  late var _maxPerGroup = widget.championship?.groupSize ?? 4;
   late var _qualifiers = widget.championship?.qualifiersPerGroup ?? 2;
+  late var _fill = widget.championship?.knockoutFill ?? KnockoutFill.bestPlaced;
   var _loading = false;
 
   @override
@@ -38,8 +42,32 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
     super.dispose();
   }
 
+  GroupsLayout get _layout => GroupsLayout.fromMax(
+    teams: _teams,
+    maxPerGroup: _maxPerGroup,
+    qualifiers: _qualifiers,
+    fill: _fill,
+  );
+
+  /// Muda os números e mantém os classificados dentro do possível.
+  void _setGroups({int? teams, int? maxPerGroup, int? qualifiers}) {
+    setState(() {
+      _teams = teams ?? _teams;
+      _maxPerGroup = maxPerGroup ?? _maxPerGroup;
+      _qualifiers = qualifiers ?? _qualifiers;
+      final most = _layout.smallestGroup - 1;
+      if (most >= 1 && _qualifiers > most) _qualifiers = most;
+    });
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_format == ChampionshipFormat.groups) {
+      if (_layout.error case final error?) {
+        showErrorSnackBar(context, error);
+        return;
+      }
+    }
     setState(() => _loading = true);
     final championship = Championship(
       id: widget.championship?.id,
@@ -48,8 +76,11 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       modality: _modality,
       format: _format,
       doubleRound: _doubleRound,
-      groupCount: _groupCount,
+      groupCount: _layout.groups,
       qualifiersPerGroup: _qualifiers,
+      teamCount: _teams,
+      groupSize: _maxPerGroup,
+      knockoutFill: _layout.effectiveFill,
     );
     try {
       final repository = ref.read(championshipRepositoryProvider);
@@ -138,39 +169,34 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
             ],
             if (_format == ChampionshipFormat.groups) ...[
               const SizedBox(height: 8),
-              Text('Grupos', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 2, label: Text('2 grupos')),
-                  ButtonSegment(value: 4, label: Text('4 grupos')),
-                  ButtonSegment(value: 8, label: Text('8 grupos')),
-                ],
-                selected: {_groupCount},
-                onSelectionChanged: (value) =>
-                    setState(() => _groupCount = value.single),
+              _NumberField(
+                label: 'Times no campeonato',
+                value: _teams,
+                min: GroupsLayout.minTeams,
+                max: GroupsLayout.maxTeams,
+                onChanged: (value) => _setGroups(teams: value),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Classificados por grupo',
-                style: theme.textTheme.titleSmall,
+              _NumberField(
+                label: 'Times por grupo',
+                hint: 'No máximo; o app divide o mais parelho possível',
+                value: _maxPerGroup,
+                min: 2,
+                max: _teams ~/ 2,
+                onChanged: (value) => _setGroups(maxPerGroup: value),
               ),
-              const SizedBox(height: 8),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 1, label: Text('1 (o líder)')),
-                  ButtonSegment(value: 2, label: Text('2 (1º e 2º)')),
-                ],
-                selected: {_qualifiers},
-                onSelectionChanged: (value) =>
-                    setState(() => _qualifiers = value.single),
+              _NumberField(
+                label: 'Classificados por grupo',
+                value: _qualifiers,
+                min: 1,
+                max: _layout.smallestGroup - 1 < 1
+                    ? 1
+                    : _layout.smallestGroup - 1,
+                onChanged: (value) => _setGroups(qualifiers: value),
               ),
               const SizedBox(height: 8),
-              Text(
-                '${_groupCount * _qualifiers} times no mata-mata.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              _GroupsSummary(
+                layout: _layout,
+                onFillChanged: (fill) => setState(() => _fill = fill),
               ),
             ],
             const SizedBox(height: 32),
@@ -186,6 +212,166 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                 widget.championship == null ? 'Criar campeonato' : 'Salvar',
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Número com os botões de menos e mais.
+class _NumberField extends StatelessWidget {
+  const _NumberField({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    this.hint,
+  });
+
+  final String label;
+  final String? hint;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: theme.textTheme.bodyLarge),
+                if (hint case final hint?)
+                  Text(
+                    hint,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton.outlined(
+            tooltip: 'Menos: $label',
+            onPressed: value > min ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove),
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+          ),
+          IconButton.outlined(
+            tooltip: 'Mais: $label',
+            onPressed: value < max ? () => onChanged(value + 1) : null,
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Como fica o formato: os grupos, quantos vão ao mata-mata e, quando não
+/// fecha, como completar.
+class _GroupsSummary extends StatelessWidget {
+  const _GroupsSummary({required this.layout, required this.onFillChanged});
+
+  final GroupsLayout layout;
+  final ValueChanged<KnockoutFill> onFillChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    if (layout.error case final error?) {
+      return Card(
+        color: colors.errorContainer,
+        child: ListTile(
+          leading: Icon(Icons.error_outline, color: colors.onErrorContainer),
+          title: Text(error),
+          textColor: colors.onErrorContainer,
+        ),
+      );
+    }
+    final q = layout.qualifiers;
+    final missing = layout.missing;
+    final next = q + 1;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(layout.groupsText, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              '${q == 1 ? 'Passa o 1º' : 'Passam os $q primeiros'} de cada '
+              'grupo: ${layout.direct} classificados.',
+            ),
+            Text(
+              'Mata-mata com ${layout.bracket} times, começando '
+              '${inKnockoutRound(layout.bracket ~/ 2)}.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            if (missing > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Faltam $missing ${missing == 1 ? 'vaga' : 'vagas'} para '
+                'fechar o mata-mata. Como completar?',
+                style: theme.textTheme.titleSmall,
+              ),
+              RadioGroup<KnockoutFill>(
+                groupValue: layout.effectiveFill,
+                onChanged: (value) => onFillChanged(value!),
+                child: Column(
+                  children: [
+                    RadioListTile<KnockoutFill>(
+                      contentPadding: EdgeInsets.zero,
+                      value: KnockoutFill.bestPlaced,
+                      enabled: layout.canUseBestPlaced,
+                      title: Text(
+                        missing == 1
+                            ? 'O melhor $nextº colocado'
+                            : 'Os $missing melhores $nextº colocados',
+                      ),
+                      subtitle: Text(
+                        layout.canUseBestPlaced
+                            ? 'Comparados entre os grupos por pontos por '
+                                  'jogo, saldo e gols'
+                            : 'Não há $nextº colocados que bastem',
+                      ),
+                    ),
+                    RadioListTile<KnockoutFill>(
+                      contentPadding: EdgeInsets.zero,
+                      value: KnockoutFill.byes,
+                      title: Text(
+                        missing == 1
+                            ? 'Folga para o melhor classificado'
+                            : 'Folga para os $missing melhores classificados',
+                      ),
+                      subtitle: Text(
+                        '${missing == 1 ? 'Passa' : 'Passam'} direto '
+                        '${inKnockoutRound(layout.bracket ~/ 4, to: true)}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
