@@ -289,6 +289,8 @@ class _FeatureLine extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             describeQuota(feature, quota, extraTeamCents: extraTeamCents),
+            // "+ R$ 10,00" e, embaixo, "por time": alinhados à direita.
+            textAlign: TextAlign.end,
             style: theme.textTheme.labelLarge?.copyWith(
               color: included ? null : scheme.outline,
             ),

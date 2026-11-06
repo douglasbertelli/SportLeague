@@ -48,7 +48,7 @@ void main() {
     expect(describeQuota(PlanFeature.championships, null), 'Ilimitado');
     expect(
       describeQuota(PlanFeature.teams, null, extraTeamCents: 1000),
-      '+ ${formatMoney(1000)} por time',
+      '+ ${formatMoney(1000)}\npor time',
     );
     expect(describeQuota(PlanFeature.teams, null), 'Vários times');
     expect(describeQuota(PlanFeature.dues, 0), 'Não incluso');

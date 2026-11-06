@@ -142,7 +142,7 @@ String describeQuota(
     PlanFeature.teams when quota != null =>
       quota == 1 ? '1 time' : '$quota times',
     PlanFeature.teams when extraTeamCents > 0 =>
-      '+ ${formatMoney(extraTeamCents)} por time',
+      '+ ${formatMoney(extraTeamCents)}\npor time',
     PlanFeature.teams => 'Vários times',
     PlanFeature.championships when quota != null =>
       quota == 1 ? '1 por vez' : '$quota por vez',
