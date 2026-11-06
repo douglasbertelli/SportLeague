@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
@@ -58,7 +59,9 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       if (widget.championship != null) await repository.update(championship);
       if (mounted) context.pop(saved);
     } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+      if (mounted && !handlePlanLimitError(context, error)) {
+        showErrorSnackBar(context, friendlyErrorMessage(error));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -10,6 +10,9 @@ import 'package:sport_league/features/dues/data/dues_repository.dart';
 import 'package:sport_league/features/dues/domain/team_dues.dart';
 import 'package:sport_league/features/dues/presentation/dues_page.dart';
 import 'package:sport_league/features/fundraisers/presentation/fundraisers_page.dart';
+import 'package:sport_league/features/plans/data/plan_repository.dart';
+import 'package:sport_league/features/plans/domain/plan_status.dart';
+import 'package:sport_league/features/profile/domain/profile.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 
@@ -90,6 +93,7 @@ Future<void> _pump(
   FakeDuesRepository dues, {
   String userId = 'u1',
   DateTime? today,
+  PlanStatus plan = PlanStatus.unrestricted,
 }) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 2.6;
@@ -102,6 +106,7 @@ Future<void> _pump(
         athleteRepositoryProvider.overrideWithValue(_athletes),
         fundraiserTeamsProvider.overrideWith((ref) async => [_team]),
         selectedTeamProvider.overrideWith((ref) async => _team),
+        planStatusProvider.overrideWith((ref) async => plan),
       ],
       child: MaterialApp(
         home: DuesPage(today: today ?? DateTime(2026, 11, 15)),
@@ -237,5 +242,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.deleted, isTrue);
     expect(find.text('Sem mensalidade'), findsOneWidget);
+  });
+
+  testWidgets('no plano sem mensalidade, fica pausada', (tester) async {
+    final repository = FakeDuesRepository(_dues());
+    await _pump(
+      tester,
+      repository,
+      plan: const PlanStatus(
+        plan: SubscriptionPlan.free,
+        quotas: {PlanFeature.dues: 0},
+      ),
+    );
+    expect(find.text('Mensalidade pausada'), findsOneWidget);
+
+    // Marcar o pagamento mostra o aviso do Premium e não salva.
+    await tester.tap(find.text('Bruno Lima'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recurso do plano Premium'), findsOneWidget);
+    expect(find.text('Ver planos'), findsOneWidget);
+    expect(repository.payments, isEmpty);
   });
 }

@@ -411,6 +411,52 @@ O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
 conta nova começa sem papel até o usuário escolher.
 
+### Planos (Gratuito e Premium)
+
+O plano é do administrador e vale para os times dele; jogadores e técnicos
+não têm plano. O que cada plano libera fica na tabela `plan_features`
+(`plan`, `feature`, `quota`): `quota` nula = sem limite, 0 = bloqueado,
+n = até n; sem linha = sem limite. Mudar um limite ou mover uma
+funcionalidade de plano é alterar a linha: vale na hora, sem versão nova do
+app (a tela Planos também lê dessa tabela). `description` é o texto do item
+naquele plano na tela Planos; nulo usa o texto padrão do app. Item não
+incluso (`quota` 0) não aparece no cartão daquele plano.
+
+| Funcionalidade | Chave | Gratuito | Premium |
+|---|---|---|---|
+| Times na conta | `teams` | 1 | sem limite |
+| Organizar campeonatos em andamento (todos os formatos) | `championships` | bloqueado | sem limite |
+| Mensalidade | `dues` | bloqueada | liberada |
+
+No Gratuito o time participa dos campeonatos para os quais for convidado;
+só organizar é do Premium.
+
+O banco barra (gatilhos com `private.require_feature`, erro
+`plan_limit:<chave>`) e o app avisa antes (`plan_status()`, com o plano, os
+limites e o uso). Quem perde o acesso não perde dados: o que existe continua
+visível; só criar e editar fica bloqueado, e os lembretes de mensalidade
+param. Uma funcionalidade nova que dependa do plano precisa do bloqueio no
+código uma vez; depois, é só a tabela.
+
+**Preço** (tabela `plans`): o Premium custa `monthly_cents` (R$ 30,00) por
+mês com 1 time, mais `extra_team_cents` (R$ 10,00) por time a mais. A tela
+Planos mostra o total com os times que o administrador já tem.
+
+**Teste grátis**: `trial_days` (15) dias de Premium, uma vez por conta, para
+o administrador no Gratuito; ele começa pelo app (`start_premium_trial()`,
+guardado em `private.premium_trials`). Enquanto dura, o plano que vale é o
+Premium (`private.effective_plan`). O cron `trial-reminders` (9h de
+Brasília) avisa faltando até 3 dias e quando termina. Sem `trial_days`, o
+teste some do app.
+
+Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
+tudo de uma vez):
+
+```sql
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+update public.profiles set plan = 'premium' where id = '<id do usuário>';
+```
+
 ## Testes
 
 ```sh
