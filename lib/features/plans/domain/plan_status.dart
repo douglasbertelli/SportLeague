@@ -7,12 +7,8 @@ enum PlanFeature {
   championships(
     'championships',
     'Campeonatos',
-    'Campeonatos em andamento ao mesmo tempo',
-  ),
-  advancedFormats(
-    'advanced_formats',
-    'Mata-mata e grupos',
-    'Campeonatos no formato mata-mata ou grupos + mata-mata',
+    'Organizar campeonatos de pontos corridos, mata-mata ou grupos + '
+        'mata-mata',
   ),
   dues('dues', 'Mensalidade', 'Controle da mensalidade com lembretes');
 
@@ -145,10 +141,9 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
         '${quota == 1 ? '1 campeonato' : '$quota campeonatos'} em andamento '
         'por vez. Finalize um ou passe para o Premium para ter mais.',
   PlanFeature.championships =>
-    'Organizar campeonatos é do plano Premium. Seu time continua '
-        'participando dos campeonatos para os quais for convidado.',
-  PlanFeature.advancedFormats =>
-    'Os formatos mata-mata e grupos + mata-mata são do plano Premium.',
+    'Organizar campeonatos (pontos corridos, mata-mata ou grupos + '
+        'mata-mata) é do plano Premium. Seu time continua participando dos '
+        'campeonatos para os quais for convidado.',
   PlanFeature.dues =>
     'O controle da mensalidade, com lembretes automáticos para quem não '
         'pagou, é do plano Premium.',

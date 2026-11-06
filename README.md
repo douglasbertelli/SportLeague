@@ -423,8 +423,7 @@ app (a tela Planos também lê dessa tabela).
 | Funcionalidade | Chave | Gratuito | Premium |
 |---|---|---|---|
 | Times na conta | `teams` | 1 | sem limite |
-| Organizar campeonatos (em andamento) | `championships` | bloqueado | sem limite |
-| Mata-mata e grupos | `advanced_formats` | bloqueado | liberado |
+| Organizar campeonatos em andamento (todos os formatos) | `championships` | bloqueado | sem limite |
 | Mensalidade | `dues` | bloqueada | liberada |
 
 No Gratuito o time participa dos campeonatos para os quais for convidado;

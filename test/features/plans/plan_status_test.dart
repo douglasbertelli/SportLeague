@@ -8,10 +8,9 @@ void main() {
     'quotas': {
       'teams': 1,
       'championships': 1,
-      'advanced_formats': 0,
       'dues': 0,
-      // Funcionalidade que esta versão do app não conhece: ignorada.
-      'future_thing': 3,
+      // Funcionalidade que esta versão do app não conhece (ou que saiu): ignorada.
+      'advanced_formats': 0,
     },
     'usage': {'teams': 1, 'championships': 0},
   });
@@ -19,12 +18,11 @@ void main() {
   test('lê o plano, os limites e o uso', () {
     expect(free.plan, SubscriptionPlan.free);
     expect(free.quota(PlanFeature.teams), 1);
-    expect(free.quotas.length, 4);
+    expect(free.quotas.length, 3);
   });
 
   test('limite zero bloqueia; limite atingido impede criar mais', () {
     expect(free.has(PlanFeature.dues), isFalse);
-    expect(free.has(PlanFeature.advancedFormats), isFalse);
     expect(free.has(PlanFeature.teams), isTrue);
     expect(free.canAdd(PlanFeature.teams), isFalse);
     expect(free.canAdd(PlanFeature.championships), isTrue);
@@ -56,8 +54,8 @@ void main() {
       PlanFeature.dues,
     );
     expect(
-      planLimitFeature('plan_limit:advanced_formats'),
-      PlanFeature.advancedFormats,
+      planLimitFeature('plan_limit:championships'),
+      PlanFeature.championships,
     );
     expect(planLimitFeature('outro erro'), isNull);
   });
@@ -110,7 +108,7 @@ void main() {
     expect(describeQuota(PlanFeature.championships, 0), 'Não incluso');
     expect(
       planLimitMessage(PlanFeature.championships, 0),
-      startsWith('Organizar campeonatos é do plano Premium'),
+      allOf(startsWith('Organizar campeonatos'), contains('mata-mata')),
     );
     expect(
       planLimitMessage(PlanFeature.championships, 2),

@@ -147,36 +147,3 @@ bool handlePlanLimitError(BuildContext context, Object error) {
   showPremiumSheet(context, feature);
   return true;
 }
-
-/// Selo "Premium" para opções bloqueadas.
-class PremiumBadge extends StatelessWidget {
-  const PremiumBadge({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.workspace_premium_outlined,
-            size: 14,
-            color: scheme.onTertiaryContainer,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Premium',
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: scheme.onTertiaryContainer),
-          ),
-        ],
-      ),
-    );
-  }
-}
