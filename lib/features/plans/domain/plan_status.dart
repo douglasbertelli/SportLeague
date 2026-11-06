@@ -6,9 +6,8 @@ enum PlanFeature {
   teams(
     'teams',
     'Times',
-    'Organize vários times na mesma conta (principal, veteranos, '
-        'feminino, base…), cada um com seu elenco, jogos, escalação, '
-        'estatísticas e convites. Troque entre eles com um toque.',
+    'Times na sua conta, cada um com elenco, jogos, escalação, '
+        'estatísticas e convites',
   ),
   championships(
     'championships',
@@ -109,12 +108,14 @@ class PlanFeatureRow {
     required this.plan,
     required this.feature,
     required this.quota,
+    this.description,
   });
 
   factory PlanFeatureRow.fromMap(Map<String, dynamic> map) => PlanFeatureRow(
     plan: SubscriptionPlan.fromName(map['plan'] as String),
     feature: PlanFeature.fromKey(map['feature'] as String),
     quota: (map['quota'] as num?)?.toInt(),
+    description: map['description'] as String?,
   );
 
   final SubscriptionPlan plan;
@@ -122,6 +123,9 @@ class PlanFeatureRow {
   /// Nulo quando o banco tem uma funcionalidade que esta versão não conhece.
   final PlanFeature? feature;
   final Quota quota;
+
+  /// Texto deste plano; nulo usa o texto padrão da funcionalidade.
+  final String? description;
 }
 
 /// "Ilimitado", "Não incluso", "1 time"…

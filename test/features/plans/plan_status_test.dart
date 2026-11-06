@@ -115,4 +115,23 @@ void main() {
       contains('2 campeonatos em andamento'),
     );
   });
+
+  test('lê o texto do item por plano', () {
+    final row = PlanFeatureRow.fromMap({
+      'plan': 'free',
+      'feature': 'teams',
+      'quota': 1,
+      'description': '1 time completo.',
+    });
+    expect(row.description, '1 time completo.');
+    expect(
+      PlanFeatureRow.fromMap({
+        'plan': 'premium',
+        'feature': 'dues',
+        'quota': null,
+        'description': null,
+      }).description,
+      isNull,
+    );
+  });
 }

@@ -104,8 +104,8 @@ class _PlanCard extends ConsumerWidget {
   final PlanPrice? price;
   final PlanStatus? status;
 
-  Quota _quota(PlanFeature feature) =>
-      rows.where((row) => row.feature == feature).firstOrNull?.quota;
+  PlanFeatureRow? _row(PlanFeature feature) =>
+      rows.where((row) => row.feature == feature).firstOrNull;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -202,7 +202,11 @@ class _PlanCard extends ConsumerWidget {
             ],
             const SizedBox(height: 8),
             for (final feature in PlanFeature.values)
-              _FeatureLine(feature: feature, quota: _quota(feature)),
+              _FeatureLine(
+                feature: feature,
+                quota: _row(feature)?.quota,
+                description: _row(feature)?.description,
+              ),
             if (premium && status?.paidPlan != SubscriptionPlan.premium) ...[
               const SizedBox(height: 16),
               if (canTry) ...[
@@ -234,10 +238,17 @@ class _PlanCard extends ConsumerWidget {
 }
 
 class _FeatureLine extends StatelessWidget {
-  const _FeatureLine({required this.feature, required this.quota});
+  const _FeatureLine({
+    required this.feature,
+    required this.quota,
+    this.description,
+  });
 
   final PlanFeature feature;
   final Quota quota;
+
+  /// Texto do plano (do banco); nulo usa o padrão da funcionalidade.
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +271,7 @@ class _FeatureLine extends StatelessWidget {
               children: [
                 Text(feature.label, style: theme.textTheme.bodyLarge),
                 Text(
-                  feature.description,
+                  description ?? feature.description,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),

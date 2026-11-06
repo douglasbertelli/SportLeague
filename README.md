@@ -418,7 +418,8 @@ não têm plano. O que cada plano libera fica na tabela `plan_features`
 (`plan`, `feature`, `quota`): `quota` nula = sem limite, 0 = bloqueado,
 n = até n; sem linha = sem limite. Mudar um limite ou mover uma
 funcionalidade de plano é alterar a linha: vale na hora, sem versão nova do
-app (a tela Planos também lê dessa tabela).
+app (a tela Planos também lê dessa tabela). `description` é o texto do item
+naquele plano na tela Planos; nulo usa o texto padrão do app.
 
 | Funcionalidade | Chave | Gratuito | Premium |
 |---|---|---|---|
