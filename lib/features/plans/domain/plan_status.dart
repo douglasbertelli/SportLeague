@@ -3,7 +3,13 @@ import '../../profile/domain/profile.dart';
 /// Funcionalidades que dependem do plano. A chave é a da tabela
 /// `plan_features` do banco, onde ficam os limites de cada plano.
 enum PlanFeature {
-  teams('teams', 'Times', 'Times na sua conta'),
+  teams(
+    'teams',
+    'Times',
+    'Organize vários times na mesma conta (principal, veteranos, '
+        'feminino, base…), cada um com seu elenco, jogos, escalação, '
+        'estatísticas e convites. Troque entre eles com um toque.',
+  ),
   championships(
     'championships',
     'Campeonatos',
