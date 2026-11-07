@@ -2514,6 +2514,148 @@ void main() {
       // O nono ficou fora.
       expect(saved.any((entry) => entry.athleteId == 'x9'), isFalse);
     });
+
+    /// Toca na posição e escolhe o jogador na janela.
+    Future<void> choose(WidgetTester tester, Finder slot, String player) async {
+      await tester.ensureVisible(slot);
+      await tester.pumpAndSettle();
+      await tester.tap(slot);
+      await tester.pumpAndSettle();
+      final tile = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text(player),
+      );
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('escalação no campo: formação, escolher e trocar', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final lineups = FakeLineupRepository()
+        ..style = LineupStyle.field
+        ..fieldAvailable = true
+        ..ownerId = 'outro';
+      final container = await coachContainer(lineups: lineups);
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(game: game(), teamId: 'team-x'),
+      );
+      // Society: as formações de 7 e o campo com as posições vazias.
+      expect(find.text('Formações'), findsOneWidget);
+      expect(find.text('2 - 3 - 1'), findsOneWidget);
+      expect(find.bySemanticsLabel('Posição GOL vazia'), findsOneWidget);
+      // Técnico não escolhe a visualização (só o dono).
+      expect(find.byTooltip('Visualização da escalação'), findsNothing);
+
+      // Na janela do MEI, os meias vêm em "Da posição".
+      await tester.tap(find.bySemanticsLabel('Posição MEI vazia'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolher jogador · MEI'), findsOneWidget);
+      expect(find.text('Da posição'), findsOneWidget);
+      // Fecha sem escolher.
+      Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+      await tester.pumpAndSettle();
+
+      await choose(
+        tester,
+        find.bySemanticsLabel('Posição GOL vazia'),
+        '1 · Atleta 1',
+      );
+      expect(find.bySemanticsLabel('GOL: Atleta 1'), findsOneWidget);
+
+      // Toca no goleiro e escolhe outro: o 1 vai para a reserva.
+      await choose(
+        tester,
+        find.bySemanticsLabel('GOL: Atleta 1'),
+        '2 · Atleta 2',
+      );
+      expect(find.bySemanticsLabel('GOL: Atleta 2'), findsOneWidget);
+
+      // Quem já está no campo troca de lugar.
+      await choose(
+        tester,
+        find.bySemanticsLabel('Posição MEI vazia'),
+        '3 · Atleta 3',
+      );
+      await choose(
+        tester,
+        find.bySemanticsLabel('MEI: Atleta 3'),
+        '2 · Atleta 2',
+      );
+      expect(find.bySemanticsLabel('MEI: Atleta 2'), findsOneWidget);
+      expect(find.bySemanticsLabel('GOL: Atleta 3'), findsOneWidget);
+
+      // Tirar da posição.
+      await tester.tap(find.bySemanticsLabel('MEI: Atleta 2'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Tirar da posição'));
+      await tester.ensureVisible(find.text('Tirar da posição'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tirar da posição'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Posição MEI vazia'), findsOneWidget);
+
+      // Troca a formação: o goleiro continua na posição 0.
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('3 - 2 - 1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      expect(lineups.formations[('g1', 'team-x')], '3-2-1');
+      final saved = {
+        for (final (_, entry) in lineups.entries) entry.athleteId: entry,
+      };
+      expect(saved['x3']?.starter, isTrue);
+      expect(saved['x3']?.slot, 0);
+      expect(saved['x1']?.starter, isFalse);
+      expect(saved['x2']?.starter, isFalse);
+      expect(saved['x2']?.slot, isNull);
+    });
+
+    testWidgets('a formação salva aparece na faixa de formações', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final lineups = FakeLineupRepository()
+        ..style = LineupStyle.field
+        ..fieldAvailable = true
+        ..formations[('g1', 'team-x')] = '1-3-2';
+      final container = await coachContainer(lineups: lineups);
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(game: game(), teamId: 'team-x'),
+      );
+      // A última do society: a faixa rola até ela.
+      final chip = tester.getRect(find.text('1 - 3 - 2'));
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(chip.left, greaterThanOrEqualTo(0));
+      expect(chip.right, lessThanOrEqualTo(screen.width));
+    });
+
+    testWidgets('o dono no Gratuito vê o campo como Premium', (tester) async {
+      _usePhoneScreen(tester);
+      final lineups = FakeLineupRepository()..ownerId = 'u1';
+      final container = await coachContainer(lineups: lineups);
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(game: game(), teamId: 'team-x'),
+      );
+      expect(find.text('Titulares'), findsOneWidget);
+      await tester.tap(find.byTooltip('Visualização da escalação'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Campo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recurso do plano Premium'), findsOneWidget);
+      expect(lineups.style, LineupStyle.list);
+    });
   });
 
   test('atleta que entrou pelo convite usa a foto do perfil', () {

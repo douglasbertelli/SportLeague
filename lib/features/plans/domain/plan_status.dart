@@ -16,7 +16,12 @@ enum PlanFeature {
     'Organizar campeonatos de pontos corridos, mata-mata ou grupos + '
         'mata-mata',
   ),
-  dues('dues', 'Mensalidade', 'Controle da mensalidade com lembretes');
+  dues('dues', 'Mensalidade', 'Controle da mensalidade com lembretes'),
+  tacticalLineup(
+    'tactical_lineup',
+    'Escalação no campo',
+    'Formações e jogadores arrastados para as posições no campo',
+  );
 
   const PlanFeature(this.key, this.label, this.description);
 
@@ -167,6 +172,9 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
   PlanFeature.dues =>
     'O controle da mensalidade, com lembretes automáticos para quem não '
         'pagou, é do plano Premium.',
+  PlanFeature.tacticalLineup =>
+    'A escalação no campo, com formações e jogadores arrastados para as '
+        'posições, é do plano Premium.',
 };
 
 /// Funcionalidade do erro `plan_limit:<chave>` que o banco devolve.

@@ -574,6 +574,31 @@ class FakeLineupRepository implements LineupRepository {
       ..addAll([for (final entry in entries) (gameId, entry)]);
   }
 
+  /// (jogo, time) -> formação.
+  final formations = <(String, String), String>{};
+  LineupStyle style = LineupStyle.list;
+  bool fieldAvailable = false;
+  String? ownerId = 'u1';
+
+  @override
+  Future<String?> fetchFormation(String gameId, String teamId) async =>
+      formations[(gameId, teamId)];
+
+  @override
+  Future<void> saveFormation({
+    required String gameId,
+    required String teamId,
+    required String formation,
+  }) async => formations[(gameId, teamId)] = formation;
+
+  @override
+  Future<LineupSettings> fetchSettings(String teamId) async =>
+      (style: style, fieldAvailable: fieldAvailable, ownerId: ownerId);
+
+  @override
+  Future<void> setStyle(String teamId, LineupStyle style) async =>
+      this.style = style;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
