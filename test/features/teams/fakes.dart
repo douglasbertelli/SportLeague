@@ -276,6 +276,11 @@ class FakeOpponentRepository implements OpponentRepository {
   final searches =
       <({String teamId, String ownerId, Modality modality, String query})>[];
   final createdGuests = <GuestTeam>[];
+  final guestLogos = <String, PickedImage?>{};
+
+  @override
+  Future<void> setGuestLogo(String guestTeamId, PickedImage? image) async =>
+      guestLogos[guestTeamId] = image;
 
   @override
   Future<({List<Team> registered, List<GuestTeam> guests})> search({
