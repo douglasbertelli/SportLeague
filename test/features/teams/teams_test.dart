@@ -2586,6 +2586,27 @@ void main() {
       expect(saved['x1']?.slot, isNull);
     });
 
+    testWidgets('a formação salva aparece na faixa de formações', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final lineups = FakeLineupRepository()
+        ..style = LineupStyle.field
+        ..fieldAvailable = true
+        ..formations[('g1', 'team-x')] = '1-3-2';
+      final container = await coachContainer(lineups: lineups);
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(game: game(), teamId: 'team-x'),
+      );
+      // A última do society: a faixa rola até ela.
+      final chip = tester.getRect(find.text('1 - 3 - 2'));
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(chip.left, greaterThanOrEqualTo(0));
+      expect(chip.right, lessThanOrEqualTo(screen.width));
+    });
+
     testWidgets('o dono no Gratuito vê o campo como Premium', (tester) async {
       _usePhoneScreen(tester);
       final lineups = FakeLineupRepository()..ownerId = 'u1';

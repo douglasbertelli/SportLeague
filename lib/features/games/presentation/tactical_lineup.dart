@@ -69,28 +69,15 @@ class TacticalLineup extends StatelessWidget {
             style: muted,
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              for (final option in formations)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(option.name.split('').join(' ')),
-                    selected: option.name == formation.name,
-                    showCheckmark: false,
-                    onSelected: (_) => onFormation(option),
-                  ),
-                ),
-            ],
-          ),
+        _FormationStrip(
+          formations: formations,
+          selected: formation,
+          onSelected: onFormation,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: AspectRatio(
-            aspectRatio: 1 / pitch.heightRatio,
+            aspectRatio: 1 / PitchKind.field.heightRatio,
             child: LayoutBuilder(
               builder: (context, box) {
                 const slotWidth = 76.0;
@@ -211,6 +198,9 @@ class _Slot extends StatelessWidget {
                 child: CustomPaint(
                   painter: _DashedCircle(
                     hovering ? colors.primary : colors.outline,
+                    // O fundo do campo esconde as linhas que passam por
+                    // baixo da posição.
+                    background: colors.surfaceContainerLow,
                     filled: hovering
                         ? colors.primary.withValues(alpha: 0.15)
                         : null,
@@ -383,15 +373,17 @@ class _DragAvatar extends StatelessWidget {
 
 /// Círculo tracejado das posições vazias.
 class _DashedCircle extends CustomPainter {
-  _DashedCircle(this.color, {this.filled});
+  _DashedCircle(this.color, {required this.background, this.filled});
 
   final Color color;
+  final Color background;
   final Color? filled;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.shortestSide / 2 - 1;
+    canvas.drawCircle(center, radius, Paint()..color = background);
     if (filled case final fill?) {
       canvas.drawCircle(center, radius, Paint()..color = fill);
     }
@@ -414,7 +406,9 @@ class _DashedCircle extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedCircle old) =>
-      old.color != color || old.filled != filled;
+      old.color != color ||
+      old.background != background ||
+      old.filled != filled;
 }
 
 /// As linhas do campo da modalidade (o gol adversário no alto).
@@ -427,14 +421,16 @@ class PitchPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Medidas em metros, escaladas para a largura.
+    // Medidas em metros. Todos os campos têm a mesma altura (a do campo
+    // de 11): o comprimento estica e a largura acompanha a tela.
     final (width, height) = switch (kind) {
       PitchKind.field => (68.0, 105.0),
       PitchKind.society => (30.0, 50.0),
       PitchKind.court => (20.0, 40.0),
     };
     final s = size.width / width;
-    final h = height * s;
+    final sy = size.height / height;
+    final h = size.height;
     final paint = Paint()
       ..color = line
       ..style = PaintingStyle.stroke
@@ -448,7 +444,7 @@ class PitchPainter extends CustomPainter {
     void box(double boxWidth, double depth, {required bool top}) {
       final left = (size.width - boxWidth * s) / 2;
       canvas.drawRect(
-        Rect.fromLTWH(left, top ? 0 : h - depth * s, boxWidth * s, depth * s),
+        Rect.fromLTWH(left, top ? 0 : h - depth * sy, boxWidth * s, depth * sy),
         paint,
       );
     }
@@ -471,6 +467,7 @@ class PitchPainter extends CustomPainter {
         // Área em "D": duas curvas de 6 m a partir das traves (3 m).
         for (final top in [true, false]) {
           final r = 6 * s;
+          final ry = 6 * sy;
           final goal = 3 * s;
           final y = top ? 0.0 : h;
           final dir = top ? 1.0 : -1.0;
@@ -478,14 +475,14 @@ class PitchPainter extends CustomPainter {
           final path = Path()
             ..moveTo(cx - goal / 2 - r, y)
             ..arcToPoint(
-              Offset(cx - goal / 2, y + dir * r),
-              radius: Radius.circular(r),
+              Offset(cx - goal / 2, y + dir * ry),
+              radius: Radius.elliptical(r, ry),
               clockwise: !top,
             )
-            ..lineTo(cx + goal / 2, y + dir * r)
+            ..lineTo(cx + goal / 2, y + dir * ry)
             ..arcToPoint(
               Offset(cx + goal / 2 + r, y),
-              radius: Radius.circular(r),
+              radius: Radius.elliptical(r, ry),
               clockwise: !top,
             );
           canvas.drawPath(path, paint);
@@ -496,4 +493,60 @@ class PitchPainter extends CustomPainter {
   @override
   bool shouldRepaint(PitchPainter old) =>
       old.kind != kind || old.line != line || old.fill != fill;
+}
+
+/// As formações em rolagem lateral. Ao abrir, rola até a escolhida (ela pode
+/// estar fora da tela, no fim da lista).
+class _FormationStrip extends StatefulWidget {
+  const _FormationStrip({
+    required this.formations,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<Formation> formations;
+  final Formation selected;
+  final ValueChanged<Formation> onSelected;
+
+  @override
+  State<_FormationStrip> createState() => _FormationStripState();
+}
+
+class _FormationStripState extends State<_FormationStrip> {
+  final _selectedKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chip = _selectedKey.currentContext;
+      if (chip == null || !chip.mounted) return;
+      // Só a rolagem lateral (não mexe na rolagem da tela).
+      Scrollable.of(
+        chip,
+        axis: Axis.horizontal,
+      ).position.ensureVisible(chip.findRenderObject()!, alignment: 0.5);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: [
+        for (final option in widget.formations)
+          Padding(
+            key: option.name == widget.selected.name ? _selectedKey : null,
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(option.name.split('').join(' ')),
+              selected: option.name == widget.selected.name,
+              showCheckmark: false,
+              onSelected: (_) => widget.onSelected(option),
+            ),
+          ),
+      ],
+    ),
+  );
 }
