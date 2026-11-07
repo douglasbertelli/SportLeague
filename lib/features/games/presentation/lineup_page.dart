@@ -126,7 +126,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
                   ],
                 ),
                 subtitle: const Text(
-                  'Formação e jogadores arrastados para as posições',
+                  'Formação e jogadores escolhidos em cada posição',
                 ),
               ),
             ],

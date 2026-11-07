@@ -20,7 +20,7 @@ enum PlanFeature {
   tacticalLineup(
     'tactical_lineup',
     'Escalação no campo',
-    'Formações e jogadores arrastados para as posições no campo',
+    'Formações e jogadores escolhidos em cada posição do campo',
   );
 
   const PlanFeature(this.key, this.label, this.description);
@@ -173,8 +173,8 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
     'O controle da mensalidade, com lembretes automáticos para quem não '
         'pagou, é do plano Premium.',
   PlanFeature.tacticalLineup =>
-    'A escalação no campo, com formações e jogadores arrastados para as '
-        'posições, é do plano Premium.',
+    'A escalação no campo, com formações e o jogador escolhido em cada '
+        'posição, é do plano Premium.',
 };
 
 /// Funcionalidade do erro `plan_limit:<chave>` que o banco devolve.
