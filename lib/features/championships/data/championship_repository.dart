@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../games/data/opponent_repository.dart';
 import '../domain/championship.dart';
 import '../domain/championship_rules.dart';
 
@@ -71,28 +72,8 @@ class ChampionshipRepository {
   /// Envia (ou, com [image] nulo, remove) o símbolo do time fictício
   /// [guestTeamId]. Fica no bucket público dos logos, na pasta do dono; as
   /// inscrições nos campeonatos acompanham pelo banco.
-  Future<void> setGuestLogo(String guestTeamId, PickedImage? image) async {
-    final storage = _client.storage.from('team-logos');
-    final path = '${_client.auth.currentUser!.id}/guest-$guestTeamId';
-    String? url;
-    if (image == null) {
-      await storage.remove([path]);
-    } else {
-      await storage.uploadBinary(
-        path,
-        image.bytes,
-        fileOptions: FileOptions(contentType: image.contentType, upsert: true),
-      );
-      url = storage.getPublicUrl(
-        path,
-        cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
-      );
-    }
-    await _client
-        .from('guest_teams')
-        .update({'logo_url': url})
-        .eq('id', guestTeamId);
-  }
+  Future<void> setGuestLogo(String guestTeamId, PickedImage? image) =>
+      OpponentRepository(_client).setGuestLogo(guestTeamId, image);
 
   Future<void> removeTeam(String entryId) =>
       _client.from('championship_teams').delete().eq('id', entryId);

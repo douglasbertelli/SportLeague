@@ -6,11 +6,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
-import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/opponent_repository.dart';
 import '../../games/domain/opponent.dart';
+import '../../games/presentation/guest_team_sheet.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
 
@@ -80,22 +80,34 @@ class _ChampionshipTeamPickerPageState
   }
 
   Future<void> _createGuest() async {
-    final name = await showAppSheet<String>(
+    final draft = await showAppSheet<GuestTeamDraft>(
       context,
-      builder: (_) => _GuestNameSheet(initialName: _search.text.trim()),
+      builder: (_) => GuestTeamSheet(
+        initialName: _search.text.trim(),
+        message:
+            'Para times que não estão no SportLeague. Entra no campeonato já '
+            'confirmado.',
+        submitLabel: 'Criar e adicionar',
+        submitIcon: Icons.check,
+      ),
     );
-    if (name == null || !mounted) return;
+    if (draft == null || !mounted) return;
     setState(() => _creating = true);
     try {
-      final guest = await ref
-          .read(opponentRepositoryProvider)
-          .createGuest(
-            GuestTeam(
-              ownerId: ref.read(currentUserIdProvider)!,
-              name: name,
-              modality: widget.modality,
-            ),
-          );
+      final guest = await createGuestTeam(
+        ref.read(opponentRepositoryProvider),
+        GuestTeam(
+          ownerId: ref.read(currentUserIdProvider)!,
+          name: draft.name,
+          modality: widget.modality,
+        ),
+        draft.logo,
+        onLogoError: () => showErrorSnackBar(
+          context,
+          'O time foi criado, mas o símbolo não foi enviado. Tente de novo '
+          'pelo campeonato.',
+        ),
+      );
       if (mounted) {
         context.pop<PickedChampionshipTeam>((
           teamId: null,
@@ -218,66 +230,6 @@ class _ChampionshipTeamPickerPageState
           ),
         ],
       ),
-    );
-  }
-}
-
-class _GuestNameSheet extends StatefulWidget {
-  const _GuestNameSheet({required this.initialName});
-
-  final String initialName;
-
-  @override
-  State<_GuestNameSheet> createState() => _GuestNameSheetState();
-}
-
-class _GuestNameSheetState extends State<_GuestNameSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.initialName);
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop(_name.text.trim());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSheet(
-      title: 'Criar time fictício',
-      message:
-          'Para times que não estão no SportLeague. Entra no campeonato já '
-          'confirmado.',
-      body: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _name,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Nome do time',
-            prefixIcon: Icon(Icons.shield_outlined),
-          ),
-          textCapitalization: TextCapitalization.words,
-          maxLength: 80,
-          onFieldSubmitted: (_) => _submit(),
-          validator: (value) =>
-              Validators.name(value, message: 'Informe o nome do time'),
-        ),
-      ),
-      actions: [
-        FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.check),
-          label: const Text('Criar e adicionar'),
-        ),
-        const SheetBackButton(),
-      ],
     );
   }
 }

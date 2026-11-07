@@ -1844,6 +1844,37 @@ void main() {
       expect(created.ownerId, 'u1');
       expect(created.modality, Modality.field);
       expect(find.text('Várzea da Esquina (fictício)'), findsOneWidget);
+      expect(opponents.guestLogos, isEmpty);
+    });
+
+    testWidgets('cria time fictício já com o símbolo', (tester) async {
+      final opponents = FakeOpponentRepository();
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        opponents: opponents,
+        pickImage: (source, {maxSize = smallImageSize}) async => PickedImage(
+          bytes: Uint8List.fromList([1, 2, 3]),
+          contentType: 'image/png',
+        ),
+      );
+      await _pumpPage(tester, container, const GameFormPage());
+
+      await tapVisible(tester, opponentField);
+      await tapVisible(tester, find.text('Campo'));
+      await tapVisible(tester, find.text('Criar time fictício'));
+      await tapVisible(tester, find.text('Adicionar símbolo (opcional)'));
+      await tapVisible(tester, find.text('Escolher da galeria'));
+      expect(find.text('Trocar símbolo'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nome do time'),
+        'Várzea da Esquina',
+      );
+      await tapVisible(tester, find.text('Criar'));
+
+      final created = opponents.createdGuests.single;
+      expect(opponents.guestLogos.keys, ['guest-1']);
+      expect(opponents.guestLogos['guest-1']?.contentType, 'image/png');
+      expect(created.name, 'Várzea da Esquina');
     });
 
     testWidgets('o local vem preenchido com o de quem joga em casa', (

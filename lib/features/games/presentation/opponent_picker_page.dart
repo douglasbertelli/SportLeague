@@ -6,13 +6,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
-import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
 import '../data/opponent_repository.dart';
 import '../domain/opponent.dart';
+import 'guest_team_sheet.dart';
 
 /// Adversário escolhido e a modalidade do jogo.
 typedef PickedOpponent = ({Opponent opponent, Modality modality});
@@ -115,26 +115,33 @@ class _OpponentPickerPageState extends ConsumerState<OpponentPickerPage> {
       context.pop<PickedOpponent>((opponent: opponent, modality: _modality));
 
   Future<void> _createGuest() async {
-    final name = await showAppSheet<String>(
+    final draft = await showAppSheet<GuestTeamDraft>(
       context,
-      builder: (_) => _GuestTeamSheet(
+      builder: (_) => GuestTeamSheet(
         initialName: _searchController.text.trim(),
-        modality: _modality,
+        message:
+            'Para adversários que não estão no SportLeague. Ele fica salvo '
+            'para os próximos jogos de ${_modality.label} e só você vê.',
+        submitLabel: 'Criar',
       ),
     );
-    if (name == null || !mounted) return;
+    if (draft == null || !mounted) return;
 
     setState(() => _creating = true);
     try {
-      final guest = await ref
-          .read(opponentRepositoryProvider)
-          .createGuest(
-            GuestTeam(
-              ownerId: ref.read(currentUserIdProvider)!,
-              name: name,
-              modality: _modality,
-            ),
-          );
+      final guest = await createGuestTeam(
+        ref.read(opponentRepositoryProvider),
+        GuestTeam(
+          ownerId: ref.read(currentUserIdProvider)!,
+          name: draft.name,
+          modality: _modality,
+        ),
+        draft.logo,
+        onLogoError: () => showErrorSnackBar(
+          context,
+          'O time foi criado, mas o símbolo não foi enviado.',
+        ),
+      );
       if (mounted) _pick(GuestOpponent(guest));
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
@@ -295,63 +302,3 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// Pede o nome do time fictício. Devolve o nome ou nulo se cancelar.
-class _GuestTeamSheet extends StatefulWidget {
-  const _GuestTeamSheet({required this.initialName, required this.modality});
-
-  final String initialName;
-  final Modality modality;
-
-  @override
-  State<_GuestTeamSheet> createState() => _GuestTeamSheetState();
-}
-
-class _GuestTeamSheetState extends State<_GuestTeamSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(text: widget.initialName);
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pop(_nameController.text.trim());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSheet(
-      title: 'Criar time fictício',
-      message:
-          'Para adversários que não estão no SportLeague. Ele fica salvo para '
-          'os próximos jogos de ${widget.modality.label} e só você vê.',
-      body: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Nome do time',
-            prefixIcon: Icon(Icons.shield_outlined),
-          ),
-          textCapitalization: TextCapitalization.words,
-          maxLength: 80,
-          onFieldSubmitted: (_) => _submit(),
-          validator: (value) =>
-              Validators.name(value, message: 'Informe o nome do time'),
-        ),
-      ),
-      actions: [
-        FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.add),
-          label: const Text('Criar'),
-        ),
-        const SheetBackButton(),
-      ],
-    );
-  }
-}

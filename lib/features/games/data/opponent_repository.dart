@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -54,6 +55,32 @@ class OpponentRepository {
         .select()
         .single();
     return GuestTeam.fromMap(row);
+  }
+
+  /// Envia (ou, com [image] nulo, remove) o símbolo do time fictício
+  /// [guestTeamId]. Fica no bucket público dos logos, na pasta do dono; as
+  /// inscrições nos campeonatos acompanham pelo banco.
+  Future<void> setGuestLogo(String guestTeamId, PickedImage? image) async {
+    final storage = _client.storage.from('team-logos');
+    final path = '${_client.auth.currentUser!.id}/guest-$guestTeamId';
+    String? url;
+    if (image == null) {
+      await storage.remove([path]);
+    } else {
+      await storage.uploadBinary(
+        path,
+        image.bytes,
+        fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+      );
+      url = storage.getPublicUrl(
+        path,
+        cacheNonce: DateTime.now().millisecondsSinceEpoch.toString(),
+      );
+    }
+    await _client
+        .from('guest_teams')
+        .update({'logo_url': url})
+        .eq('id', guestTeamId);
   }
 
   /// `%` e `_` digitados pelo usuário são texto, não curingas.
