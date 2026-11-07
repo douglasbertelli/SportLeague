@@ -2515,23 +2515,22 @@ void main() {
       expect(saved.any((entry) => entry.athleteId == 'x9'), isFalse);
     });
 
-    Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
-      // A lista de jogadores fica embaixo do campo.
-      await tester.scrollUntilVisible(
-        from,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+    /// Toca na posição e escolhe o jogador na janela.
+    Future<void> choose(WidgetTester tester, Finder slot, String player) async {
+      await tester.ensureVisible(slot);
       await tester.pumpAndSettle();
-      final gesture = await tester.startGesture(tester.getCenter(from));
-      await tester.pump(const Duration(milliseconds: 300));
-      await gesture.moveTo(tester.getCenter(to));
-      await tester.pump();
-      await gesture.up();
+      await tester.tap(slot);
+      await tester.pumpAndSettle();
+      final tile = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text(player),
+      );
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
       await tester.pumpAndSettle();
     }
 
-    testWidgets('escalação no campo: formação, arrastar e trocar', (
+    testWidgets('escalação no campo: formação, escolher e trocar', (
       tester,
     ) async {
       _usePhoneScreen(tester);
@@ -2552,21 +2551,53 @@ void main() {
       // Técnico não escolhe a visualização (só o dono).
       expect(find.byTooltip('Visualização da escalação'), findsNothing);
 
-      await drag(
+      // Na janela do MEI, os meias vêm em "Da posição".
+      await tester.tap(find.bySemanticsLabel('Posição MEI vazia'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolher jogador · MEI'), findsOneWidget);
+      expect(find.text('Da posição'), findsOneWidget);
+      // Fecha sem escolher.
+      Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+      await tester.pumpAndSettle();
+
+      await choose(
         tester,
-        find.text('1 · Atleta 1'),
         find.bySemanticsLabel('Posição GOL vazia'),
+        '1 · Atleta 1',
       );
       expect(find.bySemanticsLabel('GOL: Atleta 1'), findsOneWidget);
-      expect(find.text('Titular'), findsOneWidget);
 
-      // Outro jogador em cima do goleiro: troca, e o 1 vai para a reserva.
-      await drag(
+      // Toca no goleiro e escolhe outro: o 1 vai para a reserva.
+      await choose(
         tester,
-        find.text('2 · Atleta 2').last,
         find.bySemanticsLabel('GOL: Atleta 1'),
+        '2 · Atleta 2',
       );
       expect(find.bySemanticsLabel('GOL: Atleta 2'), findsOneWidget);
+
+      // Quem já está no campo troca de lugar.
+      await choose(
+        tester,
+        find.bySemanticsLabel('Posição MEI vazia'),
+        '3 · Atleta 3',
+      );
+      await choose(
+        tester,
+        find.bySemanticsLabel('MEI: Atleta 3'),
+        '2 · Atleta 2',
+      );
+      expect(find.bySemanticsLabel('MEI: Atleta 2'), findsOneWidget);
+      expect(find.bySemanticsLabel('GOL: Atleta 3'), findsOneWidget);
+
+      // Tirar da posição.
+      await tester.tap(find.bySemanticsLabel('MEI: Atleta 2'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Tirar da posição'));
+      await tester.ensureVisible(find.text('Tirar da posição'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tirar da posição'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Posição MEI vazia'), findsOneWidget);
 
       // Troca a formação: o goleiro continua na posição 0.
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 2000));
@@ -2580,10 +2611,11 @@ void main() {
       final saved = {
         for (final (_, entry) in lineups.entries) entry.athleteId: entry,
       };
-      expect(saved['x2']?.starter, isTrue);
-      expect(saved['x2']?.slot, 0);
+      expect(saved['x3']?.starter, isTrue);
+      expect(saved['x3']?.slot, 0);
       expect(saved['x1']?.starter, isFalse);
-      expect(saved['x1']?.slot, isNull);
+      expect(saved['x2']?.starter, isFalse);
+      expect(saved['x2']?.slot, isNull);
     });
 
     testWidgets('a formação salva aparece na faixa de formações', (

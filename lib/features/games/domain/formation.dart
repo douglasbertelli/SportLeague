@@ -288,3 +288,17 @@ Map<int, String> placeStarters({
   }
   return placed;
 }
+
+/// Posições do cadastro do atleta que combinam com a sigla da posição no
+/// campo (para sugerir os jogadores dela primeiro).
+List<String> positionsFor(String label) => switch (label) {
+  'GOL' => const ['Goleiro'],
+  'ZAG' || 'FIXO' => const ['Zagueiro'],
+  'LTE' || 'LTD' => const ['Lateral'],
+  'ALA' => const ['Lateral', 'Meia'],
+  'VOL' => const ['Volante'],
+  'MEI' => const ['Meia'],
+  'CTA' || 'PIVÔ' => const ['Centroavante', 'Atacante'],
+  'ATA' || 'PE' || 'PD' => const ['Atacante', 'Centroavante'],
+  _ => const [],
+};

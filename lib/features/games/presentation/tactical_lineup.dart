@@ -2,14 +2,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_sheet.dart';
 import '../../athletes/domain/athlete.dart';
 import '../domain/formation.dart';
 import 'game_sheet_page.dart' show AthleteAvatar;
 
 /// Escalação no campo: as formações (rolagem lateral), o campo da
-/// modalidade com as posições e os jogadores embaixo. Segurar e arrastar o
-/// jogador leva até a posição; soltar em cima de quem já está troca os dois.
-/// Arrastar do campo de volta para a lista tira do time titular.
+/// modalidade com as posições e os jogadores embaixo. Tocar numa posição
+/// abre a escolha do jogador; escolher quem já está em outra posição troca
+/// os dois de lugar.
 class TacticalLineup extends StatelessWidget {
   const TacticalLineup({
     super.key,
@@ -44,6 +45,30 @@ class TacticalLineup extends StatelessWidget {
   /// Tira o atleta do campo.
   final ValueChanged<String> onRemove;
   final ValueChanged<String> onToggleReserve;
+
+  /// Abre a escolha do jogador da posição [slot].
+  Future<void> _pick(BuildContext context, int slot) async {
+    final labels = {
+      for (final MapEntry(key: index, value: id) in placed.entries)
+        id: formation.spots[index].label,
+    };
+    final chosen = await showAppSheet<String>(
+      context,
+      builder: (_) => _PlayerPicker(
+        label: formation.spots[slot].label,
+        athletes: athletes,
+        current: placed[slot],
+        placedAt: labels,
+        reserves: reserves,
+      ),
+    );
+    if (chosen == null) return;
+    if (chosen.isEmpty) {
+      if (placed[slot] case final current?) onRemove(current);
+    } else if (chosen != placed[slot]) {
+      onPlace(chosen, slot);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +126,7 @@ class TacticalLineup extends StatelessWidget {
                         child: _Slot(
                           label: spot.label,
                           athlete: byId[placed[index]],
-                          onDrop: (athleteId) => onPlace(athleteId, index),
+                          onTap: () => _pick(context, index),
                         ),
                       ),
                   ],
@@ -117,41 +142,33 @@ class TacticalLineup extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
           child: Text(
-            'Segure e arraste o jogador até a posição. Toque para marcar '
-            'como reserva.',
+            'Toque numa posição do campo para escolher o jogador. Aqui, toque '
+            'em quem está fora do campo para marcar como reserva.',
             style: muted,
           ),
         ),
-        // Soltar aqui tira do campo.
-        DragTarget<String>(
-          onWillAcceptWithDetails: (details) => onField.contains(details.data),
-          onAcceptWithDetails: (details) => onRemove(details.data),
-          builder: (context, candidates, _) => Container(
-            color: candidates.isEmpty
-                ? null
-                : colors.primaryContainer.withValues(alpha: 0.3),
-            height: 168,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: athletes.length,
-              separatorBuilder: (_, _) => VerticalDivider(
-                width: 16,
-                indent: 12,
-                endIndent: 40,
-                color: colors.outlineVariant,
-              ),
-              itemBuilder: (context, index) {
-                final athlete = athletes[index];
-                final starter = onField.contains(athlete.id);
-                return _PlayerCard(
-                  athlete: athlete,
-                  starter: starter,
-                  reserve: reserves.contains(athlete.id),
-                  onTap: starter ? null : () => onToggleReserve(athlete.id!),
-                );
-              },
+        SizedBox(
+          height: 168,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: athletes.length,
+            separatorBuilder: (_, _) => VerticalDivider(
+              width: 16,
+              indent: 12,
+              endIndent: 40,
+              color: colors.outlineVariant,
             ),
+            itemBuilder: (context, index) {
+              final athlete = athletes[index];
+              final starter = onField.contains(athlete.id);
+              return _PlayerCard(
+                athlete: athlete,
+                starter: starter,
+                reserve: reserves.contains(athlete.id),
+                onTap: starter ? null : () => onToggleReserve(athlete.id!),
+              );
+            },
           ),
         ),
       ],
@@ -165,18 +182,18 @@ String _shirtName(Athlete athlete) => [
   athlete.displayName,
 ].join(' · ');
 
-/// Uma posição do campo: vazia (círculo tracejado) ou com o jogador, que
-/// pode ser arrastado para outra posição.
+/// Uma posição do campo: vazia (círculo tracejado) ou com o jogador. Tocar
+/// abre a escolha do jogador.
 class _Slot extends StatelessWidget {
   const _Slot({
     required this.label,
     required this.athlete,
-    required this.onDrop,
+    required this.onTap,
   });
 
   final String label;
   final Athlete? athlete;
-  final ValueChanged<String> onDrop;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -186,42 +203,35 @@ class _Slot extends StatelessWidget {
     final caption = theme.textTheme.labelSmall?.copyWith(
       color: colors.onSurfaceVariant,
     );
-
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => details.data != athlete?.id,
-      onAcceptWithDetails: (details) => onDrop(details.data),
-      builder: (context, candidates, _) {
-        final hovering = candidates.isNotEmpty;
-        final circle = athlete == null
-            ? SizedBox.square(
-                dimension: 40,
-                child: CustomPaint(
-                  painter: _DashedCircle(
-                    hovering ? colors.primary : colors.outline,
-                    // O fundo do campo esconde as linhas que passam por
-                    // baixo da posição.
-                    background: colors.surfaceContainerLow,
-                    filled: hovering
-                        ? colors.primary.withValues(alpha: 0.15)
-                        : null,
-                  ),
-                ),
-              )
-            : DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: hovering ? colors.primary : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: AthleteAvatar(
-                  name: athlete.displayName,
-                  photoUrl: athlete.photoUrl,
-                  radius: 20,
-                ),
-              );
-        final content = Column(
+    final circle = athlete == null
+        ? SizedBox.square(
+            dimension: 40,
+            child: CustomPaint(
+              painter: _DashedCircle(
+                colors.outline,
+                // O fundo do campo esconde as linhas que passam por baixo
+                // da posição.
+                background: colors.surfaceContainerLow,
+              ),
+              child: Icon(Icons.add, size: 18, color: colors.outline),
+            ),
+          )
+        : AthleteAvatar(
+            name: athlete.displayName,
+            photoUrl: athlete.photoUrl,
+            radius: 20,
+          );
+    return Semantics(
+      button: true,
+      container: true,
+      excludeSemantics: true,
+      label: athlete == null
+          ? 'Posição $label vazia'
+          : '$label: ${athlete.displayName}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             circle,
@@ -243,28 +253,8 @@ class _Slot extends StatelessWidget {
             const SizedBox(height: 2),
             Text(label, style: caption),
           ],
-        );
-        if (athlete == null) {
-          return Semantics(
-            label: 'Posição $label vazia',
-            container: true,
-            excludeSemantics: true,
-            child: content,
-          );
-        }
-        return LongPressDraggable<String>(
-          data: athlete.id,
-          delay: const Duration(milliseconds: 150),
-          feedback: _DragAvatar(athlete: athlete),
-          childWhenDragging: Opacity(opacity: 0.3, child: content),
-          child: Semantics(
-            label: '$label: ${athlete.displayName}',
-            container: true,
-            excludeSemantics: true,
-            child: content,
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -333,60 +323,133 @@ class _PlayerCard extends StatelessWidget {
         ],
       ),
     );
-    final faded = Opacity(opacity: starter ? 0.35 : 1, child: card);
-    return LongPressDraggable<String>(
-      data: athlete.id,
-      delay: const Duration(milliseconds: 150),
-      feedback: _DragAvatar(athlete: athlete),
-      childWhenDragging: Opacity(opacity: 0.2, child: card),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Semantics(
-          button: onTap != null,
-          label: _shirtName(athlete),
-          child: faded,
-        ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Semantics(
+        button: onTap != null,
+        label: _shirtName(athlete),
+        child: Opacity(opacity: starter ? 0.35 : 1, child: card),
       ),
     );
   }
 }
 
-/// O que acompanha o dedo ao arrastar.
-class _DragAvatar extends StatelessWidget {
-  const _DragAvatar({required this.athlete});
+/// Escolha do jogador da posição: primeiro os da posição (pelo cadastro),
+/// depois os outros. Quem já está em outra posição troca de lugar com o
+/// atual. Fecha com o id do escolhido ou, para tirar, com texto vazio.
+class _PlayerPicker extends StatelessWidget {
+  const _PlayerPicker({
+    required this.label,
+    required this.athletes,
+    required this.current,
+    required this.placedAt,
+    required this.reserves,
+  });
 
-  final Athlete athlete;
+  final String label;
+  final List<Athlete> athletes;
+
+  /// Quem está na posição agora.
+  final String? current;
+
+  /// Atleta -> sigla da posição em que está no campo.
+  final Map<String, String> placedAt;
+  final Set<String> reserves;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    elevation: 6,
-    shape: const CircleBorder(),
-    child: AthleteAvatar(
-      name: athlete.displayName,
-      photoUrl: athlete.photoUrl,
-      radius: 26,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final wanted = positionsFor(label);
+    final ofPosition = [
+      for (final a in athletes)
+        if (wanted.contains(a.position)) a,
+    ];
+    final others = [
+      for (final a in athletes)
+        if (!wanted.contains(a.position)) a,
+    ];
+
+    Widget tile(Athlete athlete) {
+      final selected = athlete.id == current;
+      final at = placedAt[athlete.id];
+      final status = selected
+          ? 'Nesta posição'
+          : at != null
+          ? 'No campo ($at) · troca de lugar'
+          : reserves.contains(athlete.id)
+          ? 'Reserva'
+          : null;
+      final details = [?athlete.position, ?status].join(' · ');
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: AthleteAvatar(
+          name: athlete.displayName,
+          photoUrl: athlete.photoUrl,
+          radius: 20,
+        ),
+        title: Text(_shirtName(athlete)),
+        subtitle: details.isEmpty
+            ? null
+            : Text(
+                details,
+                style: TextStyle(
+                  color: selected ? colors.primary : colors.onSurfaceVariant,
+                ),
+              ),
+        trailing: selected
+            ? Icon(Icons.check_circle, color: colors.primary)
+            : null,
+        onTap: () => Navigator.of(context).pop(athlete.id),
+      );
+    }
+
+    Widget header(String text) => Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Text(text, style: theme.textTheme.titleSmall),
+    );
+
+    return AppSheet(
+      title: 'Escolher jogador · $label',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (ofPosition.isNotEmpty) ...[
+            header('Da posição'),
+            for (final athlete in ofPosition) tile(athlete),
+          ],
+          if (others.isNotEmpty) ...[
+            header(ofPosition.isEmpty ? 'Jogadores' : 'Outros jogadores'),
+            for (final athlete in others) tile(athlete),
+          ],
+        ],
+      ),
+      actions: [
+        if (current != null)
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pop(''),
+            icon: const Icon(Icons.person_remove_outlined),
+            label: const Text('Tirar da posição'),
+          ),
+        const SheetBackButton(),
+      ],
+    );
+  }
 }
 
 /// Círculo tracejado das posições vazias.
 class _DashedCircle extends CustomPainter {
-  _DashedCircle(this.color, {required this.background, this.filled});
+  _DashedCircle(this.color, {required this.background});
 
   final Color color;
   final Color background;
-  final Color? filled;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.shortestSide / 2 - 1;
     canvas.drawCircle(center, radius, Paint()..color = background);
-    if (filled case final fill?) {
-      canvas.drawCircle(center, radius, Paint()..color = fill);
-    }
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
@@ -406,9 +469,7 @@ class _DashedCircle extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedCircle old) =>
-      old.color != color ||
-      old.background != background ||
-      old.filled != filled;
+      old.color != color || old.background != background;
 }
 
 /// As linhas do campo da modalidade (o gol adversário no alto).
