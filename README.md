@@ -400,6 +400,18 @@ supabase/
 | `championship_teams` | Times inscritos (da plataforma ou fictícios do organizador), com o nome guardado (os fictícios só o dono vê), a situação (`invited`, `accepted`, `declined`; o banco confirma os times do organizador e os fictícios) e o grupo sorteado. O dono do time convidado responde por `respond_championship_invite` |
 | `championship_matches` | Jogos: fase (`league`, `group`, `knockout`), rodada, posição no chaveamento, grupo, mandante e visitante (nulos no mata-mata até a fase anterior acabar), data, local, placar e pênaltis. Só o organizador gera, marca e lança; marcar e lançar avisam os dois times. Com os dois times e a data vira um jogo em `games` (`type = 'championship'`, `championship_match_id`), sincronizado nos dois sentidos; no mata-mata o banco avança o vencedor e encerra o campeonato na final |
 
+### Exclusão da conta
+
+No perfil, "Excluir conta" avisa que a ação é irreversível, lista o que será
+apagado e pede para digitar EXCLUIR. A conta fica **inativa por 7 dias**
+(`profiles.deleted_at`, via `request_account_deletion()`): some para os
+outros na hora (o perfil e os times do administrador saem das políticas de
+leitura), o aparelho deixa de receber push e o app sai da conta. Ao entrar
+nesse prazo, o app abre a tela de conta inativa, que deixa reativar
+(`cancel_account_deletion()`) ou sair. O cron `account-purge` (3h de
+Brasília) apaga de vez as contas inativas há 7 dias, removendo o usuário do
+Auth (o resto sai em cascata; as imagens, na limpeza do Storage).
+
 ### Imagens no Storage
 
 Buckets: `team-logos` (logo, capa e uniformes dos times e símbolo dos

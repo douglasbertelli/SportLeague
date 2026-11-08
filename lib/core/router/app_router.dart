@@ -32,6 +32,7 @@ import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/plans/presentation/plans_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
+import '../../features/profile/presentation/account_deletion.dart';
 import '../../features/profile/presentation/athlete_data_page.dart';
 import '../../features/profile/presentation/my_code_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
@@ -66,6 +67,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashPage()),
+      GoRoute(
+        path: Routes.accountInactive,
+        builder: (_, _) => const AccountInactivePage(),
+      ),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: Routes.signUp, builder: (_, _) => const SignUpPage()),
       GoRoute(
@@ -275,6 +280,11 @@ String? appRedirect({
     if (data.hasError && !data.isLoading) return Routes.splash;
   }
 
+  // Exclusão pedida: só dá para reativar ou sair.
+  if (profile.value?.deletedAt != null) {
+    return location == Routes.accountInactive ? null : Routes.accountInactive;
+  }
+
   if (profile.value?.needsRole ?? false) {
     return location == Routes.onboardingProfile
         ? null
@@ -297,6 +307,7 @@ String? appRedirect({
     Routes.splash,
     Routes.onboardingProfile,
     Routes.onboardingAddress,
+    Routes.accountInactive,
   };
   return entryRoutes.contains(location) ? Routes.home : null;
 }

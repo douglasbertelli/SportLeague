@@ -10,6 +10,7 @@ import '../../../core/theme/app_color_picker.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../address/data/address_repository.dart';
 import '../../auth/data/biometric_sign_in.dart';
+import 'account_deletion.dart';
 import '../data/profile_repository.dart';
 import 'edit_text_sheet.dart';
 import 'profile_tab.dart';
@@ -86,6 +87,10 @@ class SettingsTab extends ConsumerWidget {
             onTap: () => signOutOrPark(ref),
           ),
         ),
+        if (profile != null) ...[
+          const SizedBox(height: 16),
+          DeleteAccountButton(profile: profile),
+        ],
       ],
     );
   }
