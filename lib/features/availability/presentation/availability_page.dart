@@ -763,7 +763,6 @@ class _SlotCard extends StatelessWidget {
                     Expanded(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
                         child: Text(
                           formatGameTime(at),
                           maxLines: 1,
