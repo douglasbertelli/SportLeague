@@ -53,9 +53,8 @@ class _GameList extends ConsumerWidget {
     return Scaffold(
       // Só o dono marca amistosos (o técnico acompanha).
       floatingActionButton: ref.watch(canManageTeamProvider)
-          ? Column(
+          ? Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // Atalho para a disponibilidade do time (os horários que o
                 // time oferece para amistosos).
@@ -65,7 +64,7 @@ class _GameList extends ConsumerWidget {
                   onPressed: () => context.push(Routes.availability),
                   child: const Icon(Icons.calendar_month_outlined),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(width: 12),
                 FloatingActionButton.extended(
                   heroTag: 'new-game',
                   onPressed: () => context.push(Routes.newGame),
