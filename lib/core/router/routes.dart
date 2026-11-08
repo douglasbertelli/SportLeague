@@ -84,6 +84,9 @@ abstract final class Routes {
   /// Mensalidade do time (menu lateral).
   static const dues = '/home/dues';
 
+  /// Financeiro do administrador: plano, valor mensal e pagamentos.
+  static const finance = '/home/finance';
+
   /// Planos (Gratuito e Premium) e o que cada um libera.
   static const plans = '/home/plans';
 
