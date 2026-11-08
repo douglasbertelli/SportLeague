@@ -326,7 +326,7 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
         if (slot.isWeekly) slot,
     ];
 
-    // Próximos horários (90 dias), na ordem: os cards do topo.
+    // Próximos horários (90 dias), na ordem: cards embaixo do calendário.
     final now = DateTime.now();
     final upcoming = <(Availability, DateTime)>[
       for (var i = 0; i < 90; i++)
@@ -352,32 +352,6 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
             ),
           ),
         ),
-        if (next.isNotEmpty) ...[
-          const _SectionTitle('Próximos horários'),
-          _SlotStrip(
-            key: const Key('next-slots'),
-            cards: [
-              for (final (slot, at) in next)
-                _SlotCard(
-                  at: at,
-                  game: gameAt(at),
-                  team: team,
-                  weekly: slot.isWeekly,
-                  dated: true,
-                  onTap: () => setState(() {
-                    _selectedDay = DateUtils.dateOnly(at);
-                    _focusedDay = _selectedDay;
-                  }),
-                  onEdit: _saving
-                      ? null
-                      : () => _editOnDay(team, slot, DateUtils.dateOnly(at)),
-                  onRemove: _saving
-                      ? null
-                      : () => _deleteOnDay(team, slot, DateUtils.dateOnly(at)),
-                ),
-            ],
-          ),
-        ],
         TableCalendar<Availability>(
           locale: 'pt_BR',
           firstDay: _today,
@@ -476,6 +450,33 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
                 ),
             ],
           ),
+        if (next.isNotEmpty) const Divider(),
+        if (next.isNotEmpty) ...[
+          const _SectionTitle('Próximos horários'),
+          _SlotStrip(
+            key: const Key('next-slots'),
+            cards: [
+              for (final (slot, at) in next)
+                _SlotCard(
+                  at: at,
+                  game: gameAt(at),
+                  team: team,
+                  weekly: slot.isWeekly,
+                  dated: true,
+                  onTap: () => setState(() {
+                    _selectedDay = DateUtils.dateOnly(at);
+                    _focusedDay = _selectedDay;
+                  }),
+                  onEdit: _saving
+                      ? null
+                      : () => _editOnDay(team, slot, DateUtils.dateOnly(at)),
+                  onRemove: _saving
+                      ? null
+                      : () => _deleteOnDay(team, slot, DateUtils.dateOnly(at)),
+                ),
+            ],
+          ),
+        ],
         if (weekly.isNotEmpty) ...[
           const Divider(),
           const _SectionTitle('Recorrentes'),
@@ -761,7 +762,9 @@ class _SlotCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         formatGameTime(at),
-                        style: theme.textTheme.titleMedium,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: theme.textTheme.titleSmall,
                       ),
                     ),
                     if (game == null && onEdit != null)
@@ -769,7 +772,12 @@ class _SlotCard extends StatelessWidget {
                         tooltip: dated
                             ? 'Editar horário de $day'
                             : 'Editar horário',
-                        visualDensity: VisualDensity.compact,
+                        // Compacto: deixa espaço para o horário.
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 32,
+                        ),
                         iconSize: 20,
                         color: colors.primary,
                         onPressed: onEdit,
