@@ -74,33 +74,29 @@ class _AthleteList extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                   children: [
-                    Text(
-                      athletes.length == 1
-                          ? '1 atleta'
-                          : '${athletes.length} atletas',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
+                    Text(switch (athletes.where((a) => a.isActive).length) {
+                      1 => '1 atleta',
+                      final count => '$count atletas',
+                    }, style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 8),
                     for (final athlete in athletes)
-                      Card(
-                        child: ListTile(
-                          leading: _AthletePhoto(athlete: athlete),
-                          title: Text(athlete.displayName),
-                          subtitle: switch ([
-                            ?athlete.position,
-                            if (athlete.jerseyNumber case final number?)
-                              'Nº $number',
-                          ]) {
-                            [] => null,
-                            final parts => Text(parts.join(' · ')),
-                          },
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push(
-                            Routes.athleteProfile,
-                            extra: athlete,
-                          ),
-                        ),
+                      if (athlete.isActive) _AthleteTile(athlete: athlete),
+                    // Inativos: fora da escalação, da presença e da
+                    // mensalidade; o histórico continua.
+                    if (athletes.any((a) => !a.isActive)) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Inativos',
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
+                      const SizedBox(height: 8),
+                      for (final athlete in athletes)
+                        if (!athlete.isActive)
+                          Opacity(
+                            opacity: 0.6,
+                            child: _AthleteTile(athlete: athlete),
+                          ),
+                    ],
                   ],
                 ),
               ),
@@ -158,4 +154,28 @@ class _AthletePhoto extends StatelessWidget {
       child: Text(athlete.displayName[0].toUpperCase()),
     );
   }
+}
+
+class _AthleteTile extends StatelessWidget {
+  const _AthleteTile({required this.athlete});
+
+  final Athlete athlete;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ListTile(
+      leading: _AthletePhoto(athlete: athlete),
+      title: Text(athlete.displayName),
+      subtitle: switch ([
+        ?athlete.position,
+        if (athlete.jerseyNumber case final number?) 'Nº $number',
+        if (!athlete.isActive) 'Inativo',
+      ]) {
+        [] => null,
+        final parts => Text(parts.join(' · ')),
+      },
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.push(Routes.athleteProfile, extra: athlete),
+    ),
+  );
 }

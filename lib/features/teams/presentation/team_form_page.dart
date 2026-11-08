@@ -319,6 +319,29 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
     });
   }
 
+  /// Inativa (some das buscas e da troca de time; o histórico fica) ou
+  /// reativa o time.
+  Future<void> _toggleActive() async {
+    final team = widget.team!;
+    final active = !team.isActive;
+    if (!active) {
+      final confirmed = await confirmAction(
+        context,
+        title: 'Inativar time?',
+        message:
+            'O ${team.name} some das buscas, dos convites para amistosos e '
+            'campeonatos e da troca de time, e para de mandar lembretes. '
+            'Atletas, jogos e estatísticas continuam. Dá para reativar '
+            'depois, em Meus times.',
+        confirmLabel: 'Inativar',
+      );
+      if (!confirmed) return;
+    }
+    await _run(
+      () => ref.read(teamRepositoryProvider).setActive(team, active: active),
+    );
+  }
+
   Future<void> _delete() async {
     final confirmed = await confirmDelete(
       context,
@@ -335,11 +358,15 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
     setState(() => _loading = true);
     try {
       await action();
-      ref.invalidate(myTeamsProvider);
+      ref
+        ..invalidate(myTeamsProvider)
+        ..invalidate(myInactiveTeamsProvider);
       if (mounted) context.pop();
     } catch (error) {
       // Mesmo com erro, o time pode ter sido criado antes das imagens.
-      ref.invalidate(myTeamsProvider);
+      ref
+        ..invalidate(myTeamsProvider)
+        ..invalidate(myInactiveTeamsProvider);
       if (mounted && !handlePlanLimitError(context, error)) {
         showErrorSnackBar(context, friendlyErrorMessage(error));
       }
@@ -356,6 +383,18 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar time' : 'Novo time'),
         actions: [
+          if (_isEditing)
+            IconButton(
+              tooltip: widget.team!.isActive
+                  ? 'Inativar time'
+                  : 'Reativar time',
+              icon: Icon(
+                widget.team!.isActive
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+              ),
+              onPressed: _loading ? null : _toggleActive,
+            ),
           if (_isEditing)
             IconButton(
               tooltip: 'Excluir time',

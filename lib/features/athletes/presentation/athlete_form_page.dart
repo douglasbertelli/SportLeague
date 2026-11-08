@@ -161,6 +161,32 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     });
   }
 
+  /// Inativa (sai da escalação, da presença e da mensalidade; o histórico
+  /// fica) ou reativa o atleta.
+  Future<void> _toggleActive() async {
+    final athlete = widget.athlete!;
+    final active = !athlete.isActive;
+    if (!active) {
+      final confirmed = await confirmAction(
+        context,
+        title: 'Inativar atleta?',
+        message:
+            '${athlete.displayName} sai da escalação, da confirmação de '
+            'presença e da mensalidade, e não recebe os avisos do time. '
+            'Os jogos, gols e estatísticas continuam. Dá para reativar '
+            'depois.',
+        confirmLabel: 'Inativar',
+      );
+      if (!confirmed) return;
+    }
+    await _run(
+      athlete.teamId,
+      () => ref
+          .read(athleteRepositoryProvider)
+          .setActive(athlete, active: active),
+    );
+  }
+
   Future<void> _delete() async {
     final athlete = widget.athlete!;
     final confirmed = await confirmDelete(
@@ -216,6 +242,18 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar atleta' : 'Novo atleta'),
         actions: [
+          if (_isEditing)
+            IconButton(
+              tooltip: widget.athlete!.isActive
+                  ? 'Inativar atleta'
+                  : 'Reativar atleta',
+              icon: Icon(
+                widget.athlete!.isActive
+                    ? Icons.person_off_outlined
+                    : Icons.person_add_alt_1_outlined,
+              ),
+              onPressed: _loading ? null : _toggleActive,
+            ),
           if (_isEditing)
             IconButton(
               tooltip: 'Excluir atleta',

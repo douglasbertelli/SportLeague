@@ -315,7 +315,7 @@ class _PresenceListState extends ConsumerState<_PresenceList> {
     // do elenco do time.
     final athletes = {
       for (final athlete
-          in ref.watch(teamAthletesProvider(widget.teamId)).value ??
+          in ref.watch(activeAthletesProvider(widget.teamId)).value ??
               const <Athlete>[])
         athlete.id: athlete,
     };

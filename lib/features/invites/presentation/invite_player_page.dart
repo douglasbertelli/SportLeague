@@ -87,7 +87,7 @@ class _InvitePlayerPageState extends ConsumerState<InvitePlayerPage> {
         ? const <String>{}
         : {
             for (final athlete
-                in ref.watch(teamAthletesProvider(teamId)).value ?? const [])
+                in ref.watch(activeAthletesProvider(teamId)).value ?? const [])
               ?athlete.profileId,
           };
     final coaches = teamId == null

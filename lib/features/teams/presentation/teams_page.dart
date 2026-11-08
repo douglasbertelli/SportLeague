@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/utils/error_messages.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../plans/domain/plan_status.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../data/team_repository.dart';
+import '../domain/team.dart';
 import 'no_team_placeholder.dart';
 import 'team_logo.dart';
 
@@ -16,6 +19,7 @@ class TeamsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final teams = ref.watch(myTeamsProvider);
+    final inactive = ref.watch(myInactiveTeamsProvider).value ?? const [];
     final selectedId = ref.watch(selectedTeamProvider).value?.id;
     // O técnico e o jogador não criam nem editam times: só escolhem entre os
     // que acompanham.
@@ -47,7 +51,7 @@ class TeamsPage extends ConsumerWidget {
             label: const Text('Erro ao carregar os times. Tentar novamente'),
           ),
         ),
-        data: (teams) => teams.isEmpty
+        data: (teams) => teams.isEmpty && inactive.isEmpty
             ? const NoTeamPlaceholder()
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -64,7 +68,7 @@ class TeamsPage extends ConsumerWidget {
                               Icon(
                                 Icons.check_circle,
                                 size: 18,
-                                semanticLabel: 'Time ativo',
+                                semanticLabel: 'Time escolhido',
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ],
@@ -87,9 +91,58 @@ class TeamsPage extends ConsumerWidget {
                             .select(team.id!),
                       ),
                     ),
+                  // Inativos: fora das buscas e da troca de time; o histórico
+                  // continua. Reativar volta a contar no limite do plano.
+                  if (inactive.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Inativos',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    for (final team in inactive)
+                      Card(
+                        child: ListTile(
+                          leading: Opacity(
+                            opacity: 0.6,
+                            child: TeamLogo(team: team),
+                          ),
+                          title: Text(team.name),
+                          subtitle: const Text('Inativo'),
+                          trailing: TextButton(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
+                            onPressed: () => _reactivate(context, ref, team),
+                            child: const Text('Reativar'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
       ),
     );
+  }
+}
+
+/// Reativa o time (volta a contar no limite de times do plano).
+Future<void> _reactivate(BuildContext context, WidgetRef ref, Team team) async {
+  final allowed = await ensurePlanAllows(
+    context,
+    ref,
+    PlanFeature.teams,
+    adding: true,
+  );
+  if (!allowed || !context.mounted) return;
+  try {
+    await ref.read(teamRepositoryProvider).setActive(team, active: true);
+    ref
+      ..invalidate(myTeamsProvider)
+      ..invalidate(myInactiveTeamsProvider);
+  } catch (error) {
+    if (context.mounted && !handlePlanLimitError(context, error)) {
+      showErrorSnackBar(context, friendlyErrorMessage(error));
+    }
   }
 }

@@ -130,6 +130,7 @@ class Team {
     this.coverUrl,
     this.kitUrls = const [],
     this.homeVenue,
+    this.inactiveAt,
   });
 
   factory Team.fromMap(Map<String, dynamic> map) => Team(
@@ -168,6 +169,10 @@ class Team {
     kitUrls: [...?(map['kit_urls'] as List?)?.cast<String>()],
     homeVenue: switch (map['home_venue']) {
       final Map<String, dynamic> venue => Venue.fromMap(venue),
+      _ => null,
+    },
+    inactiveAt: switch (map['inactive_at']) {
+      final String at => DateTime.parse(at).toLocal(),
       _ => null,
     },
   );
@@ -217,6 +222,12 @@ class Team {
   /// Local onde o time joga como mandante; vem preenchido ao marcar
   /// amistoso. Carregado junto com o time (select com home_venue).
   final Venue? homeVenue;
+
+  /// Quando o time foi inativado (some das buscas e da troca de time; o
+  /// histórico fica). Nulo no time ativo.
+  final DateTime? inactiveAt;
+
+  bool get isActive => inactiveAt == null;
 
   /// Se tem algum contato para mostrar.
   bool get hasContacts =>
@@ -278,6 +289,7 @@ class Team {
     coverUrl: clearCover ? null : coverUrl ?? this.coverUrl,
     kitUrls: kitUrls ?? this.kitUrls,
     homeVenue: clearHomeVenue ? null : homeVenue ?? this.homeVenue,
+    inactiveAt: inactiveAt,
   );
 
   Map<String, dynamic> toMap() => {

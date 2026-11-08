@@ -187,7 +187,7 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
           PlanFeature.dues,
         );
     final dues = ref.watch(teamDuesProvider(_teamId));
-    final athletes = ref.watch(teamAthletesProvider(_teamId));
+    final athletes = ref.watch(activeAthletesProvider(_teamId));
     final payments = ref.watch(duePaymentsProvider(_teamId));
 
     void retry() => ref

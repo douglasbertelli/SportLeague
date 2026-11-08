@@ -60,6 +60,7 @@ class TeamRepository {
         .from('teams')
         .select(teamColumns)
         .ilike('name', '%$term%')
+        .isFilter('inactive_at', null)
         .order('name')
         .limit(30);
     return rows.map(Team.fromMap).toList();
@@ -125,6 +126,15 @@ class TeamRepository {
 
   /// Remove o time com os atletas e jogos dele (cascade no banco), o logo e as
   /// fotos dos atletas.
+  /// Inativa (ou reativa) o time. O histórico continua; reativar volta a
+  /// contar no limite de times do plano.
+  Future<void> setActive(Team team, {required bool active}) => _client
+      .from('teams')
+      .update({
+        'inactive_at': active ? null : DateTime.now().toUtc().toIso8601String(),
+      })
+      .eq('id', team.id!);
+
   Future<void> delete(Team team) async {
     final photoRows = await _client
         .from('team_players')
@@ -224,7 +234,28 @@ final isPlayerProvider = Provider<bool>((ref) => false);
 
 /// Times do administrador logado, os times em que o técnico está ou os
 /// times em que o jogador é atleta.
+/// Só os times ativos (os inativos ficam em [myInactiveTeamsProvider]).
 final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
+  final teams = await _fetchMyTeams(ref);
+  return [
+    for (final team in teams)
+      if (team.isActive) team,
+  ];
+});
+
+/// Times inativos do administrador (para reativar).
+final myInactiveTeamsProvider = FutureProvider<List<Team>>((ref) async {
+  if (ref.watch(isPlayerProvider) || ref.watch(isCoachProvider)) {
+    return const [];
+  }
+  final teams = await _fetchMyTeams(ref);
+  return [
+    for (final team in teams)
+      if (!team.isActive) team,
+  ];
+});
+
+Future<List<Team>> _fetchMyTeams(Ref ref) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return const [];
   final repository = ref.watch(teamRepositoryProvider);
@@ -232,7 +263,7 @@ final myTeamsProvider = FutureProvider<List<Team>>((ref) async {
   return ref.watch(isCoachProvider)
       ? repository.fetchCoached(userId)
       : repository.fetchByOwner(userId);
-});
+}
 
 /// Se o usuário é o dono do time ativo (o técnico só vê e escala). Sem time
 /// ativo, falso.

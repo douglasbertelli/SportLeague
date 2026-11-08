@@ -44,6 +44,16 @@ class FakeTeamRepository implements TeamRepository {
   final uploadedLogos = <String, PickedImage>{};
 
   @override
+  Future<void> setActive(Team team, {required bool active}) async {
+    final index = teams.indexWhere((t) => t.id == team.id);
+    teams[index] = Team.fromMap({
+      ...team.toMap(),
+      'id': team.id,
+      'inactive_at': active ? null : DateTime(2026, 11, 8).toIso8601String(),
+    });
+  }
+
+  @override
   Future<List<Team>> fetchByOwner(String ownerId) async =>
       teams.where((team) => team.ownerId == ownerId).toList();
 
@@ -176,6 +186,17 @@ class FakeAthleteRepository implements AthleteRepository {
   final created = <Athlete>[];
   final updated = <Athlete>[];
   final uploadedPhotos = <String, PickedImage>{};
+
+  @override
+  Future<void> setActive(Athlete athlete, {required bool active}) async {
+    final list = byTeam[athlete.teamId]!;
+    final index = list.indexWhere((a) => a.id == athlete.id);
+    list[index] = Athlete.fromMap({
+      ...athlete.toMap(),
+      'id': athlete.id,
+      'inactive_at': active ? null : DateTime(2026, 11, 8).toIso8601String(),
+    });
+  }
 
   @override
   Future<Athlete> create(Athlete athlete) async {
