@@ -3355,6 +3355,32 @@ void main() {
   });
 
   group('disponibilidade', () {
+    // Os cards do dia escolhido (embaixo do calendário).
+    Finder inDay(Finder finder) => find.descendant(
+      of: find.byKey(const Key('day-slots')),
+      matching: finder,
+    );
+
+    // Rola até os horários do dia e tira eles de baixo do botão "Adicionar
+    // horário".
+    Future<void> toDaySlots(WidgetTester tester) async {
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('day-slots')),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.drag(
+        find.byKey(const Key('day-slots')),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+    }
+
     test('avulso, recorrente e recorrente a partir de uma data', () {
       final single = Availability.single(
         teamId: 'team-a',
@@ -3474,13 +3500,12 @@ void main() {
       expect(bookedDay('24'), findsOneWidget);
       expect(bookedDay('31'), findsOneWidget);
       expect(bookedDay('28'), findsNothing);
-      expect(find.text('Jogo contra Real Bairro'), findsOneWidget);
-      final time = tester.widget<Text>(find.text('15:00'));
-      expect(time.style?.color, AppTheme.dark().colorScheme.error);
+      expect(find.text('x Real Bairro'), findsWidgets);
+      expect(find.byIcon(Icons.event_busy), findsWidgets);
 
       await tester.tap(bookedDay('31'));
       await tester.pumpAndSettle();
-      expect(find.text('Aguardando resposta: Vila Nova'), findsOneWidget);
+      expect(find.text('Aguardando: Vila Nova'), findsWidgets);
     });
 
     testWidgets('remove um dia do recorrente ou todas as semanas', (
@@ -3518,22 +3543,9 @@ void main() {
       await _pumpPage(tester, container, AvailabilityPage(today: saturday));
       // O calendário tem 5 ou 6 semanas conforme o mês, e a lista só monta o
       // que está perto da tela: rola até os horários do dia.
-      final page = find
-          .descendant(
-            of: find.byType(ListView),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      await tester.scrollUntilVisible(
-        find.text('18:00'),
-        200,
-        scrollable: page,
-      );
-      expect(find.text('15:00'), findsOneWidget);
-      expect(find.text('18:00'), findsOneWidget);
-      // Tira a lista de baixo do botão "Adicionar horário".
-      await tester.drag(find.text('15:00'), const Offset(0, -300));
-      await tester.pumpAndSettle();
+      await toDaySlots(tester);
+      expect(inDay(find.text('15:00')), findsOneWidget);
+      expect(inDay(find.text('18:00')), findsOneWidget);
 
       // Imprevisto: tira só este sábado do recorrente.
       await tester.tap(find.byTooltip('Remover horário').first);
@@ -3547,8 +3559,8 @@ void main() {
         date: saturday,
       ));
       expect(availability.deleted, isEmpty);
-      expect(find.text('15:00'), findsNothing);
-      expect(find.text('18:00'), findsOneWidget);
+      expect(inDay(find.text('15:00')), findsNothing);
+      expect(inDay(find.text('18:00')), findsOneWidget);
       // O recorrente continua nas outras semanas.
       await tester.scrollUntilVisible(
         find.text('Todo sábado às 15:00'),
@@ -3614,8 +3626,7 @@ void main() {
         container,
         AvailabilityPage(today: DateTime(2026, 10, 24)),
       );
-      await tester.drag(find.text('15:00'), const Offset(0, -300));
-      await tester.pumpAndSettle();
+      await toDaySlots(tester);
 
       // O horário vem de um bottom sheet com rolagem (24 horas).
       Future<void> pickTime(String hour, String minute) async {
@@ -3639,8 +3650,8 @@ void main() {
         availability.updated.single.startsAt,
         DateTime(2026, 10, 24, 19, 30),
       );
-      expect(find.text('19:30'), findsOneWidget);
-      expect(find.text('18:00'), findsNothing);
+      expect(inDay(find.text('19:30')), findsOneWidget);
+      expect(inDay(find.text('18:00')), findsNothing);
 
       // Recorrente, todas as semanas: muda o horário do recorrente.
       await tester.tap(find.byTooltip('Editar horário').first);
@@ -3652,7 +3663,7 @@ void main() {
       final weekly = availability.updated.last;
       expect(weekly.id, 'w1');
       expect(weekly.startTime, const TimeOfDay(hour: 17, minute: 0));
-      expect(find.text('17:00'), findsOneWidget);
+      expect(inDay(find.text('17:00')), findsOneWidget);
 
       // Recorrente, só neste dia: vira avulso e o dia sai do recorrente.
       await tester.tap(find.byTooltip('Editar horário').first);
@@ -3665,8 +3676,8 @@ void main() {
         availabilityId: 'w1',
         date: DateTime(2026, 10, 24),
       ));
-      expect(find.text('16:00'), findsOneWidget);
-      expect(find.text('17:00'), findsNothing);
+      expect(inDay(find.text('16:00')), findsOneWidget);
+      expect(inDay(find.text('17:00')), findsNothing);
       expect(availability.deleted, isEmpty);
     });
 
@@ -3697,7 +3708,7 @@ void main() {
       expect(added.weekday, DateTime.saturday);
       expect(added.startTime, const TimeOfDay(hour: 15, minute: 0));
       expect(added.startsOn, DateTime(2026, 10, 24));
-      expect(find.text('Todo sábado'), findsOneWidget);
+      expect(find.text('Toda semana'), findsWidgets);
       // Rolar arrastando por cima do calendário também move a tela.
       await tester.scrollUntilVisible(
         find.text('Todo sábado às 15:00'),

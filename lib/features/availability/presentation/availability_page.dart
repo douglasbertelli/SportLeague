@@ -125,9 +125,13 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
 
   /// Remover um horário no dia selecionado: o avulso sai de vez; o recorrente
   /// pode sair só deste dia (imprevisto) ou de todas as semanas.
-  Future<void> _deleteOnDay(Team team, Availability availability) async {
+  Future<void> _deleteOnDay(
+    Team team,
+    Availability availability, [
+    DateTime? on,
+  ]) async {
     if (!availability.isWeekly) return _delete(team, availability);
-    final day = _selectedDay;
+    final day = on ?? _selectedDay;
     final repository = ref.read(availabilityRepositoryProvider);
     switch (await _askScope(
       availability,
@@ -146,8 +150,12 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
 
   /// Mudar o horário no dia selecionado. No recorrente, "só neste dia" vira um
   /// horário avulso no novo horário e o dia sai do recorrente.
-  Future<void> _editOnDay(Team team, Availability availability) async {
-    final day = _selectedDay;
+  Future<void> _editOnDay(
+    Team team,
+    Availability availability, [
+    DateTime? on,
+  ]) async {
+    final day = on ?? _selectedDay;
     final current = availability.at(day);
     final time = await pickTimeSheet(
       context,
@@ -318,6 +326,19 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
         if (slot.isWeekly) slot,
     ];
 
+    // Próximos horários (90 dias), na ordem: os cards do topo.
+    final now = DateTime.now();
+    final upcoming = <(Availability, DateTime)>[
+      for (var i = 0; i < 90; i++)
+        for (final slot in slots)
+          if (slot.occursOn(_today.add(Duration(days: i))))
+            (slot, slot.at(_today.add(Duration(days: i)))),
+    ]..sort((a, b) => a.$2.compareTo(b.$2));
+    final next = [
+      for (final item in upcoming)
+        if (!item.$2.isBefore(widget.today == null ? now : _today)) item,
+    ].take(20);
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 96),
       children: [
@@ -331,6 +352,32 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
             ),
           ),
         ),
+        if (next.isNotEmpty) ...[
+          const _SectionTitle('Próximos horários'),
+          _SlotStrip(
+            key: const Key('next-slots'),
+            cards: [
+              for (final (slot, at) in next)
+                _SlotCard(
+                  at: at,
+                  game: gameAt(at),
+                  team: team,
+                  weekly: slot.isWeekly,
+                  dated: true,
+                  onTap: () => setState(() {
+                    _selectedDay = DateUtils.dateOnly(at);
+                    _focusedDay = _selectedDay;
+                  }),
+                  onEdit: _saving
+                      ? null
+                      : () => _editOnDay(team, slot, DateUtils.dateOnly(at)),
+                  onRemove: _saving
+                      ? null
+                      : () => _deleteOnDay(team, slot, DateUtils.dateOnly(at)),
+                ),
+            ],
+          ),
+        ],
         TableCalendar<Availability>(
           locale: 'pt_BR',
           firstDay: _today,
@@ -411,49 +458,23 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
             child: Text(
               'Nenhum horário neste dia. Toque em "Adicionar horário".',
             ),
-          ),
-        for (final game in otherGames)
-          ListTile(
-            leading: Icon(Icons.event_busy, color: colors.error),
-            title: Text(
-              formatGameTime(game.scheduledAt),
-              style: TextStyle(color: colors.error),
-            ),
-            subtitle: Text(_gameLine(game, team)),
-          ),
-        for (final slot in ofDay)
-          ListTile(
-            leading: switch (gameAt(slot.at(_selectedDay))) {
-              null => const Icon(Icons.schedule),
-              _ => Icon(Icons.event_busy, color: colors.error),
-            },
-            title: Text(
-              formatGameTime(slot.at(_selectedDay)),
-              style: gameAt(slot.at(_selectedDay)) == null
-                  ? null
-                  : TextStyle(color: colors.error),
-            ),
-            subtitle: switch ((gameAt(slot.at(_selectedDay)), slot.isWeekly)) {
-              (final game?, _) => Text(_gameLine(game, team)),
-              (null, true) => Text(everyWeekday(slot.weekday!)),
-              _ => null,
-            },
-            onTap: _saving ? null : () => _editOnDay(team, slot),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: 'Editar horário',
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: _saving ? null : () => _editOnDay(team, slot),
+          )
+        else
+          _SlotStrip(
+            key: const Key('day-slots'),
+            cards: [
+              for (final game in otherGames)
+                _SlotCard(at: game.scheduledAt, game: game, team: team),
+              for (final slot in ofDay)
+                _SlotCard(
+                  at: slot.at(_selectedDay),
+                  game: gameAt(slot.at(_selectedDay)),
+                  team: team,
+                  weekly: slot.isWeekly,
+                  onEdit: _saving ? null : () => _editOnDay(team, slot),
+                  onRemove: _saving ? null : () => _deleteOnDay(team, slot),
                 ),
-                IconButton(
-                  tooltip: 'Remover horário',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _saving ? null : () => _deleteOnDay(team, slot),
-                ),
-              ],
-            ),
+            ],
           ),
         if (weekly.isNotEmpty) ...[
           const Divider(),
@@ -478,14 +499,6 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
 }
 
 enum _Scope { thisDay, allWeeks }
-
-/// "Jogo contra Real Bairro" ou "Aguardando resposta: Real Bairro".
-String _gameLine(Game game, Team team) {
-  final opponent = game.opponentNameFor(team.id!);
-  return game.status == GameStatus.pending
-      ? 'Aguardando resposta: $opponent'
-      : 'Jogo contra $opponent';
-}
 
 /// "A partir de 24/10/2026 · Sem jogo em 31/10/2026", só com os dias pulados
 /// que ainda vão acontecer.
@@ -583,6 +596,192 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
         ),
         const SheetBackButton(),
       ],
+    );
+  }
+}
+
+/// Cards de horário em rolagem lateral.
+class _SlotStrip extends StatelessWidget {
+  const _SlotStrip({super.key, required this.cards});
+
+  final List<Widget> cards;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 180,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      itemCount: cards.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (_, index) => cards[index],
+    ),
+  );
+}
+
+/// Um horário: o dia em destaque, o dia da semana e, embaixo, a hora com o
+/// lápis para mudar. O X remove. Com jogo marcado (ou aguardando resposta),
+/// fica em vermelho e sem ações.
+class _SlotCard extends StatelessWidget {
+  const _SlotCard({
+    required this.at,
+    required this.team,
+    this.game,
+    this.weekly = false,
+    this.dated = false,
+    this.onTap,
+    this.onEdit,
+    this.onRemove,
+  });
+
+  final DateTime at;
+  final Team team;
+  final Game? game;
+  final bool weekly;
+
+  /// Nas listas com vários dias, o dia entra nas dicas dos botões.
+  final bool dated;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final game = this.game;
+    final accent = game == null ? colors.primary : colors.error;
+    final day =
+        '${at.day.toString().padLeft(2, '0')}/'
+        '${at.month.toString().padLeft(2, '0')}';
+    final weekday = weekdayNames[at.weekday] ?? '';
+
+    return SizedBox(
+      width: 136,
+      child: Material(
+        color: colors.surfaceContainer,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 20, 8, 4),
+                        // Encolhe em vez de estourar com letras maiores.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                day,
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w900,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              Text(
+                                weekday.isEmpty
+                                    ? ''
+                                    : weekday[0].toUpperCase() +
+                                          weekday.substring(1),
+                                style: theme.textTheme.titleSmall,
+                              ),
+                              if (game != null)
+                                // Largura fixa: o nome longo corta com "…" em
+                                // vez de encolher o card todo.
+                                SizedBox(
+                                  width: 112,
+                                  child: Text(
+                                    game.status == GameStatus.pending
+                                        ? 'Aguardando: '
+                                              '${game.opponentNameFor(team.id!)}'
+                                        : 'x ${game.opponentNameFor(team.id!)}',
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colors.error,
+                                    ),
+                                  ),
+                                )
+                              else if (weekly)
+                                Text(
+                                  'Toda semana',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (game == null && onRemove != null)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          tooltip: dated
+                              ? 'Remover horário de $day'
+                              : 'Remover horário',
+                          visualDensity: VisualDensity.compact,
+                          iconSize: 20,
+                          color: colors.onSurfaceVariant,
+                          onPressed: onRemove,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                color: colors.surfaceContainerHighest,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(
+                      game == null ? Icons.schedule : Icons.event_busy,
+                      size: 20,
+                      color: game == null
+                          ? colors.onSurfaceVariant
+                          : colors.error,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        formatGameTime(at),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                    if (game == null && onEdit != null)
+                      IconButton(
+                        tooltip: dated
+                            ? 'Editar horário de $day'
+                            : 'Editar horário',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 20,
+                        color: colors.primary,
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
