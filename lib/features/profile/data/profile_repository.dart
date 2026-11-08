@@ -63,6 +63,16 @@ class ProfileRepository {
       })
       .eq('id', userId);
 
+  /// Pede a exclusão da conta: fica inativa por 7 dias e depois é apagada
+  /// de vez. Devolve quando a exclusão vira definitiva.
+  Future<DateTime> requestDeletion() async {
+    final at = await _client.rpc<String>('request_account_deletion');
+    return DateTime.parse(at).toLocal();
+  }
+
+  /// Reativa a conta (só nos 7 dias).
+  Future<void> cancelDeletion() => _client.rpc<void>('cancel_account_deletion');
+
   /// Gera outro código pessoal (JG ou TC); o antigo deixa de valer.
   Future<String> regenerateCode() => _client.rpc<String>('regenerate_my_code');
 

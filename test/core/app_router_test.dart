@@ -150,4 +150,42 @@ void main() {
       Routes.splash,
     );
   });
+
+  test('conta marcada para exclusão só reativa ou sai', () {
+    final inactive = AsyncData<Profile?>(
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+        deletedAt: DateTime(2026, 11, 8),
+      ),
+    );
+    for (final location in [Routes.home, Routes.splash, Routes.teams]) {
+      expect(
+        redirect(
+          location,
+          session: loggedIn,
+          profile: inactive,
+          address: hasAddress,
+        ),
+        Routes.accountInactive,
+      );
+    }
+    expect(
+      redirect(
+        Routes.accountInactive,
+        session: loggedIn,
+        profile: inactive,
+        address: hasAddress,
+      ),
+      isNull,
+    );
+    // Reativada: sai da tela de conta inativa para o início.
+    expect(
+      redirect(Routes.accountInactive, session: loggedIn, address: hasAddress),
+      Routes.home,
+    );
+    expect(inactive.value!.deletionDate, DateTime(2026, 11, 15));
+  });
 }

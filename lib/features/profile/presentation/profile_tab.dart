@@ -16,6 +16,7 @@ import '../../auth/data/biometric_sign_in.dart';
 import '../../plans/data/plan_repository.dart';
 import '../../plans/domain/plan_status.dart';
 import '../../plans/presentation/plan_gate.dart';
+import 'account_deletion.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 import 'edit_text_sheet.dart';
@@ -169,6 +170,8 @@ class _StaffProfile extends ConsumerWidget {
             onTap: () => signOutOrPark(ref),
           ),
         ),
+        const SizedBox(height: 16),
+        DeleteAccountButton(profile: profile),
       ],
     );
   }

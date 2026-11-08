@@ -4,6 +4,9 @@ abstract final class Routes {
   static const signUp = '/signup';
   static const onboardingProfile = '/onboarding/profile';
   static const onboardingAddress = '/onboarding/address';
+
+  /// Conta marcada para exclusão (inativa por 7 dias): reativar ou sair.
+  static const accountInactive = '/account-inactive';
   static const home = '/home';
   static const editAddress = '/home/address';
 
