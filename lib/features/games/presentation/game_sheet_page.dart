@@ -344,6 +344,11 @@ class _TeamSheetEditorPageState extends ConsumerState<TeamSheetEditorPage> {
       for (final row in stats)
         if (row.teamId == widget.teamId) row.athleteId: row,
     };
+    // Inativos só aparecem se já têm dados neste jogo.
+    athletes = [
+      for (final athlete in athletes)
+        if (athlete.isActive || rows.containsKey(athlete.id)) athlete,
+    ];
     final theme = Theme.of(context);
     if (athletes.isEmpty) {
       return const Center(
@@ -538,7 +543,7 @@ Future<void> askGoalScorer(
   required Game game,
   required String teamId,
 }) async {
-  final athletes = await ref.read(teamAthletesProvider(teamId).future);
+  final athletes = await ref.read(activeAthletesProvider(teamId).future);
   if (athletes.isEmpty || !context.mounted) return;
   final picked = await showAppSheet<(String, String?)>(
     context,

@@ -84,7 +84,7 @@ class _FundraiserFormPageState extends ConsumerState<FundraiserFormPage> {
   /// Explica o valor e, com ele digitado, mostra a conta: quanto cada um paga
   /// (valor total) ou quanto a vaquinha junta (por pessoa).
   String _helper() {
-    final people = switch (ref.watch(teamAthletesProvider(widget.team.id!))) {
+    final people = switch (ref.watch(activeAthletesProvider(widget.team.id!))) {
       AsyncValue(value: final athletes?) => fundraiserPeople(
         athletes,
         widget.team.ownerId,

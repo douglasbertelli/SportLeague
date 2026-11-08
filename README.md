@@ -400,6 +400,16 @@ supabase/
 | `championship_teams` | Times inscritos (da plataforma ou fictícios do organizador), com o nome guardado (os fictícios só o dono vê), a situação (`invited`, `accepted`, `declined`; o banco confirma os times do organizador e os fictícios) e o grupo sorteado. O dono do time convidado responde por `respond_championship_invite` |
 | `championship_matches` | Jogos: fase (`league`, `group`, `knockout`), rodada, posição no chaveamento, grupo, mandante e visitante (nulos no mata-mata até a fase anterior acabar), data, local, placar e pênaltis. Só o organizador gera, marca e lança; marcar e lançar avisam os dois times. Com os dois times e a data vira um jogo em `games` (`type = 'championship'`, `championship_match_id`), sincronizado nos dois sentidos; no mata-mata o banco avança o vencedor e encerra o campeonato na final |
 
+### Times e atletas inativos
+
+O dono inativa (e reativa) um time na edição do time e um atleta na
+edição do atleta (`inactive_at` em `teams` e `team_players`); nada é
+apagado. Atleta inativo sai da escalação, da presença, da mensalidade, das
+vaquinhas novas e dos avisos do time (na súmula, só aparece se já tem dados
+no jogo). Time inativo some das buscas, dos adversários e da troca de time,
+não manda lembretes e não conta no limite de times do plano; reativar volta
+a contar. Os inativos aparecem numa seção "Inativos" nas listas.
+
 ### Exclusão da conta
 
 No perfil, "Excluir conta" avisa que a ação é irreversível, lista o que será

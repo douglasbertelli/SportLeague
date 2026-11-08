@@ -4115,4 +4115,103 @@ void main() {
       expect(launched.last.queryParameters['q'], arena.address);
     });
   });
+
+  group('inativos', () {
+    final squad = {
+      'team-a': [
+        const Athlete(
+          id: 'a1',
+          teamId: 'team-a',
+          name: 'Bruno Lima',
+          jerseyNumber: 9,
+        ),
+        Athlete.fromMap({
+          'id': 'a2',
+          'team_id': 'team-a',
+          'name': 'Caio Souza',
+          'jersey_number': 10,
+          'inactive_at': '2026-11-01T12:00:00Z',
+        }),
+      ],
+    };
+
+    testWidgets('atleta inativo fica em Inativos e fora da escalação', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: FakeAthleteRepository({...squad}),
+      );
+      await _pumpTab(tester, container, const AthletesTab());
+      expect(find.text('1 atleta'), findsOneWidget);
+      expect(find.text('Inativos'), findsOneWidget);
+      expect(find.textContaining('Inativo'), findsWidgets);
+
+      await _pumpPage(
+        tester,
+        container,
+        LineupPage(
+          game: Game(
+            id: 'g1',
+            teamId: 'team-a',
+            opponent: 'Real Bairro',
+            scheduledAt: DateTime(2026, 11, 20, 20),
+            status: GameStatus.scheduled,
+            modality: Modality.society,
+          ),
+          teamId: 'team-a',
+        ),
+      );
+      expect(find.text('9 · Bruno Lima'), findsOneWidget);
+      expect(find.text('10 · Caio Souza'), findsNothing);
+    });
+
+    testWidgets('time inativo some da troca e pode ser reativado', (
+      tester,
+    ) async {
+      _usePhoneScreen(tester);
+      final teams = FakeTeamRepository([
+        teamA,
+        Team.fromMap({
+          ...teamB.toMap(),
+          'id': teamB.id,
+          'inactive_at': '2026-11-01T12:00:00Z',
+        }),
+      ]);
+      final container = await _container(teams: teams);
+      expect(
+        [for (final t in await container.read(myTeamsProvider.future)) t.name],
+        [teamA.name],
+      );
+      await _pumpPage(tester, container, const TeamsPage());
+      expect(find.text('Inativos'), findsOneWidget);
+      expect(find.text(teamB.name), findsOneWidget);
+
+      await tester.tap(find.text('Reativar'));
+      await tester.pumpAndSettle();
+      expect(teams.teams.every((t) => t.isActive), isTrue);
+      expect(find.text('Inativos'), findsNothing);
+    });
+
+    testWidgets('inativar o atleta pelo formulário', (tester) async {
+      _usePhoneScreen(tester);
+      final athletes = FakeAthleteRepository({...squad});
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        athletes: athletes,
+      );
+      await _pumpPage(
+        tester,
+        container,
+        AthleteFormPage(athlete: squad['team-a']!.first),
+      );
+      await tester.tap(find.byTooltip('Inativar atleta'));
+      await tester.pumpAndSettle();
+      expect(find.text('Inativar atleta?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Inativar'));
+      await tester.pumpAndSettle();
+      expect(athletes.byTeam['team-a']!.first.isActive, isFalse);
+    });
+  });
 }

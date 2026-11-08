@@ -31,6 +31,7 @@ class OpponentRepository {
           .contains('modalities', [modality.name])
           .neq('id', teamId)
           .ilike('name', pattern)
+          .isFilter('inactive_at', null)
           .order('name')
           .limit(_limit),
       _client

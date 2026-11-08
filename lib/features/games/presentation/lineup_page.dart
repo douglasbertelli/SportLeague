@@ -213,7 +213,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final athletes = ref.watch(teamAthletesProvider(widget.teamId));
+    final athletes = ref.watch(activeAthletesProvider(widget.teamId));
     final lineup = ref.watch(gameLineupProvider(widget.game.id!));
     final settings = ref.watch(lineupSettingsProvider(widget.teamId));
     final formation = ref.watch(gameFormationProvider(_key));

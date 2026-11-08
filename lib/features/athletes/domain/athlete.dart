@@ -24,6 +24,7 @@ class Athlete {
     this.profilePhotoUrl,
     this.profileNickname,
     this.profileFullName,
+    this.inactiveAt,
   });
 
   factory Athlete.fromMap(Map<String, dynamic> map) => Athlete(
@@ -44,6 +45,10 @@ class Athlete {
     },
     profileFullName: switch (map['profile']) {
       {'full_name': final String fullName} => fullName,
+      _ => null,
+    },
+    inactiveAt: switch (map['inactive_at']) {
+      final String at => DateTime.parse(at).toLocal(),
       _ => null,
     },
   );
@@ -74,6 +79,12 @@ class Athlete {
   /// Nome completo do perfil do jogador vinculado.
   final String? profileFullName;
 
+  /// Quando o atleta foi inativado (fora da escalação, da presença e da
+  /// mensalidade; o histórico fica). Nulo no atleta ativo.
+  final DateTime? inactiveAt;
+
+  bool get isActive => inactiveAt == null;
+
   /// Nome mostrado nas telas. Do jogador vinculado, o que ele escolheu no
   /// perfil (o apelido ou, sem ele, o nome completo), que só ele altera; do
   /// atleta sem conta, o nome cadastrado no time ([name]).
@@ -95,6 +106,7 @@ class Athlete {
     profilePhotoUrl: profilePhotoUrl,
     profileNickname: profileNickname,
     profileFullName: profileFullName,
+    inactiveAt: inactiveAt,
   );
 
   Map<String, dynamic> toMap() => {

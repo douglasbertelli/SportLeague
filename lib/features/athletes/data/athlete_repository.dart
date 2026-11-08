@@ -66,6 +66,14 @@ class AthleteRepository {
       .update(athlete.toMap())
       .eq('id', athlete.id!);
 
+  /// Inativa (ou reativa) o atleta. O histórico continua.
+  Future<void> setActive(Athlete athlete, {required bool active}) => _client
+      .from('team_players')
+      .update({
+        'inactive_at': active ? null : DateTime.now().toUtc().toIso8601String(),
+      })
+      .eq('id', athlete.id!);
+
   Future<void> delete(Athlete athlete) async {
     await _client.from('team_players').delete().eq('id', athlete.id!);
     if (athlete.photoPath case final path?) await removePhoto(path);
@@ -98,4 +106,12 @@ final athleteRepositoryProvider = Provider<AthleteRepository>(
 /// Atletas de um time.
 final teamAthletesProvider = FutureProvider.family<List<Athlete>, String>(
   (ref, teamId) => ref.watch(athleteRepositoryProvider).fetchByTeam(teamId),
+);
+
+/// Só os atletas ativos (para escalar, pedir presença, cobrar e convidar).
+final activeAthletesProvider = FutureProvider.family<List<Athlete>, String>(
+  (ref, teamId) async => [
+    for (final athlete in await ref.watch(teamAthletesProvider(teamId).future))
+      if (athlete.isActive) athlete,
+  ],
 );
