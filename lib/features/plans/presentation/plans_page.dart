@@ -41,7 +41,13 @@ class PlansPage extends ConsumerWidget {
                 _TrialBanner(ends: ends),
                 const SizedBox(height: 16),
               ],
-              for (final plan in SubscriptionPlan.values) ...[
+              // O Elite só aparece para quem está nele, e sozinho.
+              for (final plan
+                  in status?.plan == SubscriptionPlan.elite
+                      ? const [SubscriptionPlan.elite]
+                      : SubscriptionPlan.values.where(
+                          (plan) => plan != SubscriptionPlan.elite,
+                        )) ...[
                 _PlanCard(
                   plan: plan,
                   rows: rows.where((row) => row.plan == plan).toList(),
@@ -112,6 +118,7 @@ class _PlanCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final premium = plan == SubscriptionPlan.premium;
+    final elite = plan == SubscriptionPlan.elite;
     final current = status?.plan == plan;
     final price = this.price;
     final teams = status?.usage[PlanFeature.teams] ?? 0;
@@ -134,10 +141,12 @@ class _PlanCard extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  premium
+                  elite
+                      ? Icons.diamond_outlined
+                      : premium
                       ? Icons.workspace_premium_outlined
                       : Icons.sports_soccer_outlined,
-                  color: premium ? scheme.tertiary : scheme.primary,
+                  color: premium || elite ? scheme.tertiary : scheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -199,6 +208,21 @@ class _PlanCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+            ],
+            if (elite) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Sem cobrança',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Todas as funcionalidades liberadas, sem limite.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
             const SizedBox(height: 8),
             // Só o que o plano inclui (o não incluso fica de fora).
