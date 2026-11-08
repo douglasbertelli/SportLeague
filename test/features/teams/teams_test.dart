@@ -990,6 +990,10 @@ void main() {
       );
       await _pumpTab(tester, container, GamesTab(now: now));
 
+      // O dono tem o atalho para a disponibilidade junto do Novo amistoso.
+      expect(find.byTooltip('Disponibilidade'), findsOneWidget);
+      expect(find.text('Novo amistoso'), findsOneWidget);
+
       // As abas rolam na horizontal quando não cabem.
       final tabBar = tester.widget<TabBar>(find.byType(TabBar));
       expect(tabBar.isScrollable, isTrue);
@@ -2413,6 +2417,7 @@ void main() {
       // Jogos: sem "Novo amistoso"; no card, só a escalação.
       await _pumpTab(tester, container, GamesTab(now: DateTime(2026, 10, 22)));
       expect(find.text('Novo amistoso'), findsNothing);
+      expect(find.byTooltip('Disponibilidade'), findsNothing);
       await tester.tap(find.byTooltip('Ações do amistoso'));
       await tester.pumpAndSettle();
       expect(find.text('Escalação'), findsOneWidget);
