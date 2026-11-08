@@ -65,11 +65,22 @@ class _GameList extends ConsumerWidget {
                   child: const Icon(Icons.calendar_month_outlined),
                 ),
                 const SizedBox(width: 12),
-                FloatingActionButton.extended(
-                  heroTag: 'new-game',
-                  onPressed: () => context.push(Routes.newGame),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Novo amistoso'),
+                // Na altura do botão pequeno ao lado (40).
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    floatingActionButtonTheme: Theme.of(context)
+                        .floatingActionButtonTheme
+                        .copyWith(
+                          extendedSizeConstraints:
+                              const BoxConstraints.tightFor(height: 40),
+                        ),
+                  ),
+                  child: FloatingActionButton.extended(
+                    heroTag: 'new-game',
+                    onPressed: () => context.push(Routes.newGame),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Novo amistoso'),
+                  ),
                 ),
               ],
             )
