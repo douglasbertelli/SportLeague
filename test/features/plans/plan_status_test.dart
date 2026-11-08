@@ -42,6 +42,54 @@ void main() {
     expect(PlanStatus.unrestricted.canAdd(PlanFeature.teams), isTrue);
   });
 
+  test('Elite: lê o plano, libera tudo e ignora teste que sobrou', () {
+    final elite = PlanStatus.fromMap({
+      'plan': 'elite',
+      'paid_plan': 'elite',
+      'trial_ends_at': '2099-11-21T20:47:30.821108+00:00',
+      'trial_available': false,
+      'quotas': <String, dynamic>{},
+      'usage': {'teams': 4, 'championships': 1},
+    });
+    expect(elite.plan, SubscriptionPlan.elite);
+    expect(elite.plan.label, 'Elite');
+    expect(elite.onTrial, isFalse);
+    for (final feature in PlanFeature.values) {
+      expect(elite.has(feature), isTrue);
+      expect(elite.canAdd(feature), isTrue);
+    }
+  });
+
+  test('Elite com limite de times do cliente', () {
+    final elite = PlanStatus.fromMap({
+      'plan': 'elite',
+      'paid_plan': 'elite',
+      'quotas': {'teams': 3},
+      'usage': {'teams': 3, 'championships': 0},
+    });
+    expect(elite.canAdd(PlanFeature.teams), isFalse);
+    expect(elite.has(PlanFeature.dues), isTrue);
+    expect(
+      eliteLimitMessage(PlanFeature.teams, 3),
+      'Você chegou ao limite de times combinado para o seu plano Elite '
+      '(3 times). Para aumentar, fale com a gente.',
+    );
+  });
+
+  test('teste em andamento no Gratuito continua aparecendo', () {
+    final trial = PlanStatus.fromMap({
+      'plan': 'premium',
+      'paid_plan': 'free',
+      'trial_ends_at': '2099-11-21T20:47:30Z',
+    });
+    expect(trial.onTrial, isTrue);
+  });
+
+  test('plano que esta versão não conhece vira Gratuito em vez de travar', () {
+    expect(SubscriptionPlan.fromName('platinum'), SubscriptionPlan.free);
+    expect(SubscriptionPlan.fromName('elite'), SubscriptionPlan.elite);
+  });
+
   test('descreve os limites', () {
     expect(describeQuota(PlanFeature.teams, 1), '1 time');
     expect(describeQuota(PlanFeature.teams, 5), '5 times');
