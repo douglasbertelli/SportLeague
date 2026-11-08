@@ -18,8 +18,22 @@ Future<void> showPremiumSheet(
   context,
   builder: (sheetContext) => Consumer(
     builder: (sheetContext, ref, _) {
-      final trialAvailable =
-          ref.watch(planStatusProvider).value?.trialAvailable ?? false;
+      final status = ref.watch(planStatusProvider).value;
+      // No Elite o limite é combinado com cada cliente: não há plano para
+      // oferecer.
+      if (status?.plan == SubscriptionPlan.elite) {
+        return AppSheet(
+          title: 'Limite do seu plano',
+          message: eliteLimitMessage(feature, quota ?? status!.quota(feature)),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(sheetContext).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        );
+      }
+      final trialAvailable = status?.trialAvailable ?? false;
       final trialDays = _premiumPrice(ref)?.trialDays;
       final canTry = trialAvailable && trialDays != null;
       return AppSheet(

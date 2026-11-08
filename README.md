@@ -466,6 +466,13 @@ abaixo, com `plan = 'elite'`). Sem cobrança, sem teste e sem linhas em
 novas. A tela Planos mostra só o cartão do Elite para quem está nele e não o
 mostra para os outros.
 
+**Limites por cliente** (`private.plan_overrides`: `profile_id`, `feature`,
+`quota`): uma linha vale no lugar do limite do plano para aquela pessoa
+(`private.plan_quota` e `plan_status()` já consideram). Hoje é do Elite: o
+painel dá o Elite com até 3 times e ajusta o número por cliente; sair do
+Elite apaga os limites dele. No limite, o app mostra o aviso do Elite (sem
+oferecer o Premium).
+
 Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
 tudo de uma vez):
 

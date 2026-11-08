@@ -113,6 +113,10 @@ class _PlanCard extends ConsumerWidget {
   PlanFeatureRow? _row(PlanFeature feature) =>
       rows.where((row) => row.feature == feature).firstOrNull;
 
+  Quota _quota(PlanFeature feature) => plan == SubscriptionPlan.elite
+      ? status?.quota(feature)
+      : _row(feature)?.quota;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -218,7 +222,8 @@ class _PlanCard extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Todas as funcionalidades liberadas, sem limite.',
+                'Todas as funcionalidades liberadas, com os limites '
+                'combinados com você.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -226,11 +231,13 @@ class _PlanCard extends ConsumerWidget {
             ],
             const SizedBox(height: 8),
             // Só o que o plano inclui (o não incluso fica de fora).
+            // No Elite os limites são os do cliente (plan_status), não os
+            // da tabela de planos.
             for (final feature in PlanFeature.values)
-              if (_row(feature)?.quota != 0)
+              if (_quota(feature) != 0)
                 _FeatureLine(
                   feature: feature,
-                  quota: _row(feature)?.quota,
+                  quota: _quota(feature),
                   description: _row(feature)?.description,
                   extraTeamCents: price?.extraTeamCents ?? 0,
                 ),
