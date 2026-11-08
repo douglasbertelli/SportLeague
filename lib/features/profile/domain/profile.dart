@@ -14,14 +14,21 @@ enum UserRole {
 
 enum SubscriptionPlan {
   free('Gratuito'),
-  premium('Premium');
+  premium('Premium'),
+
+  /// Clientes VIP, dado pelo painel: sem cobrança e com tudo liberado. Não
+  /// aparece na comparação dos planos para quem não está nele.
+  elite('Elite');
 
   const SubscriptionPlan(this.label);
 
   final String label;
 
+  /// Plano que esta versão não conhece vira o Gratuito na tela; o banco é
+  /// quem decide o que fica liberado.
   static SubscriptionPlan fromName(String value) =>
-      SubscriptionPlan.values.firstWhere((plan) => plan.name == value);
+      SubscriptionPlan.values.where((plan) => plan.name == value).firstOrNull ??
+      SubscriptionPlan.free;
 }
 
 /// Pé dominante do jogador.
