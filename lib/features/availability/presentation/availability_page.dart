@@ -658,7 +658,7 @@ class _SlotCard extends StatelessWidget {
     final weekday = weekdayNames[at.weekday] ?? '';
 
     return SizedBox(
-      width: 136,
+      width: 144,
       child: Material(
         color: colors.surfaceContainer,
         clipBehavior: Clip.antiAlias,
@@ -747,36 +747,40 @@ class _SlotCard extends StatelessWidget {
               ),
               Container(
                 color: colors.surfaceContainerHighest,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.only(left: 10, right: 2),
                 height: 48,
                 child: Row(
                   children: [
                     Icon(
                       game == null ? Icons.schedule : Icons.event_busy,
-                      size: 20,
+                      size: 18,
                       color: game == null
                           ? colors.onSurfaceVariant
                           : colors.error,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
+                    // Encolhe com letras maiores em vez de cortar.
                     Expanded(
-                      child: Text(
-                        formatGameTime(at),
-                        maxLines: 1,
-                        softWrap: false,
-                        style: theme.textTheme.titleSmall,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatGameTime(at),
+                          maxLines: 1,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ),
                     ),
+                    // No canto direito.
                     if (game == null && onEdit != null)
                       IconButton(
                         tooltip: dated
                             ? 'Editar horário de $day'
                             : 'Editar horário',
-                        // Compacto: deixa espaço para o horário.
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 32,
-                          height: 32,
+                        style: IconButton.styleFrom(
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          minimumSize: const Size(40, 40),
+                          padding: EdgeInsets.zero,
                         ),
                         iconSize: 20,
                         color: colors.primary,
