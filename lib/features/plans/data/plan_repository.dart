@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../domain/plan_status.dart';
+import '../domain/subscription_payment.dart';
 
 class PlanRepository {
   PlanRepository(this._client);
@@ -25,6 +26,15 @@ class PlanRepository {
   Future<List<PlanPrice>> fetchPrices() async {
     final rows = await _client.from('plans').select();
     return rows.map(PlanPrice.fromMap).toList();
+  }
+
+  /// Pagamentos da assinatura do usuário, os mais novos primeiro.
+  Future<List<SubscriptionPayment>> fetchPayments() async {
+    final rows = await _client
+        .from('subscription_payments')
+        .select()
+        .order('period_start', ascending: false);
+    return rows.map(SubscriptionPayment.fromMap).toList();
   }
 
   /// Começa o teste do Premium (uma vez por conta); devolve quando termina.
@@ -52,3 +62,8 @@ final planFeaturesProvider = FutureProvider.autoDispose<List<PlanFeatureRow>>(
 final planPricesProvider = FutureProvider.autoDispose<List<PlanPrice>>(
   (ref) => ref.watch(planRepositoryProvider).fetchPrices(),
 );
+
+final subscriptionPaymentsProvider =
+    FutureProvider.autoDispose<List<SubscriptionPayment>>(
+      (ref) => ref.watch(planRepositoryProvider).fetchPayments(),
+    );

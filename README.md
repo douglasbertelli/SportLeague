@@ -495,6 +495,11 @@ painel dá o Elite com até 3 times e ajusta o número por cliente; sair do
 Elite apaga os limites dele. No limite, o app mostra o aviso do Elite (sem
 oferecer o Premium).
 
+**Financeiro** (perfil do administrador): o plano, o valor mensal do
+Premium com os times ativos (times inativos não são cobrados) e os
+pagamentos da assinatura (`subscription_payments`, só leitura para o dono;
+quem grava é o backend de pagamentos).
+
 Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
 tudo de uma vez):
 
