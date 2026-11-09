@@ -7,6 +7,14 @@ abstract final class Routes {
 
   /// Conta marcada para exclusão (inativa por 7 dias): reativar ou sair.
   static const accountInactive = '/account-inactive';
+
+  /// Documentos legais (abertos também sem login).
+  static const privacy = '/privacy';
+  static const terms = '/terms';
+
+  /// Aceite dos Termos e da Política (contas sem o aceite da versão atual).
+  static const acceptTerms = '/accept-terms';
+
   static const home = '/home';
   static const editAddress = '/home/address';
 

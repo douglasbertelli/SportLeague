@@ -6,6 +6,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
+import '../../legal/presentation/legal_page.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/domain/profile.dart';
 import '../data/auth_repository.dart';
@@ -27,6 +28,8 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   late final TextEditingController _nameController;
   UserRole? _role;
   bool _loading = false;
+  bool _accepted = false;
+  bool _acceptMissing = false;
 
   @override
   void initState() {
@@ -51,7 +54,8 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
 
   Future<void> _submit() async {
     final form = _formKey.currentState!;
-    if (!form.validate()) return;
+    setState(() => _acceptMissing = !_accepted);
+    if (!form.validate() || !_accepted) return;
     form.save();
 
     final userId = ref.read(currentUserIdProvider);
@@ -117,6 +121,23 @@ class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        LegalAcceptance(
+          accepted: _accepted,
+          onChanged: (value) => setState(() {
+            _accepted = value;
+            if (value) _acceptMissing = false;
+          }),
+        ),
+        if (_acceptMissing)
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              'Aceite os Termos de Uso e a Política de Privacidade para '
+              'continuar.',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
         const SizedBox(height: 24),
         LoadingButton(
           label: 'Continuar',

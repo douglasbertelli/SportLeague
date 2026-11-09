@@ -30,8 +30,15 @@ class ProfileRepository {
       .from('profiles')
       .update({
         'role': role.name,
+        'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
         if (fullName != null) 'full_name': fullName.trim(),
       })
+      .eq('id', userId);
+
+  /// Registra o aceite dos Termos de Uso e da Política de Privacidade.
+  Future<void> acceptTerms(String userId) => _client
+      .from('profiles')
+      .update({'terms_accepted_at': DateTime.now().toUtc().toIso8601String()})
       .eq('id', userId);
 
   /// Troca o nome do usuário (o banco aceita de 2 a 120 caracteres).

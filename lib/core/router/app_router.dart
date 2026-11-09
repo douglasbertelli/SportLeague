@@ -25,6 +25,7 @@ import '../../features/games/domain/game.dart';
 import '../../features/games/presentation/game_form_page.dart';
 import '../../features/games/presentation/opponent_picker_page.dart';
 import '../../features/home/presentation/home_page.dart';
+import '../../features/legal/presentation/legal_page.dart';
 import '../../features/invites/presentation/invite_player_page.dart';
 import '../../features/invites/presentation/player_invites_page.dart';
 import '../../features/invites/presentation/team_invites_page.dart';
@@ -50,6 +51,10 @@ import 'routes.dart';
 
 const _publicRoutes = {Routes.login, Routes.signUp};
 
+/// Abertos em qualquer situação (com ou sem login, antes do cadastro
+/// terminar).
+const _legalRoutes = {Routes.privacy, Routes.terms};
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
   void notify(_, _) => refresh.value++;
@@ -71,6 +76,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.accountInactive,
         builder: (_, _) => const AccountInactivePage(),
+      ),
+      GoRoute(
+        path: Routes.privacy,
+        builder: (_, _) => const LegalPage(document: LegalDocument.privacy),
+      ),
+      GoRoute(
+        path: Routes.terms,
+        builder: (_, _) => const LegalPage(document: LegalDocument.terms),
+      ),
+      GoRoute(
+        path: Routes.acceptTerms,
+        builder: (_, _) => const AcceptTermsPage(),
       ),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginPage()),
       GoRoute(path: Routes.signUp, builder: (_, _) => const SignUpPage()),
@@ -271,6 +288,7 @@ String? appRedirect({
   required AsyncValue<Object?> address,
 }) {
   if (session.isLoading && !session.hasValue) return Routes.splash;
+  if (_legalRoutes.contains(location)) return null;
 
   final loggedIn = session.value != null;
   if (!loggedIn) return _publicRoutes.contains(location) ? null : Routes.login;
@@ -293,6 +311,11 @@ String? appRedirect({
         : Routes.onboardingProfile;
   }
 
+  // Conta sem o aceite da versão atual dos Termos e da Política.
+  if (profile.value?.needsTermsAcceptance(legalVersion) ?? false) {
+    return location == Routes.acceptTerms ? null : Routes.acceptTerms;
+  }
+
   if (address.value == null) {
     return location == Routes.onboardingAddress
         ? null
@@ -310,6 +333,7 @@ String? appRedirect({
     Routes.onboardingProfile,
     Routes.onboardingAddress,
     Routes.accountInactive,
+    Routes.acceptTerms,
   };
   return entryRoutes.contains(location) ? Routes.home : null;
 }

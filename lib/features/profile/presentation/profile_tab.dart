@@ -166,6 +166,8 @@ class _StaffProfile extends ConsumerWidget {
         ProfileHeader(profile: profile, email: email),
         const SizedBox(height: 16),
         SettingsGroup(items: items),
+        const SizedBox(height: 16),
+        const LegalLinks(),
         const SizedBox(height: 32),
         Card(
           child: ListTile(
@@ -754,4 +756,27 @@ class _AvatarState extends ConsumerState<_Avatar> {
       ),
     );
   }
+}
+
+/// Política de Privacidade e Termos de Uso, num grupo do perfil.
+class LegalLinks extends StatelessWidget {
+  const LegalLinks({super.key});
+
+  @override
+  Widget build(BuildContext context) => SettingsGroup(
+    items: [
+      ListTile(
+        leading: const Icon(Icons.privacy_tip_outlined),
+        title: const Text('Política de Privacidade'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(Routes.privacy),
+      ),
+      ListTile(
+        leading: const Icon(Icons.description_outlined),
+        title: const Text('Termos de Uso'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(Routes.terms),
+      ),
+    ],
+  );
 }

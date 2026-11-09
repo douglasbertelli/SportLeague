@@ -142,6 +142,13 @@ void main() {
     return profiles;
   }
 
+  // Marca o aceite dos Termos e da Política.
+  Future<void> accept(WidgetTester tester) async {
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+  }
+
   Future<void> tapContinue(WidgetTester tester) async {
     final submit = find.text('Continuar');
     await tester.ensureVisible(submit);
@@ -162,6 +169,11 @@ void main() {
 
     await tester.ensureVisible(find.text('Administrador'));
     await tester.tap(find.text('Administrador'));
+    // Sem o aceite dos Termos e da Política, não continua.
+    await tapContinue(tester);
+    expect(profiles.completed, isNull);
+    expect(find.textContaining('Aceite os Termos de Uso'), findsOneWidget);
+    await accept(tester);
     await tapContinue(tester);
 
     expect(profiles.completed?.userId, 'u1');
@@ -178,6 +190,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField), 'Bruno Lima');
     await tester.ensureVisible(find.text('Jogador'));
     await tester.tap(find.text('Jogador'));
+    await accept(tester);
     await tapContinue(tester);
 
     expect(profiles.completed?.role, UserRole.player);

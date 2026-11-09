@@ -61,6 +61,7 @@ class Profile {
     this.coverUrl,
     this.nickname,
     this.deletedAt,
+    this.termsAcceptedAt,
   });
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -90,6 +91,10 @@ class Profile {
       final String at => DateTime.parse(at).toLocal(),
       _ => null,
     },
+    termsAcceptedAt: switch (map['terms_accepted_at']) {
+      final String at => DateTime.parse(at),
+      _ => null,
+    },
   );
 
   /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
@@ -102,6 +107,13 @@ class Profile {
   /// Quando o usuário pediu para excluir a conta: inativa por 7 dias e
   /// depois apagada de vez. Nulo na conta ativa.
   final DateTime? deletedAt;
+
+  /// Quando aceitou os Termos de Uso e a Política de Privacidade (UTC).
+  final DateTime? termsAcceptedAt;
+
+  /// Ainda não aceitou os documentos da versão [version].
+  bool needsTermsAcceptance(DateTime version) =>
+      termsAcceptedAt == null || termsAcceptedAt!.isBefore(version);
 
   /// Quando a exclusão vira definitiva.
   DateTime? get deletionDate => deletedAt?.add(const Duration(days: 7));

@@ -75,6 +75,8 @@ class SettingsTab extends ConsumerWidget {
           const SizedBox(height: 16),
         ],
         SettingsGroup(items: items),
+        const SizedBox(height: 16),
+        const LegalLinks(),
         const SizedBox(height: 32),
         Card(
           child: ListTile(
