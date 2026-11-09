@@ -8,6 +8,7 @@ class GuestTeam {
     required this.ownerId,
     required this.name,
     required this.modality,
+    this.logoUrl,
   });
 
   factory GuestTeam.fromMap(Map<String, dynamic> map) => GuestTeam(
@@ -15,12 +16,16 @@ class GuestTeam {
     ownerId: map['owner_id'] as String,
     name: map['name'] as String,
     modality: Modality.fromName(map['modality'] as String),
+    logoUrl: map['logo_url'] as String?,
   );
 
   final String? id;
   final String ownerId;
   final String name;
   final Modality modality;
+
+  /// Símbolo do time (bucket público dos logos); nulo sem símbolo.
+  final String? logoUrl;
 
   Map<String, dynamic> toMap() => {
     'owner_id': ownerId,

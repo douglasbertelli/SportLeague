@@ -84,6 +84,23 @@ class OpponentRepository {
         .eq('id', guestTeamId);
   }
 
+  /// Todos os times fictícios do administrador, em ordem alfabética.
+  Future<List<GuestTeam>> fetchGuests(String ownerId) async {
+    final rows = await _client
+        .from('guest_teams')
+        .select()
+        .eq('owner_id', ownerId)
+        .order('name');
+    return rows.map(GuestTeam.fromMap).toList();
+  }
+
+  /// Troca o nome do fictício (os amistosos por jogar e os campeonatos
+  /// acompanham pelo banco).
+  Future<void> renameGuest(String guestTeamId, String name) => _client
+      .from('guest_teams')
+      .update({'name': name.trim()})
+      .eq('id', guestTeamId);
+
   /// `%` e `_` digitados pelo usuário são texto, não curingas.
   static String _escapeLike(String value) =>
       value.replaceAllMapped(RegExp(r'[\\%_]'), (m) => '\\${m[0]}');
@@ -92,3 +109,12 @@ class OpponentRepository {
 final opponentRepositoryProvider = Provider<OpponentRepository>(
   (ref) => OpponentRepository(ref.watch(supabaseClientProvider)),
 );
+
+/// Times fictícios do administrador logado.
+final myGuestTeamsProvider = FutureProvider.autoDispose<List<GuestTeam>>((
+  ref,
+) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return const [];
+  return ref.watch(opponentRepositoryProvider).fetchGuests(userId);
+});

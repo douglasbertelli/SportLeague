@@ -4230,4 +4230,43 @@ void main() {
       expect(athletes.byTeam['team-a']!.first.isActive, isFalse);
     });
   });
+
+  testWidgets('Meus times: aba Fictícios lista e edita o nome', (tester) async {
+    _usePhoneScreen(tester);
+    final opponents = FakeOpponentRepository(
+      guests: const [
+        GuestTeam(
+          id: 'g-1',
+          ownerId: 'u1',
+          name: 'Várzea da Esquina',
+          modality: Modality.society,
+        ),
+      ],
+    );
+    final container = await _container(
+      teams: FakeTeamRepository([teamA]),
+      opponents: opponents,
+    );
+    await _pumpPage(tester, container, const TeamsPage());
+    expect(find.text('Novo time'), findsOneWidget);
+
+    await tester.tap(find.text('Fictícios'));
+    await tester.pumpAndSettle();
+    expect(find.text('Várzea da Esquina'), findsOneWidget);
+    expect(find.text('Society'), findsOneWidget);
+    // Na aba dos fictícios não há "Novo time".
+    expect(find.text('Novo time'), findsNothing);
+
+    await tester.tap(find.byTooltip('Editar Várzea da Esquina'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar time fictício'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome do time'),
+      'Várzea FC',
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    expect(opponents.renamedGuests, {'g-1': 'Várzea FC'});
+    expect(opponents.guestLogos, isEmpty);
+  });
 }
