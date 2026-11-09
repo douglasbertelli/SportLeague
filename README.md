@@ -410,6 +410,16 @@ no jogo). Time inativo some das buscas, dos adversários e da troca de time,
 não manda lembretes e não conta no limite de times do plano; reativar volta
 a contar. Os inativos aparecem numa seção "Inativos" nas listas.
 
+### Política de Privacidade e Termos de Uso
+
+Os textos ficam em `legal/` (Markdown, empacotados no app) e abrem pelo
+Perfil e pelos links do aceite, mesmo sem login (`/privacy`, `/terms`).
+Na escolha do perfil, o cadastro só continua com o aceite, gravado em
+`profiles.terms_accepted_at`. Contas sem o aceite da versão atual
+(`legalVersion` em `legal_page.dart`) veem a tela de aceite antes de
+entrar: ao mudar os textos, atualize essa data. Os campos entre colchetes
+precisam ser preenchidos antes da publicação.
+
 ### Exclusão da conta
 
 No perfil, "Excluir conta" avisa que a ação é irreversível, lista o que será

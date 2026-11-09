@@ -313,6 +313,13 @@ void main() {
     expect(find.textContaining('Plano'), findsNothing);
     expect(find.text('Meu código'), findsOneWidget);
     expect(find.text('Endereço'), findsOneWidget);
+    // Os documentos e o Sair ficam mais embaixo.
+    await tester.scrollUntilVisible(
+      find.text('Sair'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Termos de Uso'), findsOneWidget);
     expect(find.text('Sair'), findsOneWidget);
     // Sem capa nem apelido (são do jogador).
     expect(find.bySemanticsLabel(RegExp('capa')), findsNothing);

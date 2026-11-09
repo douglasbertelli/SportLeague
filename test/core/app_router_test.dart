@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sport_league/core/router/app_router.dart';
 import 'package:sport_league/core/router/routes.dart';
+import 'package:sport_league/features/legal/presentation/legal_page.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
 
 void main() {
@@ -9,12 +10,13 @@ void main() {
   const loggedOut = AsyncData<Object?>(null);
   const hasAddress = AsyncData<Object?>('address');
   const noAddress = AsyncData<Object?>(null);
-  const withRole = AsyncData<Profile?>(
+  final withRole = AsyncData<Profile?>(
     Profile(
       id: 'u1',
       fullName: 'Ana Souza',
       role: UserRole.player,
       plan: SubscriptionPlan.free,
+      termsAcceptedAt: legalVersion,
     ),
   );
   const withoutRole = AsyncData<Profile?>(
@@ -24,12 +26,12 @@ void main() {
   String? redirect(
     String location, {
     required AsyncValue<Object?> session,
-    AsyncValue<Profile?> profile = withRole,
+    AsyncValue<Profile?>? profile,
     AsyncValue<Object?> address = noAddress,
   }) => appRedirect(
     location: location,
     session: session,
-    profile: profile,
+    profile: profile ?? withRole,
     address: address,
   );
 
@@ -104,20 +106,22 @@ void main() {
   });
 
   test('técnico não abre o cadastro de time', () {
-    const coach = AsyncData<Profile?>(
+    final coach = AsyncData<Profile?>(
       Profile(
         id: 'u1',
         fullName: 'Ana Souza',
         role: UserRole.coach,
         plan: SubscriptionPlan.free,
+        termsAcceptedAt: legalVersion,
       ),
     );
-    const admin = AsyncData<Profile?>(
+    final admin = AsyncData<Profile?>(
       Profile(
         id: 'u1',
         fullName: 'Ana Souza',
         role: UserRole.admin,
         plan: SubscriptionPlan.free,
+        termsAcceptedAt: legalVersion,
       ),
     );
     expect(
@@ -187,5 +191,44 @@ void main() {
       Routes.home,
     );
     expect(inactive.value!.deletionDate, DateTime(2026, 11, 15));
+  });
+
+  test('sem o aceite da versão atual, pede os Termos e a Política', () {
+    final old = AsyncData<Profile?>(
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+        termsAcceptedAt: legalVersion.subtract(const Duration(days: 1)),
+      ),
+    );
+    const never = AsyncData<Profile?>(
+      Profile(
+        id: 'u1',
+        fullName: 'Ana Souza',
+        role: UserRole.player,
+        plan: SubscriptionPlan.free,
+      ),
+    );
+    for (final profile in [old, never]) {
+      expect(
+        redirect(
+          Routes.home,
+          session: loggedIn,
+          profile: profile,
+          address: hasAddress,
+        ),
+        Routes.acceptTerms,
+      );
+    }
+    // Os documentos abrem mesmo antes do aceite (e sem login).
+    expect(redirect(Routes.terms, session: loggedIn, profile: never), isNull);
+    expect(redirect(Routes.privacy, session: loggedOut), isNull);
+    // Aceitou: sai da tela de aceite.
+    expect(
+      redirect(Routes.acceptTerms, session: loggedIn, address: hasAddress),
+      Routes.home,
+    );
   });
 }

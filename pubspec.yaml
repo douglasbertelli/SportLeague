@@ -56,6 +56,8 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
+    # Política de Privacidade e Termos de Uso (abertos no app).
+    - legal/
 
   # DM Sans (SIL Open Font License, assets/fonts/OFL.txt). O peso 600 usa o
   # arquivo mais próximo (Bold).
