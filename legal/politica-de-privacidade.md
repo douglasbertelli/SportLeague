@@ -1,6 +1,6 @@
 # Política de Privacidade do SportLeague
 
-**Última atualização:** [DATA DA PUBLICAÇÃO]
+**Última atualização:** 9 de novembro de 2026
 
 Esta Política de Privacidade explica como o aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós") coleta, usa, compartilha e protege os dados pessoais de quem o utiliza ("você", "usuário"). Ela segue a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018, "LGPD").
 
@@ -12,12 +12,11 @@ Ao criar uma conta ou usar o aplicativo, você declara que leu e entendeu esta P
 
 O controlador dos dados pessoais tratados no SportLeague é:
 
-- **Nome / razão social:** [NOME OU RAZÃO SOCIAL]
-- **CPF / CNPJ:** [CPF OU CNPJ]
-- **Endereço:** [ENDEREÇO COMPLETO]
-- **E-mail de contato:** [E-MAIL DE CONTATO]
+- **Nome / razão social:** Douglas Bertelli de Oliveira
+- **Endereço:** Rua Professor Cardoso de Mello Neto, 1127 — São Paulo/SP
+- **E-mail de contato:** contato@sportleague.com.br
 
-**Encarregado pelo tratamento de dados (DPO):** [NOME DO ENCARREGADO] — [E-MAIL DO ENCARREGADO]
+**Encarregado pelo tratamento de dados (DPO):** Douglas Bertelli de Oliveira — contato@sportleague.com.br
 
 O encarregado é o canal de comunicação entre você, o SportLeague e a Autoridade Nacional de Proteção de Dados (ANPD).
 
@@ -99,7 +98,7 @@ Compartilhamos dados apenas com os serviços necessários para o aplicativo func
 | **Google** e **Apple** | Login social, quando você escolhe essa opção |
 | **ViaCEP** | Consulta do endereço a partir do CEP (apenas o CEP é enviado) |
 | **Google Maps** e **Waze** | Abertura do endereço do local de jogo, quando você toca no botão |
-| [PROVEDOR DE PAGAMENTO] | Cobrança da assinatura Premium, quando estiver disponível |
+| **Google Play** e **App Store** | Cobrança da assinatura Premium, quando estiver disponível |
 
 Também podemos compartilhar dados quando exigido por lei, por ordem judicial ou para proteger direitos do SportLeague e dos usuários.
 
@@ -116,7 +115,7 @@ O SportLeague permite cadastrar times de categorias de base, que podem incluir a
 - **Menores de 18 anos** só devem criar conta própria com a autorização e o acompanhamento de pelo menos um dos pais ou do responsável legal.
 - Quando o **administrador de um time** cadastra um atleta menor de idade (nome, foto, data de nascimento, número e estatísticas), ele declara ter obtido o **consentimento específico de um dos pais ou do responsável legal**, como exige o art. 14 da LGPD.
 - Os dados de crianças e adolescentes são usados apenas para a organização esportiva do time e tratados no seu melhor interesse.
-- Os pais ou responsáveis podem pedir a correção ou a exclusão desses dados a qualquer momento pelo e-mail [E-MAIL DO ENCARREGADO] ou ao administrador do time.
+- Os pais ou responsáveis podem pedir a correção ou a exclusão desses dados a qualquer momento pelo e-mail contato@sportleague.com.br ou ao administrador do time.
 
 ---
 
@@ -146,7 +145,7 @@ Conforme o art. 18 da LGPD, você pode, a qualquer momento:
 
 **Como exercer:**
 - **Excluir a conta:** diretamente no aplicativo, em Perfil > Excluir conta.
-- **Demais pedidos:** pelo e-mail [E-MAIL DO ENCARREGADO]. Responderemos em até 15 dias.
+- **Demais pedidos:** pelo e-mail contato@sportleague.com.br. Responderemos em até 15 dias.
 
 Você também pode apresentar reclamação à **Autoridade Nacional de Proteção de Dados (ANPD)** pelo site [www.gov.br/anpd](https://www.gov.br/anpd).
 
@@ -182,5 +181,5 @@ Podemos atualizar esta Política para refletir mudanças no aplicativo ou na leg
 
 Dúvidas sobre esta Política ou sobre seus dados:
 
-- **E-mail:** [E-MAIL DO ENCARREGADO]
-- **Responsável:** [NOME OU RAZÃO SOCIAL]
+- **E-mail:** contato@sportleague.com.br
+- **Responsável:** Douglas Bertelli de Oliveira
