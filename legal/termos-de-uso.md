@@ -1,8 +1,8 @@
 # Termos de Uso do SportLeague
 
-**Última atualização:** [DATA DA PUBLICAÇÃO]
+**Última atualização:** 9 de novembro de 2026
 
-Estes Termos de Uso ("Termos") regulam o uso do aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós"), oferecido por **[NOME OU RAZÃO SOCIAL]**, inscrito no **[CPF OU CNPJ]**, com endereço em **[ENDEREÇO COMPLETO]**.
+Estes Termos de Uso ("Termos") regulam o uso do aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós"), oferecido por **Douglas Bertelli de Oliveira**, com endereço em **Rua Professor Cardoso de Mello Neto, 1127 — São Paulo/SP**.
 
 Ao criar uma conta ou usar o aplicativo, você ("usuário") declara que leu, entendeu e aceita estes Termos e a [Política de Privacidade](politica-de-privacidade.md). Se não concordar, não utilize o SportLeague.
 
@@ -33,7 +33,7 @@ O SportLeague é uma ferramenta de organização. **Não organizamos nem partici
 - **Técnico:** acompanha os times em que foi aceito, monta escalações e súmulas;
 - **Jogador:** participa dos times em que foi aceito, confirma presença e acompanha jogos e estatísticas.
 
-2.3. Você é responsável por manter sua senha em sigilo e por toda atividade feita na sua conta. Avise-nos imediatamente em caso de uso não autorizado, pelo e-mail [E-MAIL DE CONTATO].
+2.3. Você é responsável por manter sua senha em sigilo e por toda atividade feita na sua conta. Avise-nos imediatamente em caso de uso não autorizado, pelo e-mail contato@sportleague.com.br.
 
 2.4. **Menores de 18 anos** só podem usar o aplicativo com a autorização e o acompanhamento de um dos pais ou do responsável legal, que também ficam responsáveis pelo uso.
 
@@ -61,7 +61,7 @@ Quem cria e administra um time é responsável por:
 
 4.3. **Valores:** o Premium é cobrado por mês, com um valor base que inclui um time e um valor adicional por time ativo a mais, conforme a tela Planos. Times inativos não são cobrados.
 
-4.4. **Cobrança:** quando a assinatura estiver disponível, a cobrança será feita por [PROVEDOR DE PAGAMENTO / LOJA DE APLICATIVOS], nas condições informadas no momento da contratação, incluindo renovação, cancelamento e reembolso. Os pagamentos ficam registrados na tela **Financeiro**.
+4.4. **Cobrança:** quando a assinatura estiver disponível, a cobrança será feita por Google Play (Android) ou App Store (iPhone), nas condições informadas no momento da contratação, incluindo renovação, cancelamento e reembolso. Os pagamentos ficam registrados na tela **Financeiro**.
 
 4.5. **Cancelamento:** você pode cancelar o Premium quando quiser. O acesso continua até o fim do período já pago. Depois disso, o que foi criado continua salvo e visível, mas criar e editar o que é exclusivo do Premium fica bloqueado.
 
@@ -96,7 +96,7 @@ O descumprimento destas regras pode levar à remoção do conteúdo, à suspens�
 
 ## 7. Propriedade intelectual
 
-A marca SportLeague, o aplicativo, seu código, design e funcionalidades pertencem a [NOME OU RAZÃO SOCIAL] e são protegidos por lei. Estes Termos não transferem nenhum direito sobre eles ao usuário, apenas uma licença pessoal, limitada e não exclusiva para usar o aplicativo.
+A marca SportLeague, o aplicativo, seu código, design e funcionalidades pertencem a Douglas Bertelli de Oliveira e são protegidos por lei. Estes Termos não transferem nenhum direito sobre eles ao usuário, apenas uma licença pessoal, limitada e não exclusiva para usar o aplicativo.
 
 ---
 
@@ -135,11 +135,11 @@ Podemos atualizar estes Termos para refletir mudanças no aplicativo ou na legis
 
 ## 11. Lei aplicável e foro
 
-Estes Termos seguem as leis da República Federativa do Brasil. Fica eleito o foro da comarca de **[CIDADE/UF]** para resolver eventuais conflitos, ressalvado o direito do consumidor de propor ação no foro do seu domicílio.
+Estes Termos seguem as leis da República Federativa do Brasil. Fica eleito o foro da comarca de **São Paulo/SP** para resolver eventuais conflitos, ressalvado o direito do consumidor de propor ação no foro do seu domicílio.
 
 ---
 
 ## 12. Contato
 
-- **E-mail:** [E-MAIL DE CONTATO]
-- **Responsável:** [NOME OU RAZÃO SOCIAL]
+- **E-mail:** contato@sportleague.com.br
+- **Responsável:** Douglas Bertelli de Oliveira
