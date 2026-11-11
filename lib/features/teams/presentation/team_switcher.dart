@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../data/team_repository.dart';
 import 'team_logo.dart';
 
@@ -13,7 +14,7 @@ class TeamSwitcher extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(selectedTeamProvider).value;
-    if (team == null) return const Text('SportLeague');
+    if (team == null) return const AppSymbol();
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),

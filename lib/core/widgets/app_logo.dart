@@ -19,3 +19,20 @@ class AppLogo extends StatelessWidget {
     );
   }
 }
+
+/// Só o símbolo do SportLeague (a bola verde com o traço), para barras
+/// superiores sem time escolhido.
+class AppSymbol extends StatelessWidget {
+  const AppSymbol({super.key, this.height = 32});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      'assets/images/symbol.svg',
+      height: height,
+      semanticsLabel: 'SportLeague',
+    );
+  }
+}

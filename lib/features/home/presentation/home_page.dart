@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/biometric_tile.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/theme_mode_button.dart';
 import '../../profile/data/profile_repository.dart';
 import 'admin_home_page.dart';
@@ -37,7 +38,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SportLeague'),
+        title: const AppSymbol(),
         actions: const [ThemeModeButton()],
       ),
       body: profile.when(
