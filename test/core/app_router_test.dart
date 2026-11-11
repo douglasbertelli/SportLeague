@@ -35,9 +35,9 @@ void main() {
     address: address,
   );
 
-  test('sem sessão vai para o login, mas permite o cadastro', () {
+  test('sem sessão vai para o login', () {
     expect(redirect(Routes.home, session: loggedOut), Routes.login);
-    expect(redirect(Routes.signUp, session: loggedOut), isNull);
+    expect(redirect(Routes.login, session: loggedOut), isNull);
   });
 
   test('sessão carregando mostra a splash', () {
