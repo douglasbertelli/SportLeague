@@ -34,23 +34,7 @@ class AuthRepository {
   final Future<void> Function()? beforeSignOut;
   Future<void>? _googleInit;
 
-  /// Cria a conta. O perfil é criado no banco pelo trigger `handle_new_user`
-  /// a partir de `full_name`, ainda sem tipo de perfil: ele é escolhido na
-  /// etapa seguinte, como no login social.
-  ///
-  /// Retorna `true` se o e-mail ainda precisa ser confirmado (sem sessão).
-  Future<bool> signUp({
-    required String fullName,
-    required String email,
-    required String password,
-  }) async {
-    final response = await _auth.signUp(
-      email: email.trim(),
-      password: password,
-      data: {'full_name': fullName.trim()},
-    );
-    return response.session == null;
-  }
+  // A conta com e-mail e senha é criada no site (sportleague-web), não no app.
 
   Future<void> signIn({required String email, required String password}) =>
       _auth.signInWithPassword(email: email.trim(), password: password);

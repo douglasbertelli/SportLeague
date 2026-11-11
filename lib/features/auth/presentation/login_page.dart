@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/router/routes.dart';
+import '../../../core/config/env.dart';
 import '../../../core/security/biometrics.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
@@ -249,16 +249,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       const SizedBox(height: 24),
       SocialSignInButtons(enabled: !_loading, compact: true),
       const SizedBox(height: 24),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Não tem conta?'),
-          TextButton(
-            onPressed: _loading ? null : () => context.push(Routes.signUp),
-            child: const Text('Criar conta'),
-          ),
-        ],
-      ),
+      // A conta é criada no site; o app só leva até lá.
+      if (Env.webUrl.isEmpty)
+        Text(
+          'Não tem conta? Crie pelo site do SportLeague.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        )
+      else
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Não tem conta?'),
+            TextButton.icon(
+              onPressed: _loading
+                  ? null
+                  : () => launchUrl(
+                      Uri.parse('${Env.webUrl}/cadastro'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Criar conta no site'),
+            ),
+          ],
+        ),
       // Veio de "Usar outra conta": volta para a biometria.
       if (parked != null)
         TextButton.icon(

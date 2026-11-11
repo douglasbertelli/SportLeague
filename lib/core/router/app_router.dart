@@ -10,7 +10,6 @@ import '../../features/athletes/presentation/athlete_form_page.dart';
 import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
-import '../../features/auth/presentation/sign_up_page.dart';
 import '../../features/championships/domain/championship.dart';
 import '../../features/championships/presentation/championship_form_page.dart';
 import '../../features/championships/presentation/championship_page.dart';
@@ -49,7 +48,7 @@ import '../../features/venues/presentation/venues_page.dart';
 import '../supabase/supabase_providers.dart';
 import 'routes.dart';
 
-const _publicRoutes = {Routes.login, Routes.signUp};
+const _publicRoutes = {Routes.login};
 
 /// Abertos em qualquer situação (com ou sem login, antes do cadastro
 /// terminar).
@@ -90,7 +89,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const AcceptTermsPage(),
       ),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginPage()),
-      GoRoute(path: Routes.signUp, builder: (_, _) => const SignUpPage()),
       GoRoute(
         path: Routes.onboardingProfile,
         builder: (_, _) => const CompleteProfilePage(),

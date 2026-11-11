@@ -14,6 +14,10 @@ abstract final class Env {
     'GOOGLE_IOS_CLIENT_ID',
   );
 
+  /// Endereço do site (sportleague-web), onde a conta é criada. Vazio, o
+  /// app só avisa que o cadastro é pelo site.
+  static const webUrl = String.fromEnvironment('WEB_URL');
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }
