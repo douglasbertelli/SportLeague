@@ -265,7 +265,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onPressed: _loading
                   ? null
                   : () => launchUrl(
-                      Uri.parse('${Env.webUrl}/cadastro'),
+                      // origem=app: o site esconde planos e preços (regra
+                      // das lojas sobre compras fora delas).
+                      Uri.parse('${Env.webUrl}/cadastro?origem=app'),
                       mode: LaunchMode.externalApplication,
                     ),
               iconAlignment: IconAlignment.end,
