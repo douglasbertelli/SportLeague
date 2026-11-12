@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../domain/banner_design.dart';
+import 'football_patterns.dart';
 
 /// O banner desenhado no tamanho do [BannerStyle.format] (360 de largura).
 /// O editor mostra encolhido e exporta 3× maior.
@@ -822,6 +823,22 @@ class BannerPatternPainter extends CustomPainter {
               ],
             ).createShader(rect),
         );
+      case BannerPattern.ball:
+        paintBall(canvas, size, accent);
+      case BannerPattern.net:
+        paintNet(canvas, size, accent);
+      case BannerPattern.goal:
+        paintGoal(canvas, size, accent);
+      case BannerPattern.stadium:
+        paintStadium(canvas, size, accent);
+      case BannerPattern.grass:
+        paintGrass(canvas, size, accent);
+      case BannerPattern.tactics:
+        paintTactics(canvas, size, accent);
+      case BannerPattern.corner:
+        paintCorner(canvas, size, accent);
+      case BannerPattern.centerCircle:
+        paintCenterCircle(canvas, size, accent);
       case BannerPattern.honeycomb:
         const radius = 18.0;
         final width = sqrt(3) * radius;

@@ -267,7 +267,16 @@ enum BannerPattern {
   waves('Ondas'),
   checkers('Xadrez'),
   glow('Brilho'),
-  honeycomb('Colmeia');
+  honeycomb('Colmeia'),
+  // Tema de futebol.
+  ball('Bola'),
+  net('Rede'),
+  goal('Gol'),
+  stadium('Estádio'),
+  grass('Gramado'),
+  tactics('Prancheta'),
+  corner('Escanteio'),
+  centerCircle('Meio-campo');
 
   const BannerPattern(this.label);
 

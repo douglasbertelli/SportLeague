@@ -324,7 +324,7 @@ void main() {
       ..physicalSize = const Size(1080, 2340)
       ..devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    expect(BannerPattern.values, hasLength(12));
+    expect(BannerPattern.values, hasLength(20));
     for (final pattern in BannerPattern.values) {
       for (final format in BannerFormat.values) {
         await tester.pumpWidget(
