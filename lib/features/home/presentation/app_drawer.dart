@@ -6,7 +6,7 @@ import '../../../core/router/routes.dart';
 import '../../plans/domain/plan_status.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../../profile/domain/profile.dart';
-import '../../teams/data/team_repository.dart';
+import '../../banners/presentation/banner_editor_page.dart';
 
 /// Botão ☰ da barra da home, depois do modo claro/escuro: abre o
 /// [AppDrawer] (que fica no `endDrawer` do Scaffold).
@@ -100,10 +100,12 @@ class AppDrawer extends StatelessWidget {
           subtitle: const Text('Quem pagou o mês e quem está devendo'),
           onTap: () => _open(context, Routes.dues),
         ),
-        // Banners do time ativo, para quem administra (Premium). O aviso do
-        // plano aparece por cima do menu; liberado, fecha o menu e abre.
+        // Banners, para o administrador (Premium): do time ativo dele ou,
+        // sem time, o editor pede para criar. O aviso do plano aparece por
+        // cima do menu; liberado, fecha o menu e abre.
         Consumer(
-          builder: (context, ref, _) => !ref.watch(canManageTeamProvider)
+          builder: (context, ref, _) =>
+              !profile.isAdmin || !ref.watch(bannersVisibleProvider)
               ? const SizedBox.shrink()
               : ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 28),

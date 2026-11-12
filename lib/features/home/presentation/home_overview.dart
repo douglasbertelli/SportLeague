@@ -95,8 +95,9 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
               subtitle: 'Código para os jogadores e pedidos para entrar',
               onTap: () => context.push(Routes.teamInvites),
             ),
-            // Banners do time ativo, para quem administra (Premium).
-            if (ref.watch(canManageTeamProvider))
+            // Banners do time ativo do administrador (Premium); sem time, o
+            // editor pede para criar.
+            if (ref.watch(bannersVisibleProvider))
               _ActionTile(
                 icon: Icons.auto_awesome_outlined,
                 title: 'Banners',

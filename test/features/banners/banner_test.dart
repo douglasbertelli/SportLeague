@@ -476,6 +476,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('sem time, o editor pede para criar um', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [selectedTeamProvider.overrideWith((ref) async => null)],
+        child: const MaterialApp(home: BannerEditorPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Crie seu time primeiro'), findsOneWidget);
+    expect(find.text('Criar time'), findsOneWidget);
+  });
+
+  test('os banners aparecem sem time ou para o dono do time ativo', () {
+    ProviderContainer container(Team? team, {required bool owner}) {
+      final c = ProviderContainer(
+        overrides: [
+          selectedTeamProvider.overrideWithValue(AsyncData(team)),
+          canManageTeamProvider.overrideWithValue(owner),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    expect(container(null, owner: false).read(bannersVisibleProvider), isTrue);
+    expect(container(_team, owner: true).read(bannersVisibleProvider), isTrue);
+    // Time ativo de outro dono (o administrador como técnico, por exemplo).
+    expect(
+      container(_team, owner: false).read(bannersVisibleProvider),
+      isFalse,
+    );
+  });
+
   test('o banner é recurso do plano', () {
     expect(PlanFeature.fromKey('banners'), PlanFeature.banners);
     final free = PlanStatus.fromMap({

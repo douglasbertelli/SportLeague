@@ -25,6 +25,15 @@ import 'banner_style_tab.dart';
 import 'banner_template_tab.dart';
 import 'banner_texts_tab.dart';
 
+/// Se o administrador vê os Banners (menu e atalhos): sem time ativo (o
+/// editor explica e leva a criar o time) ou sendo o dono do time ativo.
+/// Quem decide se é administrador é quem chama.
+final bannersVisibleProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(selectedTeamProvider).value == null ||
+      ref.watch(canManageTeamProvider),
+);
+
 /// Confere o Premium e abre o editor de banners do time ativo.
 Future<void> openBannerEditor(
   BuildContext context,
@@ -91,10 +100,18 @@ class BannerEditorPage extends ConsumerWidget {
       data: (team) => team == null
           ? Scaffold(
               appBar: AppBar(title: const Text('Banner')),
-              body: const EmptyState(
+              body: EmptyState(
                 icon: Icons.shield_outlined,
-                title: 'Nenhum time ativo',
-                message: 'Escolha ou crie um time para montar os banners.',
+                title: 'Crie seu time primeiro',
+                message:
+                    'Os banners usam o nome, o escudo e as cores do time. '
+                    'Crie um time (ou escolha um no topo da tela inicial) '
+                    'para começar.',
+                action: FilledButton.icon(
+                  onPressed: () => context.push(Routes.newTeam),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Criar time'),
+                ),
               ),
             )
           : BannerEditor(key: ValueKey(team.id), team: team, args: args),
