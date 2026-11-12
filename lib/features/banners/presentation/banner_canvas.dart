@@ -600,16 +600,68 @@ class _Footer extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (style.showBrand)
-          SvgPicture.asset(
-            'assets/images/logo.svg',
-            width: 78,
-            semanticsLabel: 'SportLeague',
-            theme: SvgTheme(currentColor: muted),
-          ),
+        if (style.showBrand) BannerBrandMark(style: style),
       ],
     );
   }
+}
+
+/// A marca SportLeague (o logo ou só o símbolo) nas cores escolhidas em
+/// [BannerStyle.brandColor]: o verde do desenho vira a cor do desenho e as
+/// letras ([SvgTheme.currentColor]) a das letras.
+class BannerBrandMark extends StatelessWidget {
+  const BannerBrandMark({super.key, required this.style, this.scale = 1});
+
+  final BannerStyle style;
+
+  /// Para a miniatura da escolha na aba Estilo.
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = style.brandColor.resolve(style);
+    final mapper = _BrandColorMapper(colors.mark);
+    return switch (style.brand) {
+      BannerBrand.none => const SizedBox.shrink(),
+      BannerBrand.logo => SvgPicture.asset(
+        'assets/images/logo.svg',
+        width: 78 * scale,
+        semanticsLabel: 'SportLeague',
+        colorMapper: mapper,
+        theme: SvgTheme(currentColor: colors.word),
+      ),
+      BannerBrand.symbol => SvgPicture.asset(
+        'assets/images/symbol.svg',
+        height: 26 * scale,
+        semanticsLabel: 'SportLeague',
+        colorMapper: mapper,
+      ),
+    };
+  }
+}
+
+/// Troca o verde da marca pela cor [mark]. Igualdade pela cor, para o cache
+/// do SVG desenhar de novo quando ela muda.
+class _BrandColorMapper extends ColorMapper {
+  const _BrandColorMapper(this.mark);
+
+  final Color mark;
+
+  @override
+  Color substitute(
+    String? id,
+    String elementName,
+    String attributeName,
+    Color color,
+  ) =>
+      color.toARGB32() == BannerBrandColor.brandGreen.toARGB32() ? mark : color;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _BrandColorMapper && other.mark == mark;
+
+  @override
+  int get hashCode => mark.hashCode;
 }
 
 /// O desenho do fundo ([BannerPattern]), na cor de destaque por cima da cor

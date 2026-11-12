@@ -93,10 +93,42 @@ void main() {
         pattern: BannerPattern.rays,
         format: BannerFormat.story,
         titleScale: 1.2,
-        showBrand: false,
+        brand: BannerBrand.symbol,
+        brandColor: BannerBrandColor.original,
       );
       final read = BannerStyle.fromJson(style.toJson(), _offlineStyle);
       expect(read, style);
+    });
+
+    test('a marca salva antes (liga e desliga) vira logo ou nada', () {
+      final old = _offlineStyle.toJson().replaceFirst(
+        RegExp(r'"brand":"\w+","brand_color":"\w+"'),
+        '"show_brand":false',
+      );
+      expect(old, contains('show_brand'));
+      expect(BannerStyle.fromJson(old, _offlineStyle).brand, BannerBrand.none);
+      expect(
+        BannerStyle.fromJson(
+          old.replaceFirst('false', 'true'),
+          _offlineStyle,
+        ).brand,
+        BannerBrand.logo,
+      );
+    });
+
+    test('as cores da marca seguem a arte', () {
+      final art = BannerBrandColor.art.resolve(_offlineStyle);
+      expect(art.mark, _offlineStyle.accent);
+      expect(
+        art.word.toARGB32() & 0xFFFFFF,
+        Colors.white.toARGB32() & 0xFFFFFF,
+      );
+      final mono = BannerBrandColor.text.resolve(_offlineStyle);
+      expect(mono.mark, mono.word);
+      expect(
+        BannerBrandColor.original.resolve(_offlineStyle).mark,
+        BannerBrandColor.brandGreen,
+      );
     });
 
     test('texto inválido cai no padrão', () {
@@ -385,11 +417,27 @@ void main() {
     expect(style.bodyScale, greaterThan(1));
     expect(style.titleScale, 1);
 
-    // Mostrar: tira a marca.
-    await tester.ensureVisible(find.text('Marca SportLeague'));
-    await tester.tap(find.text('Marca SportLeague'));
+    // Marca: só o símbolo, com o verde original; depois sem marca.
+    final symbol = find.bySemanticsLabel('Marca Símbolo');
+    await tester.ensureVisible(symbol);
+    await tester.pump();
+    await tester.tap(symbol);
+    await tester.pump();
+    expect(style.brand, BannerBrand.symbol);
+    final original = find.bySemanticsLabel('Cores da marca Original');
+    await tester.ensureVisible(original);
+    await tester.pump();
+    await tester.tap(original);
+    await tester.pump();
+    expect(style.brandColor, BannerBrandColor.original);
+    final none = find.bySemanticsLabel('Marca Sem marca');
+    await tester.ensureVisible(none);
+    await tester.pump();
+    await tester.tap(none);
     await tester.pump();
     expect(style.showBrand, isFalse);
+    // Sem marca, as cores da marca somem.
+    expect(original, findsNothing);
   });
 
   testWidgets('os cartões de formato têm a mesma altura e a proporção cabe', (
