@@ -338,14 +338,16 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [canManageTeamProvider.overrideWithValue(true)],
+        // Administrador ainda sem time (conta nova).
+        overrides: [selectedTeamProvider.overrideWith((ref) async => null)],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.tap(find.byTooltip('Menu'));
     await tester.pumpAndSettle();
     expect(find.text('Douglas Admin'), findsOneWidget);
-    // Quem administra o time ativo também vê os banners.
+    // O administrador vê os banners mesmo sem time: o editor pede para
+    // criar um.
     expect(find.text('Banners'), findsOneWidget);
     await tester.tap(find.text('Vaquinha'));
     await tester.pumpAndSettle();
