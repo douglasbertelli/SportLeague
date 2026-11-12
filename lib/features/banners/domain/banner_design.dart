@@ -260,7 +260,14 @@ enum BannerPattern {
   gradient('Degradê'),
   stripes('Listras'),
   dots('Pontos'),
-  rays('Raios');
+  rays('Raios'),
+  pitch('Campo'),
+  diagonal('Diagonal'),
+  sash('Faixa'),
+  waves('Ondas'),
+  checkers('Xadrez'),
+  glow('Brilho'),
+  honeycomb('Colmeia');
 
   const BannerPattern(this.label);
 

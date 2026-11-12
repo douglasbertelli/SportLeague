@@ -612,7 +612,8 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// O desenho do fundo: liso, degradê, listras, pontos ou raios.
+/// O desenho do fundo ([BannerPattern]), na cor de destaque por cima da cor
+/// do fundo.
 class BannerPatternPainter extends CustomPainter {
   BannerPatternPainter(this.style);
 
@@ -621,6 +622,8 @@ class BannerPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    // Listras, raios e colmeia passam da borda: nada sai do banner.
+    canvas.clipRect(rect);
     final background = style.background;
     final accent = style.accent;
     final paint = Paint()..color = background;
@@ -681,6 +684,172 @@ class BannerPatternPainter extends CustomPainter {
             ray,
           );
         }
+      case BannerPattern.pitch:
+        _paintPitch(canvas, size);
+      case BannerPattern.diagonal:
+        // Metade de baixo em diagonal, com um filete na borda.
+        final top = Offset(size.width, size.height * 0.36);
+        final bottom = Offset(0, size.height * 0.64);
+        canvas.drawPath(
+          Path()
+            ..moveTo(bottom.dx, bottom.dy)
+            ..lineTo(top.dx, top.dy)
+            ..lineTo(size.width, size.height)
+            ..lineTo(0, size.height)
+            ..close(),
+          Paint()..color = accent.withValues(alpha: 0.22),
+        );
+        canvas.drawLine(
+          bottom,
+          top,
+          Paint()
+            ..color = accent.withValues(alpha: 0.7)
+            ..strokeWidth = 3,
+        );
+      case BannerPattern.sash:
+        // Faixa transversal, como a de uma camisa, com dois filetes.
+        final band = Paint()
+          ..color = accent.withValues(alpha: 0.24)
+          ..strokeWidth = 74;
+        final line = Paint()
+          ..color = accent.withValues(alpha: 0.5)
+          ..strokeWidth = 3;
+        final from = Offset(-20, size.height * 0.05);
+        final to = Offset(size.width + 20, size.height * 0.95);
+        canvas.drawLine(from, to, band);
+        for (final shift in const [-48.0, 48.0]) {
+          canvas.drawLine(
+            from.translate(shift, -shift * 0.4),
+            to.translate(shift, -shift * 0.4),
+            line,
+          );
+        }
+      case BannerPattern.waves:
+        // Ondas sobrepostas, mais fortes embaixo.
+        for (var i = 0; i < 4; i++) {
+          final base = size.height * (0.55 + i * 0.12);
+          final amplitude = 14.0 + i * 4;
+          final path = Path()..moveTo(0, base);
+          for (var x = 0.0; x <= size.width; x += 6) {
+            path.lineTo(
+              x,
+              base + amplitude * sin(x / size.width * 2 * pi + i * 1.3),
+            );
+          }
+          path
+            ..lineTo(size.width, size.height)
+            ..lineTo(0, size.height)
+            ..close();
+          canvas.drawPath(path, Paint()..color = accent.withValues(alpha: 0.1));
+        }
+      case BannerPattern.checkers:
+        const side = 30.0;
+        final square = Paint()..color = accent.withValues(alpha: 0.07);
+        for (var row = 0; row * side < size.height; row++) {
+          for (
+            var col = row.isEven ? 0 : 1;
+            col * side < size.width;
+            col += 2
+          ) {
+            canvas.drawRect(
+              Rect.fromLTWH(col * side, row * side, side, side),
+              square,
+            );
+          }
+        }
+      case BannerPattern.glow:
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(0, -0.2),
+              radius: 0.85,
+              colors: [
+                accent.withValues(alpha: 0.5),
+                accent.withValues(alpha: 0),
+              ],
+            ).createShader(rect),
+        );
+      case BannerPattern.honeycomb:
+        const radius = 18.0;
+        final width = sqrt(3) * radius;
+        final cell = Paint()
+          ..color = accent.withValues(alpha: 0.14)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+        for (var row = 0; row * radius * 1.5 < size.height + radius; row++) {
+          final y = row * radius * 1.5;
+          final offset = row.isOdd ? width / 2 : 0;
+          for (var x = offset - width; x < size.width + width; x += width) {
+            final hexagon = Path();
+            for (var corner = 0; corner < 6; corner++) {
+              final angle = pi / 6 + corner * pi / 3;
+              final point = Offset(
+                x + radius * cos(angle),
+                y + radius * sin(angle),
+              );
+              corner == 0
+                  ? hexagon.moveTo(point.dx, point.dy)
+                  : hexagon.lineTo(point.dx, point.dy);
+            }
+            canvas.drawPath(hexagon..close(), cell);
+          }
+        }
+    }
+  }
+
+  /// Gramado com faixas de corte e as linhas do campo (visto de cima).
+  void _paintPitch(Canvas canvas, Size size) {
+    final accent = style.accent;
+    const bands = 8;
+    final bandHeight = size.height / bands;
+    final mow = Paint()..color = accent.withValues(alpha: 0.06);
+    for (var i = 0; i < bands; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, i * bandHeight, size.width, bandHeight),
+        mow,
+      );
+    }
+    final line = Paint()
+      ..color = accent.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final field = Rect.fromLTRB(14, 14, size.width - 14, size.height - 14);
+    final center = field.center;
+    canvas
+      ..drawRect(field, line)
+      ..drawLine(
+        Offset(field.left, center.dy),
+        Offset(field.right, center.dy),
+        line,
+      )
+      ..drawCircle(center, size.width * 0.17, line)
+      ..drawCircle(center, 3, line..style = PaintingStyle.fill);
+    line.style = PaintingStyle.stroke;
+    for (final top in [true, false]) {
+      final penalty = Rect.fromCenter(
+        center: Offset(
+          center.dx,
+          top
+              ? field.top + size.height * 0.08
+              : field.bottom - size.height * 0.08,
+        ),
+        width: field.width * 0.6,
+        height: size.height * 0.16,
+      );
+      final goal = Rect.fromCenter(
+        center: Offset(
+          center.dx,
+          top
+              ? field.top + size.height * 0.03
+              : field.bottom - size.height * 0.03,
+        ),
+        width: field.width * 0.28,
+        height: size.height * 0.06,
+      );
+      canvas
+        ..drawRect(penalty, line)
+        ..drawRect(goal, line);
     }
   }
 

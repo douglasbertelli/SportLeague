@@ -245,6 +245,34 @@ void main() {
     expect(sharedText, 'Unidos da Vila · CONVOCADOS');
   });
 
+  testWidgets('todos os fundos desenham em todos os formatos', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    expect(BannerPattern.values, hasLength(12));
+    for (final pattern in BannerPattern.values) {
+      for (final format in BannerFormat.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Center(
+              child: BannerCanvas(
+                template: BannerTemplate.notice,
+                style: _offlineStyle.copyWith(pattern: pattern, format: format),
+                texts: defaultTexts(BannerTemplate.notice, teamName: 'Time'),
+                teamName: 'Time',
+              ),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: '$pattern $format');
+      }
+      // O fundo escolhido volta igual do estilo salvo.
+      final saved = _offlineStyle.copyWith(pattern: pattern);
+      expect(BannerStyle.fromJson(saved.toJson(), _offlineStyle), saved);
+    }
+  });
+
   test('o banner é recurso do plano', () {
     expect(PlanFeature.fromKey('banners'), PlanFeature.banners);
     final free = PlanStatus.fromMap({
