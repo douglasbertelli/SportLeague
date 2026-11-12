@@ -25,6 +25,7 @@ import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../domain/banner_design.dart';
 import 'banner_canvas.dart';
+import 'banner_style_tab.dart';
 
 /// Confere o Premium e abre o editor de banners do time ativo.
 Future<void> openBannerEditor(
@@ -353,7 +354,6 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
                     team: _team,
                     gameId: game?.id,
                     featuredPhoto: _featuredPhoto,
-                    backgroundPhoto: _backgroundPhoto,
                     onPickPhoto: _pickPhoto,
                     onAthletePhoto: (url) => setState(
                       () => _featuredPhoto = url == null
@@ -361,10 +361,11 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
                           : NetworkImage(url),
                     ),
                   ),
-                  _StyleTab(
+                  BannerStyleTab(
                     style: _style,
                     teamStyle: _teamStyle,
-                    hasBackgroundPhoto: _backgroundPhoto != null,
+                    backgroundPhoto: _backgroundPhoto,
+                    onPickBackground: () => _pickPhoto(featured: false),
                     onChanged: _setStyle,
                   ),
                 ],
@@ -534,7 +535,6 @@ class _TextsTab extends ConsumerWidget {
     required this.team,
     required this.gameId,
     required this.featuredPhoto,
-    required this.backgroundPhoto,
     required this.onPickPhoto,
     required this.onAthletePhoto,
   });
@@ -544,7 +544,6 @@ class _TextsTab extends ConsumerWidget {
   final Team team;
   final String? gameId;
   final ImageProvider? featuredPhoto;
-  final ImageProvider? backgroundPhoto;
   final Future<void> Function({required bool featured}) onPickPhoto;
   final ValueChanged<String?> onAthletePhoto;
 
@@ -718,12 +717,6 @@ class _TextsTab extends ConsumerWidget {
             selected: featuredPhoto != null,
             onTap: () => onPickPhoto(featured: true),
           ),
-        _PhotoTile(
-          icon: Icons.wallpaper_outlined,
-          title: 'Imagem de fundo',
-          selected: backgroundPhoto != null,
-          onTap: () => onPickPhoto(featured: false),
-        ),
       ],
     );
   }
@@ -752,267 +745,5 @@ class _PhotoTile extends StatelessWidget {
         ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
         : const Icon(Icons.chevron_right),
     onTap: onTap,
-  );
-}
-
-/// Cores oferecidas: a do time primeiro, depois as do app, o branco e os
-/// pretos.
-List<Color> bannerPalette(BannerStyle teamStyle) {
-  final colors = <Color>[
-    teamStyle.accent,
-    teamStyle.background,
-    Colors.white,
-    const Color(0xFFF2F2F2),
-    const Color(0xFF111111),
-    Colors.black,
-    for (final color in appColors) color.color,
-  ];
-  final seen = <int>{};
-  return [
-    for (final color in colors)
-      if (seen.add(color.toARGB32())) color,
-  ];
-}
-
-class _StyleTab extends StatelessWidget {
-  const _StyleTab({
-    required this.style,
-    required this.teamStyle,
-    required this.hasBackgroundPhoto,
-    required this.onChanged,
-  });
-
-  final BannerStyle style;
-  final BannerStyle teamStyle;
-  final bool hasBackgroundPhoto;
-  final ValueChanged<BannerStyle> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = bannerPalette(teamStyle);
-    Widget heading(String text) => Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(text, style: theme.textTheme.titleSmall),
-    );
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => onChanged(
-                style.copyWith(
-                  background: teamStyle.background,
-                  accent: teamStyle.accent,
-                  text: teamStyle.text,
-                ),
-              ),
-              icon: const Icon(Icons.palette_outlined),
-              label: const Text('Usar as cores do time'),
-            ),
-          ),
-        ),
-        heading('Fundo'),
-        _ColorRow(
-          label: 'Cor do fundo',
-          colors: palette,
-          selected: style.background,
-          onSelected: (color) => onChanged(style.copyWith(background: color)),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final pattern in BannerPattern.values)
-              ChoiceChip(
-                label: Text(pattern.label),
-                selected: pattern == style.pattern,
-                onSelected: (_) => onChanged(style.copyWith(pattern: pattern)),
-              ),
-          ],
-        ),
-        if (hasBackgroundPhoto) ...[
-          const SizedBox(height: 8),
-          Text('Escurecer a imagem de fundo', style: theme.textTheme.bodySmall),
-          Slider(
-            value: style.backgroundDim,
-            max: 0.9,
-            onChanged: (value) =>
-                onChanged(style.copyWith(backgroundDim: value)),
-          ),
-        ],
-        heading('Destaque'),
-        _ColorRow(
-          label: 'Cor de destaque',
-          colors: palette,
-          selected: style.accent,
-          onSelected: (color) => onChanged(style.copyWith(accent: color)),
-        ),
-        heading('Texto'),
-        _ColorRow(
-          label: 'Cor do texto',
-          colors: palette,
-          selected: style.text,
-          onSelected: (color) => onChanged(style.copyWith(text: color)),
-        ),
-        heading('Fonte do título'),
-        _FontPicker(
-          selected: style.titleFont,
-          onSelected: (font) => onChanged(style.copyWith(titleFont: font)),
-        ),
-        _ScaleSlider(
-          label: 'Tamanho do título',
-          value: style.titleScale,
-          onChanged: (value) => onChanged(style.copyWith(titleScale: value)),
-        ),
-        heading('Fonte dos textos'),
-        _FontPicker(
-          selected: style.bodyFont,
-          onSelected: (font) => onChanged(style.copyWith(bodyFont: font)),
-        ),
-        _ScaleSlider(
-          label: 'Tamanho dos textos',
-          value: style.bodyScale,
-          onChanged: (value) => onChanged(style.copyWith(bodyScale: value)),
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Mostrar os escudos'),
-          value: style.showLogo,
-          onChanged: (value) => onChanged(style.copyWith(showLogo: value)),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Mostrar a marca SportLeague'),
-          value: style.showBrand,
-          onChanged: (value) => onChanged(style.copyWith(showBrand: value)),
-        ),
-      ],
-    );
-  }
-}
-
-class _ColorRow extends StatelessWidget {
-  const _ColorRow({
-    required this.label,
-    required this.colors,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final String label;
-  final List<Color> colors;
-  final Color selected;
-  final ValueChanged<Color> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final outline = Theme.of(context).colorScheme.outline;
-    // A cor atual aparece mesmo se não estiver na paleta (salva antes).
-    final options = colors.any((c) => c.toARGB32() == selected.toARGB32())
-        ? colors
-        : [selected, ...colors];
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: options.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final color = options[index];
-          final isSelected = color.toARGB32() == selected.toARGB32();
-          final check =
-              ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-              ? Colors.white
-              : Colors.black;
-          return Semantics(
-            button: true,
-            selected: isSelected,
-            label: '$label ${index + 1}',
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => onSelected(color),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected ? check : outline,
-                    width: isSelected ? 3 : 1,
-                  ),
-                ),
-                child: isSelected
-                    ? Icon(Icons.check, size: 20, color: check)
-                    : null,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FontPicker extends StatelessWidget {
-  const _FontPicker({required this.selected, required this.onSelected});
-
-  final BannerFont selected;
-  final ValueChanged<BannerFont> onSelected;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final font in BannerFont.values)
-        ChoiceChip(
-          label: Text(
-            font.family,
-            style: font.apply(const TextStyle(fontSize: 15)),
-          ),
-          selected: font == selected,
-          onSelected: (_) => onSelected(font),
-        ),
-    ],
-  );
-}
-
-class _ScaleSlider extends StatelessWidget {
-  const _ScaleSlider({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final double value;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      ),
-      Expanded(
-        flex: 2,
-        child: Slider(
-          value: value,
-          min: BannerStyle.minScale,
-          max: BannerStyle.maxScale,
-          divisions: 14,
-          label: '${(value * 100).round()}%',
-          onChanged: onChanged,
-        ),
-      ),
-    ],
   );
 }

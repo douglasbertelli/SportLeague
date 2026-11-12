@@ -8,6 +8,7 @@ import 'package:sport_league/core/storage/preferences_provider.dart';
 import 'package:sport_league/features/banners/domain/banner_design.dart';
 import 'package:sport_league/features/banners/presentation/banner_canvas.dart';
 import 'package:sport_league/features/banners/presentation/banner_editor_page.dart';
+import 'package:sport_league/features/banners/presentation/banner_style_tab.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/plans/domain/plan_status.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
@@ -271,6 +272,83 @@ void main() {
       final saved = _offlineStyle.copyWith(pattern: pattern);
       expect(BannerStyle.fromJson(saved.toJson(), _offlineStyle), saved);
     }
+  });
+
+  testWidgets('aba Estilo: combinações, cores, fontes e imagem de fundo', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final team = BannerStyle.forTeam(const Color(0xFF1E88E5));
+    var style = team.copyWith(
+      titleFont: BannerFont.dmSans,
+      bodyFont: BannerFont.dmSans,
+    );
+    var picked = 0;
+
+    Future<void> pump() => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) => BannerStyleTab(
+              style: style,
+              teamStyle: team,
+              backgroundPhoto: null,
+              onPickBackground: () => picked++,
+              onChanged: (value) => setState(() => style = value),
+            ),
+          ),
+        ),
+      ),
+    );
+    await pump();
+
+    // Combinação "Invertido": o fundo vira a cor do time.
+    await tester.tap(find.bySemanticsLabel('Combinação Invertido'));
+    await tester.pump();
+    expect(style.background, team.accent);
+    expect(style.text, team.onAccent);
+
+    // Uma paleta só: escolhe "Texto" e toca no branco (o 3º da paleta).
+    await tester.tap(find.text('Texto'));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Cor texto 3'));
+    await tester.pump();
+    expect(style.text, Colors.white);
+    expect(style.background, team.accent);
+
+    // Fundo pela miniatura (rolando a fila de fundos).
+    await tester.dragUntilVisible(
+      find.bySemanticsLabel('Fundo Campo'),
+      find.bySemanticsLabel('Fundo Liso'),
+      const Offset(-120, 0),
+    );
+    await tester.tap(find.bySemanticsLabel('Fundo Campo'));
+    await tester.pump();
+    expect(style.pattern, BannerPattern.pitch);
+
+    // A imagem de fundo agora fica nesta aba.
+    await tester.ensureVisible(find.text('Imagem de fundo'));
+    await tester.tap(find.text('Imagem de fundo'));
+    expect(picked, 1);
+
+    // Tamanho do texto, não do título, depois de trocar para "Textos".
+    await tester.ensureVisible(find.text('Textos'));
+    await tester.tap(find.text('Textos'));
+    await tester.pump();
+    await tester.ensureVisible(find.byType(Slider));
+    await tester.drag(find.byType(Slider), const Offset(200, 0));
+    await tester.pump();
+    expect(style.bodyScale, greaterThan(1));
+    expect(style.titleScale, 1);
+
+    // Mostrar: tira a marca.
+    await tester.ensureVisible(find.text('Marca SportLeague'));
+    await tester.tap(find.text('Marca SportLeague'));
+    await tester.pump();
+    expect(style.showBrand, isFalse);
   });
 
   test('o banner é recurso do plano', () {
