@@ -341,72 +341,117 @@ void paintTactics(Canvas canvas, Size size, Color accent) {
   ]);
 }
 
-/// O escanteio: a meia-lua do canto e a bandeirinha, embaixo à esquerda, e
-/// o outro canto no alto à direita.
+/// O escanteio: o canto do campo visto de cima, embaixo à esquerda, com a
+/// meia-lua e a bola, a linha de fundo com a área, a pequena área e o gol,
+/// e a bandeirinha de pé no canto.
 void paintCorner(Canvas canvas, Size size, Color accent) {
+  final w = size.width;
+  // Faixas do gramado, para ler como campo.
+  const bands = 8;
+  final band = size.height / bands;
+  final mow = Paint()..color = accent.withValues(alpha: 0.05);
+  for (var i = 0; i < bands; i += 2) {
+    canvas.drawRect(Rect.fromLTWH(0, i * band, w, band), mow);
+  }
+
   final line = Paint()
-    ..color = accent.withValues(alpha: 0.35)
+    ..color = accent.withValues(alpha: 0.4)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3;
-  const inset = 18.0;
-  final radius = size.width * 0.2;
-
-  // Canto de baixo: linhas laterais e a meia-lua.
+  const inset = 22.0;
   final corner = Offset(inset, size.height - inset);
+
+  // Linha lateral (subindo) e linha de fundo (para a direita).
   canvas
     ..drawLine(Offset(inset, 0), corner, line)
-    ..drawLine(corner, Offset(size.width, corner.dy), line)
+    ..drawLine(corner, Offset(w, corner.dy), line);
+
+  // A meia-lua do escanteio e a bola em cima dela.
+  final arc = w * 0.12;
+  canvas.drawArc(
+    Rect.fromCircle(center: corner, radius: arc),
+    -pi / 2,
+    pi / 2,
+    false,
+    line,
+  );
+  final ball = corner + Offset.fromDirection(-pi / 4, arc);
+  canvas
+    ..drawCircle(ball, 7, Paint()..color = accent.withValues(alpha: 0.85))
+    ..drawPath(
+      _closed(_polygon(ball, 3, 5, -pi / 2)),
+      Paint()..color = accent.withValues(alpha: 0.3),
+    );
+
+  // A grande área, a pequena área e o gol, na linha de fundo à direita.
+  final penaltyDepth = w * 0.36;
+  final goalAreaDepth = w * 0.13;
+  canvas
+    ..drawRect(
+      Rect.fromLTRB(w * 0.46, corner.dy - penaltyDepth, w + 4, corner.dy),
+      line,
+    )
+    ..drawRect(
+      Rect.fromLTRB(w * 0.76, corner.dy - goalAreaDepth, w + 4, corner.dy),
+      line,
+    )
+    ..drawRect(
+      Rect.fromLTRB(w * 0.88, corner.dy, w + 4, corner.dy + 12),
+      line..strokeWidth = 2,
+    );
+  line.strokeWidth = 3;
+  // A marca do pênalti e a meia-lua da área.
+  final spot = Offset(w * 1.02, corner.dy - w * 0.24);
+  canvas
+    ..drawCircle(
+      Offset(w * 0.98, spot.dy),
+      3.5,
+      Paint()..color = accent.withValues(alpha: 0.5),
+    )
     ..drawArc(
-      Rect.fromCircle(center: corner, radius: radius),
-      -pi / 2,
-      pi / 2,
+      Rect.fromCircle(center: spot, radius: w * 0.2),
+      pi * 1.12,
+      pi * 0.38,
       false,
       line,
     );
 
-  // A bandeirinha.
-  final poleTop = corner - Offset(0, size.width * 0.4);
+  // A bandeirinha: o mastro inclinado para fora do campo e a bandeira
+  // tremulando.
+  final poleTop = corner + Offset(-w * 0.05, -w * 0.34);
   canvas.drawLine(
     corner,
     poleTop,
     Paint()
-      ..color = accent.withValues(alpha: 0.6)
-      ..strokeWidth = 3
+      ..color = accent.withValues(alpha: 0.9)
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round,
   );
-  final flag = size.width * 0.2;
+  final flagWidth = w * 0.2;
+  final flagHeight = w * 0.13;
   canvas.drawPath(
     Path()
       ..moveTo(poleTop.dx, poleTop.dy)
-      ..quadraticBezierTo(
-        poleTop.dx + flag * 0.5,
-        poleTop.dy + flag * 0.15,
-        poleTop.dx + flag,
-        poleTop.dy + flag * 0.05,
+      ..cubicTo(
+        poleTop.dx + flagWidth * 0.35,
+        poleTop.dy - flagHeight * 0.2,
+        poleTop.dx + flagWidth * 0.65,
+        poleTop.dy + flagHeight * 0.2,
+        poleTop.dx + flagWidth,
+        poleTop.dy + flagHeight * 0.05,
       )
-      ..lineTo(poleTop.dx + flag * 0.9, poleTop.dy + flag * 0.6)
-      ..quadraticBezierTo(
-        poleTop.dx + flag * 0.45,
-        poleTop.dy + flag * 0.7,
-        poleTop.dx,
-        poleTop.dy + flag * 0.55,
+      ..lineTo(poleTop.dx + flagWidth * 0.94, poleTop.dy + flagHeight)
+      ..cubicTo(
+        poleTop.dx + flagWidth * 0.6,
+        poleTop.dy + flagHeight * 1.15,
+        poleTop.dx + flagWidth * 0.3,
+        poleTop.dy + flagHeight * 0.75,
+        poleTop.dx + flagWidth * 0.03,
+        poleTop.dy + flagHeight * 0.95,
       )
       ..close(),
-    Paint()..color = accent.withValues(alpha: 0.5),
+    Paint()..color = accent.withValues(alpha: 0.75),
   );
-
-  // O canto do alto, do outro lado, para equilibrar.
-  final other = Offset(size.width - inset, inset);
-  canvas
-    ..drawLine(Offset(0, other.dy), other, line)
-    ..drawLine(other, Offset(other.dx, size.height * 0.35), line)
-    ..drawArc(
-      Rect.fromCircle(center: other, radius: radius),
-      pi / 2,
-      pi / 2,
-      false,
-      line,
-    );
 }
 
 /// O meio-campo de perto: o grande círculo central, a linha do meio e as
