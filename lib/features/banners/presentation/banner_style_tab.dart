@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/banner_design.dart';
 import 'banner_canvas.dart';
+import 'banner_photo_tile.dart';
 
 /// Cores oferecidas: as do time primeiro, depois o branco, os pretos e as
 /// cores do app.
@@ -198,8 +199,11 @@ class _BannerStyleTabState extends State<BannerStyleTab> {
           ),
         ),
         const SizedBox(height: 8),
-        _BackgroundPhotoTile(
+        BannerPhotoTile(
           photo: widget.backgroundPhoto,
+          icon: Icons.wallpaper_outlined,
+          title: 'Imagem de fundo',
+          emptySubtitle: 'Uma foto atrás de tudo, escurecida',
           onTap: widget.onPickBackground,
         ),
         if (widget.backgroundPhoto != null)
@@ -542,42 +546,6 @@ class _PatternThumb extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BackgroundPhotoTile extends StatelessWidget {
-  const _BackgroundPhotoTile({required this.photo, required this.onTap});
-
-  final ImageProvider? photo;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox.square(
-          dimension: 44,
-          child: switch (photo) {
-            final photo? => Image(image: photo, fit: BoxFit.cover),
-            null => ColoredBox(
-              color: scheme.surfaceContainerHighest,
-              child: Icon(Icons.wallpaper_outlined, color: scheme.primary),
-            ),
-          },
-        ),
-      ),
-      title: const Text('Imagem de fundo'),
-      subtitle: Text(
-        photo == null
-            ? 'Uma foto atrás de tudo, escurecida'
-            : 'Toque para trocar ou remover',
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     );
   }
 }

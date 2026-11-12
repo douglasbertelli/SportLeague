@@ -11,12 +11,8 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/theme/app_color_provider.dart';
-import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../athletes/data/athlete_repository.dart';
-import '../../athletes/domain/athlete.dart';
-import '../../games/data/lineup_repository.dart';
 import '../../games/data/player_stats_repository.dart';
 import '../../games/presentation/share_result.dart' show capturePng;
 import '../../plans/domain/plan_status.dart';
@@ -26,6 +22,8 @@ import '../../teams/domain/team.dart';
 import '../domain/banner_design.dart';
 import 'banner_canvas.dart';
 import 'banner_style_tab.dart';
+import 'banner_template_tab.dart';
+import 'banner_texts_tab.dart';
 
 /// Confere o Premium e abre o editor de banners do time ativo.
 Future<void> openBannerEditor(
@@ -159,13 +157,7 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
   /// que ele é aberto. Trocar de modelo e voltar mantém o que foi editado.
   Map<BannerField, TextEditingController> _fieldsOf(BannerTemplate template) =>
       _controllers.putIfAbsent(template, () {
-        final texts = defaultTexts(
-          template,
-          teamName: _team.name,
-          teamId: _team.id,
-          instagram: _team.instagram,
-          game: widget.args?.game,
-        );
+        final texts = _defaultsOf(template);
         return {
           for (final field in template.fields)
             field: TextEditingController(text: texts[field] ?? '')
@@ -173,10 +165,33 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
         };
       });
 
-  BannerTexts get _texts => {
-    for (final MapEntry(:key, :value) in _fieldsOf(_template).entries)
-      key: value.text,
-  };
+  BannerTexts get _texts => _textsOf(_template);
+
+  BannerTexts _defaultsOf(BannerTemplate template) => defaultTexts(
+    template,
+    teamName: _team.name,
+    teamId: _team.id,
+    instagram: _team.instagram,
+    game: widget.args?.game,
+  );
+
+  /// Os textos do [template]: os editados ou, se ainda não foi aberto, os
+  /// iniciais (as miniaturas da aba Modelo não criam os campos).
+  BannerTexts _textsOf(BannerTemplate template) =>
+      switch (_controllers[template]) {
+        final fields? => {
+          for (final MapEntry(:key, :value) in fields.entries) key: value.text,
+        },
+        null => _defaultsOf(template),
+      };
+
+  /// Volta os textos do modelo atual aos iniciais.
+  void _resetTexts() {
+    final defaults = _defaultsOf(_template);
+    for (final MapEntry(:key, :value) in _fieldsOf(_template).entries) {
+      value.text = defaults[key] ?? '';
+    }
+  }
 
   /// No resultado, os gols e o craque da súmula (se já foi lançada).
   Future<void> _fillHighlight() async {
@@ -340,21 +355,28 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
             Expanded(
               child: TabBarView(
                 children: [
-                  _TemplateTab(
+                  BannerTemplateTab(
                     template: _template,
-                    format: _style.format,
+                    style: _style,
+                    textsOf: _textsOf,
+                    teamName: _team.name,
+                    teamLogoUrl: _team.logoUrl,
+                    opponentLogoUrl: game?.opponentLogoFor(_team.id!),
+                    featuredPhoto: _featuredPhoto,
+                    backgroundPhoto: _backgroundPhoto,
                     onTemplate: (template) =>
                         setState(() => _template = template),
                     onFormat: (format) =>
                         _setStyle(_style.copyWith(format: format)),
                   ),
-                  _TextsTab(
+                  BannerTextsTab(
                     template: _template,
                     controllers: _fieldsOf(_template),
                     team: _team,
                     gameId: game?.id,
                     featuredPhoto: _featuredPhoto,
-                    onPickPhoto: _pickPhoto,
+                    onPickFeaturedPhoto: () => _pickPhoto(featured: true),
+                    onReset: _resetTexts,
                     onAthletePhoto: (url) => setState(
                       () => _featuredPhoto = url == null
                           ? null
@@ -405,345 +427,4 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
       ),
     );
   }
-}
-
-class _TemplateTab extends StatelessWidget {
-  const _TemplateTab({
-    required this.template,
-    required this.format,
-    required this.onTemplate,
-    required this.onFormat,
-  });
-
-  final BannerTemplate template;
-  final BannerFormat format;
-  final ValueChanged<BannerTemplate> onTemplate;
-  final ValueChanged<BannerFormat> onFormat;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('Formato', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        SegmentedButton<BannerFormat>(
-          showSelectedIcon: false,
-          segments: [
-            for (final format in BannerFormat.values)
-              ButtonSegment(
-                value: format,
-                label: Text('${format.label} ${format.ratio}'),
-              ),
-          ],
-          selected: {format},
-          onSelectionChanged: (selected) => onFormat(selected.first),
-        ),
-        const SizedBox(height: 20),
-        Text('Modelo', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 2.4,
-          children: [
-            for (final option in BannerTemplate.values)
-              _TemplateCard(
-                template: option,
-                selected: option == template,
-                onTap: () => onTemplate(option),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TemplateCard extends StatelessWidget {
-  const _TemplateCard({
-    required this.template,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final BannerTemplate template;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: Material(
-        color: selected ? colors.primaryContainer : colors.surfaceContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? colors.primary : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Icon(template.icon, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        template.label,
-                        style: Theme.of(context).textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        template.description,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TextsTab extends ConsumerWidget {
-  const _TextsTab({
-    required this.template,
-    required this.controllers,
-    required this.team,
-    required this.gameId,
-    required this.featuredPhoto,
-    required this.onPickPhoto,
-    required this.onAthletePhoto,
-  });
-
-  final BannerTemplate template;
-  final Map<BannerField, TextEditingController> controllers;
-  final Team team;
-  final String? gameId;
-  final ImageProvider? featuredPhoto;
-  final Future<void> Function({required bool featured}) onPickPhoto;
-  final ValueChanged<String?> onAthletePhoto;
-
-  Future<List<Athlete>> _athletes(WidgetRef ref) =>
-      ref.read(activeAthletesProvider(team.id!).future);
-
-  /// Os convocados: a escalação do jogo (titulares primeiro) ou o elenco.
-  Future<void> _fillNames(
-    BuildContext context,
-    WidgetRef ref, {
-    required bool lineup,
-  }) async {
-    try {
-      final athletes = await _athletes(ref);
-      List<String> names;
-      if (lineup) {
-        final entries = [
-          for (final entry in await ref.read(
-            gameLineupProvider(gameId!).future,
-          ))
-            if (entry.teamId == team.id) entry,
-        ]..sort((a, b) => (b.starter ? 1 : 0) - (a.starter ? 1 : 0));
-        final byId = {for (final athlete in athletes) athlete.id: athlete};
-        names = [
-          for (final entry in entries)
-            if (byId[entry.athleteId] case final athlete?) _nameOf(athlete),
-        ];
-        if (names.isEmpty && context.mounted) {
-          showErrorSnackBar(context, 'A escalação deste jogo está vazia.');
-          return;
-        }
-      } else {
-        names = [for (final athlete in athletes) _nameOf(athlete)];
-      }
-      if (context.mounted) {
-        controllers[BannerField.names]?.text = names.join('\n');
-      }
-    } catch (_) {
-      if (context.mounted) {
-        showErrorSnackBar(context, 'Não foi possível carregar os atletas.');
-      }
-    }
-  }
-
-  static String _nameOf(Athlete athlete) => switch (athlete.jerseyNumber) {
-    final number? => '$number · ${athlete.displayName}',
-    null => athlete.displayName,
-  };
-
-  /// O aniversariante escolhido no elenco: o nome e a foto.
-  Future<void> _pickAthlete(BuildContext context, WidgetRef ref) async {
-    List<Athlete> athletes;
-    try {
-      athletes = await _athletes(ref);
-    } catch (_) {
-      if (context.mounted) {
-        showErrorSnackBar(context, 'Não foi possível carregar os atletas.');
-      }
-      return;
-    }
-    if (!context.mounted) return;
-    final athlete = await showAppSheet<Athlete>(
-      context,
-      builder: (sheetContext) => AppSheet(
-        title: 'Aniversariante',
-        body: athletes.isEmpty
-            ? const Text('O time ainda não tem atletas.')
-            : ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.5,
-                ),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    for (final athlete in athletes)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          foregroundImage: switch (athlete.photoUrl) {
-                            final url? => NetworkImage(url),
-                            null => null,
-                          },
-                          child: Text(
-                            athlete.displayName.isEmpty
-                                ? '?'
-                                : athlete.displayName[0].toUpperCase(),
-                          ),
-                        ),
-                        title: Text(athlete.displayName),
-                        onTap: () => Navigator.of(sheetContext).pop(athlete),
-                      ),
-                  ],
-                ),
-              ),
-        actions: const [SheetBackButton(label: 'Fechar')],
-      ),
-    );
-    if (athlete == null || !context.mounted) return;
-    controllers[BannerField.person]?.text = athlete.displayName;
-    onAthletePhoto(athlete.photoUrl);
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (template == BannerTemplate.callUp)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (gameId != null)
-                  ActionChip(
-                    avatar: const Icon(Icons.format_list_numbered),
-                    label: const Text('Usar a escalação do jogo'),
-                    onPressed: () => _fillNames(context, ref, lineup: true),
-                  ),
-                ActionChip(
-                  avatar: const Icon(Icons.groups_outlined),
-                  label: const Text('Usar o elenco todo'),
-                  onPressed: () => _fillNames(context, ref, lineup: false),
-                ),
-              ],
-            ),
-          ),
-        if (template == BannerTemplate.birthday)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: ActionChip(
-              avatar: const Icon(Icons.person_search_outlined),
-              label: const Text('Escolher atleta do elenco'),
-              onPressed: () => _pickAthlete(context, ref),
-            ),
-          ),
-        for (final field in template.fields)
-          if (controllers[field] case final controller?)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: TextField(
-                controller: controller,
-                minLines: 1,
-                maxLines: field.lines,
-                keyboardType: field.number
-                    ? TextInputType.number
-                    : field.lines > 1
-                    ? TextInputType.multiline
-                    : TextInputType.text,
-                inputFormatters: field.number
-                    ? [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(2),
-                      ]
-                    : null,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: field.label,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ),
-        const SizedBox(height: 4),
-        if (template.featuredPhoto)
-          _PhotoTile(
-            icon: Icons.add_a_photo_outlined,
-            title: template == BannerTemplate.birthday
-                ? 'Foto do aniversariante'
-                : 'Foto do time campeão',
-            selected: featuredPhoto != null,
-            onTap: () => onPickPhoto(featured: true),
-          ),
-      ],
-    );
-  }
-}
-
-class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({
-    required this.icon,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icon),
-    title: Text(title),
-    subtitle: Text(selected ? 'Toque para trocar ou remover' : 'Nenhuma'),
-    trailing: selected
-        ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
-        : const Icon(Icons.chevron_right),
-    onTap: onTap,
-  );
 }

@@ -9,6 +9,8 @@ import 'package:sport_league/features/banners/domain/banner_design.dart';
 import 'package:sport_league/features/banners/presentation/banner_canvas.dart';
 import 'package:sport_league/features/banners/presentation/banner_editor_page.dart';
 import 'package:sport_league/features/banners/presentation/banner_style_tab.dart';
+import 'package:sport_league/features/banners/presentation/banner_template_tab.dart';
+import 'package:sport_league/features/banners/presentation/banner_texts_tab.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/plans/domain/plan_status.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
@@ -192,14 +194,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final canvas = find.byType(BannerCanvas);
+    // A prévia grande é a primeira; as miniaturas da aba Modelo vêm depois.
+    final canvas = find.byType(BannerCanvas).first;
+    Finder inPreview(String text) =>
+        find.descendant(of: canvas, matching: find.text(text));
+    expect(inPreview('FIM DE JOGO'), findsOneWidget);
+    expect(inPreview('VITÓRIA'), findsOneWidget);
+    // Uma miniatura de cada modelo, além da prévia.
     expect(
-      find.descendant(of: canvas, matching: find.text('FIM DE JOGO')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: canvas, matching: find.text('VITÓRIA')),
-      findsOneWidget,
+      find.byType(BannerCanvas),
+      findsNWidgets(BannerTemplate.values.length + 1),
     );
 
     // Editar o título muda a prévia na hora.
@@ -207,23 +211,60 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Título'), 'GOLEADA');
     await tester.pump();
-    expect(
-      find.descendant(of: canvas, matching: find.text('GOLEADA')),
-      findsOneWidget,
-    );
+    expect(inPreview('GOLEADA'), findsOneWidget);
 
-    // Trocar de modelo.
-    await tester.tap(find.text('Modelo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Convocação'));
+    // Título pronto e placar com o +.
+    await tester.tap(find.text('VITÓRIA!'));
     await tester.pump();
-    expect(
-      find.descendant(of: canvas, matching: find.text('CONVOCADOS')),
-      findsOneWidget,
+    expect(inPreview('VITÓRIA!'), findsOneWidget);
+    final textsList = find
+        .descendant(
+          of: find.byType(BannerTextsTab),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final plusOne = find.byTooltip('Mais um gol de Unidos da Vila');
+    await tester.scrollUntilVisible(plusOne, 80, scrollable: textsList);
+    await tester.tap(plusOne);
+    await tester.pump();
+    expect(inPreview('4 × 1'), findsOneWidget);
+
+    // Restaurar volta os textos iniciais do modelo.
+    final reset = find.text('Restaurar');
+    await tester.scrollUntilVisible(reset, -80, scrollable: textsList);
+    await tester.tap(reset);
+    await tester.pump();
+    expect(inPreview('FIM DE JOGO'), findsOneWidget);
+    expect(inPreview('3 × 1'), findsOneWidget);
+
+    // Trocar de modelo pela miniatura.
+    await tester.tap(find.widgetWithText(Tab, 'Modelo'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BannerTemplateTab), findsOneWidget);
+    final callUp = find.bySemanticsLabel('Modelo Convocação');
+    await tester.ensureVisible(callUp);
+    await tester.pump();
+    await tester.tap(callUp);
+    await tester.pump();
+    expect(inPreview('CONVOCADOS'), findsOneWidget);
+
+    // Na convocação, o contador dos nomes.
+    await tester.tap(find.widgetWithText(Tab, 'Textos'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Nenhum convocado'),
+      80,
+      scrollable: textsList,
     );
+    expect(find.text('Nenhum convocado'), findsOneWidget);
+    await tester.tap(find.widgetWithText(Tab, 'Modelo'));
+    await tester.pumpAndSettle();
 
     // O estilo escolhido fica salvo para o time.
-    await tester.tap(find.text('Story 9:16'));
+    final story = find.bySemanticsLabel('Formato Story 9:16');
+    await tester.ensureVisible(story);
+    await tester.pump();
+    await tester.tap(story);
     await tester.pump();
     expect(tester.getSize(canvas).height, greaterThan(0));
     expect(
