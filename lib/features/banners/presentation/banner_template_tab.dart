@@ -53,19 +53,25 @@ class BannerTemplateTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
         heading('Formato'),
-        Row(
-          children: [
-            for (final format in BannerFormat.values) ...[
-              if (format != BannerFormat.values.first) const SizedBox(width: 8),
-              Expanded(
-                child: _FormatCard(
-                  format: format,
-                  selected: format == style.format,
-                  onTap: () => onFormat(format),
+        // Os três cartões com a mesma altura, mesmo quando a dica de um
+        // cabe numa linha e a dos outros quebra em duas.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final format in BannerFormat.values) ...[
+                if (format != BannerFormat.values.first)
+                  const SizedBox(width: 8),
+                Expanded(
+                  child: _FormatCard(
+                    format: format,
+                    selected: format == style.format,
+                    onTap: () => onFormat(format),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         heading('Modelo'),
         LayoutBuilder(
@@ -125,7 +131,7 @@ class _FormatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    const height = 46.0;
+    const height = 52.0;
     final width = height * format.size.width / format.size.height;
     return Semantics(
       button: true,
@@ -162,10 +168,18 @@ class _FormatCard extends StatelessWidget {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        format.ratio,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      // No retângulo estreito do Story, "9:16" encolhe em vez
+                      // de quebrar a linha.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          format.ratio,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),

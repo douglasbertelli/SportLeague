@@ -392,6 +392,42 @@ void main() {
     expect(style.showBrand, isFalse);
   });
 
+  testWidgets('os cartões de formato têm a mesma altura e a proporção cabe', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BannerTemplateTab(
+            template: BannerTemplate.gameDay,
+            style: _offlineStyle,
+            textsOf: (template) => defaultTexts(template, teamName: 'Time'),
+            teamName: 'Time',
+            onTemplate: (_) {},
+            onFormat: (_) {},
+          ),
+        ),
+      ),
+    );
+    final heights = {
+      for (final format in BannerFormat.values)
+        tester
+            .getSize(
+              find.bySemanticsLabel('Formato ${format.label} ${format.ratio}'),
+            )
+            .height,
+    };
+    expect(heights, hasLength(1));
+    // "9:16" numa linha só, dentro do retângulo estreito do Story.
+    final ratio = find.text('9:16');
+    expect(tester.getSize(ratio).height, lessThan(20));
+    expect(tester.takeException(), isNull);
+  });
+
   test('o banner é recurso do plano', () {
     expect(PlanFeature.fromKey('banners'), PlanFeature.banners);
     final free = PlanStatus.fromMap({
