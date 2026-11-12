@@ -74,6 +74,8 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Escolha uma imagem da galeria para o logo do seu time.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Salve na galeria os banners que você cria para o seu time.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use o Face ID para entrar no SportLeague.</string>
 	<key>NSCameraUsageDescription</key>

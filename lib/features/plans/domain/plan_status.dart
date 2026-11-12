@@ -21,6 +21,11 @@ enum PlanFeature {
     'tactical_lineup',
     'Escalação no campo',
     'Formações e jogadores escolhidos em cada posição do campo',
+  ),
+  banners(
+    'banners',
+    'Banners do time',
+    'Banners para as redes com modelos, cores, fontes e o escudo do time',
   );
 
   const PlanFeature(this.key, this.label, this.description);
@@ -180,6 +185,10 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
   PlanFeature.tacticalLineup =>
     'A escalação no campo, com formações e o jogador escolhido em cada '
         'posição, é do plano Premium.',
+  PlanFeature.banners =>
+    'Os banners do time (anúncio de jogo, resultado, convocação, '
+        'aniversariante, campeão), com as cores e fontes que você escolher, '
+        'são do plano Premium.',
 };
 
 /// Mensagem do limite no Elite, combinado com cada cliente.

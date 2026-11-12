@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../athletes/data/athlete_repository.dart';
+import '../../banners/presentation/banner_editor_page.dart';
 import '../../games/data/dispute_repository.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
@@ -94,6 +95,14 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
               subtitle: 'Código para os jogadores e pedidos para entrar',
               onTap: () => context.push(Routes.teamInvites),
             ),
+            // Banners do time ativo, para quem administra (Premium).
+            if (ref.watch(canManageTeamProvider))
+              _ActionTile(
+                icon: Icons.auto_awesome_outlined,
+                title: 'Banners',
+                subtitle: 'Jogo, resultado, convocação e mais para as redes',
+                onTap: () => openBannerEditor(context, ref),
+              ),
           ]
         : [
             _ActionTile(

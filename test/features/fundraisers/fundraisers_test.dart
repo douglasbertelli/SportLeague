@@ -12,6 +12,7 @@ import 'package:sport_league/features/fundraisers/presentation/fundraiser_form_p
 import 'package:sport_league/features/fundraisers/presentation/fundraiser_page.dart';
 import 'package:sport_league/features/home/presentation/app_drawer.dart';
 import 'package:sport_league/features/profile/domain/profile.dart';
+import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/team.dart';
 
 import '../teams/fakes.dart';
@@ -335,10 +336,17 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [canManageTeamProvider.overrideWithValue(true)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
     await tester.tap(find.byTooltip('Menu'));
     await tester.pumpAndSettle();
     expect(find.text('Douglas Admin'), findsOneWidget);
+    // Quem administra o time ativo também vê os banners.
+    expect(find.text('Banners'), findsOneWidget);
     await tester.tap(find.text('Vaquinha'));
     await tester.pumpAndSettle();
     expect(find.text('Tela da vaquinha'), findsOneWidget);

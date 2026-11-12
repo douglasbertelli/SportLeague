@@ -8,6 +8,8 @@ import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../banners/domain/banner_design.dart';
+import '../../banners/presentation/banner_editor_page.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/team_logo.dart';
 import '../data/dispute_repository.dart';
@@ -39,6 +41,7 @@ enum _GameAction {
   lineup,
   presence,
   share,
+  banner,
 }
 
 /// Card do amistoso do ponto de vista do time ativo ([viewerTeamId]): o time
@@ -97,6 +100,8 @@ class _GameCardState extends ConsumerState<GameCard> {
         widget.stage == GameStage.played &&
         _game.hasScore)
       _GameAction.share,
+    // O dono monta um banner do jogo (anúncio, resultado, convocação).
+    if (_canManage && _game.status != GameStatus.canceled) _GameAction.banner,
   ];
 
   List<_GameAction> _statusActions(ScoreDispute? dispute) {
@@ -169,6 +174,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.lineup => Icons.format_list_numbered,
                     _GameAction.presence => Icons.how_to_reg_outlined,
                     _GameAction.share => Icons.share_outlined,
+                    _GameAction.banner => Icons.auto_awesome_outlined,
                   }),
                   iconColor: action == _GameAction.cancel ? colors.error : null,
                   textColor: action == _GameAction.cancel ? colors.error : null,
@@ -184,6 +190,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                     _GameAction.lineup => 'Escalação',
                     _GameAction.presence => 'Pedir confirmação de presença',
                     _GameAction.share => 'Compartilhar resultado',
+                    _GameAction.banner => 'Criar banner',
                   }),
                   onTap: () => Navigator.of(context).pop(action),
                 ),
@@ -296,6 +303,17 @@ class _GameCardState extends ConsumerState<GameCard> {
     if (action == _GameAction.edit) {
       await context.push(Routes.editGame, extra: _game);
       return;
+    }
+    if (action == _GameAction.banner) {
+      final played = widget.stage == GameStage.played && _game.hasScore;
+      return openBannerEditor(
+        context,
+        ref,
+        args: BannerArgs(
+          template: played ? BannerTemplate.result : BannerTemplate.gameDay,
+          game: _game,
+        ),
+      );
     }
     if (action == _GameAction.share) {
       return shareGameResult(
