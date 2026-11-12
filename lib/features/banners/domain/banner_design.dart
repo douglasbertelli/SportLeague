@@ -267,7 +267,16 @@ enum BannerPattern {
   waves('Ondas'),
   checkers('Xadrez'),
   glow('Brilho'),
-  honeycomb('Colmeia');
+  honeycomb('Colmeia'),
+  // Tema de futebol.
+  ball('Bola'),
+  net('Rede'),
+  goal('Gol'),
+  stadium('Estádio'),
+  grass('Gramado'),
+  tactics('Prancheta'),
+  corner('Escanteio'),
+  centerCircle('Meio-campo');
 
   const BannerPattern(this.label);
 
@@ -303,6 +312,54 @@ enum BannerFont {
       values.where((font) => font.name == name).firstOrNull ?? fallback;
 }
 
+/// A marca SportLeague no rodapé do banner.
+enum BannerBrand {
+  none('Sem marca'),
+  logo('Logo'),
+  symbol('Símbolo');
+
+  const BannerBrand(this.label);
+
+  final String label;
+
+  static BannerBrand fromName(String? name) =>
+      values.where((brand) => brand.name == name).firstOrNull ?? logo;
+}
+
+/// De onde vêm as cores da marca: o desenho (o "S", verde no original) e as
+/// letras do logo.
+enum BannerBrandColor {
+  /// O desenho na cor de destaque e as letras na cor do texto: combina com
+  /// a arte.
+  art('Da arte'),
+
+  /// Tudo na cor do texto, discreto.
+  text('Uma cor'),
+
+  /// O verde da marca e as letras na cor do texto.
+  original('Original');
+
+  const BannerBrandColor(this.label);
+
+  final String label;
+
+  /// O verde do símbolo nos arquivos do logo.
+  static const brandGreen = Color(0xFF07F469);
+
+  /// As cores do desenho e das letras com o [style].
+  ({Color mark, Color word}) resolve(BannerStyle style) {
+    final word = style.text.withValues(alpha: 0.85);
+    return switch (this) {
+      art => (mark: style.accent, word: word),
+      text => (mark: word, word: word),
+      original => (mark: brandGreen, word: word),
+    };
+  }
+
+  static BannerBrandColor fromName(String? name) =>
+      values.where((color) => color.name == name).firstOrNull ?? art;
+}
+
 /// Cores, fontes e o resto do visual. Fica salvo no aparelho por time.
 @immutable
 class BannerStyle {
@@ -317,7 +374,8 @@ class BannerStyle {
     this.titleScale = 1,
     this.bodyScale = 1,
     this.showLogo = true,
-    this.showBrand = true,
+    this.brand = BannerBrand.logo,
+    this.brandColor = BannerBrandColor.art,
     this.backgroundDim = 0.55,
   });
 
@@ -359,8 +417,14 @@ class BannerStyle {
   /// Mostra o escudo do time (e o do adversário, quando houver).
   final bool showLogo;
 
-  /// Mostra a marca SportLeague no rodapé.
-  final bool showBrand;
+  /// Qual marca SportLeague vai no rodapé (o logo, só o símbolo ou nada).
+  final BannerBrand brand;
+
+  /// De onde vêm as cores da marca.
+  final BannerBrandColor brandColor;
+
+  /// Mostra alguma marca no rodapé.
+  bool get showBrand => brand != BannerBrand.none;
 
   /// Quanto a imagem de fundo escurece com a cor do fundo (0 a 0,9).
   final double backgroundDim;
@@ -385,7 +449,8 @@ class BannerStyle {
     double? titleScale,
     double? bodyScale,
     bool? showLogo,
-    bool? showBrand,
+    BannerBrand? brand,
+    BannerBrandColor? brandColor,
     double? backgroundDim,
   }) => BannerStyle(
     background: background ?? this.background,
@@ -398,7 +463,8 @@ class BannerStyle {
     titleScale: titleScale ?? this.titleScale,
     bodyScale: bodyScale ?? this.bodyScale,
     showLogo: showLogo ?? this.showLogo,
-    showBrand: showBrand ?? this.showBrand,
+    brand: brand ?? this.brand,
+    brandColor: brandColor ?? this.brandColor,
     backgroundDim: backgroundDim ?? this.backgroundDim,
   );
 
@@ -413,7 +479,8 @@ class BannerStyle {
     'title_scale': titleScale,
     'body_scale': bodyScale,
     'show_logo': showLogo,
-    'show_brand': showBrand,
+    'brand': brand.name,
+    'brand_color': brandColor.name,
     'background_dim': backgroundDim,
   });
 
@@ -447,7 +514,13 @@ class BannerStyle {
         titleScale: scale('title_scale'),
         bodyScale: scale('body_scale'),
         showLogo: map['show_logo'] as bool? ?? true,
-        showBrand: map['show_brand'] as bool? ?? true,
+        // Antes era só ligar e desligar (o logo).
+        brand: switch (map['brand']) {
+          final String name => BannerBrand.fromName(name),
+          _ when map['show_brand'] == false => BannerBrand.none,
+          _ => BannerBrand.logo,
+        },
+        brandColor: BannerBrandColor.fromName(map['brand_color'] as String?),
         backgroundDim: switch (map['background_dim']) {
           final num value => value.toDouble().clamp(0, 0.9),
           _ => fallback.backgroundDim,

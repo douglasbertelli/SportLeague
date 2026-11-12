@@ -275,15 +275,129 @@ class _BannerStyleTabState extends State<BannerStyleTab> {
               selected: _style.showLogo,
               onSelected: (value) => _change(_style.copyWith(showLogo: value)),
             ),
-            FilterChip(
-              avatar: const Icon(Icons.verified_outlined),
-              label: const Text('Marca SportLeague'),
-              selected: _style.showBrand,
-              onSelected: (value) => _change(_style.copyWith(showBrand: value)),
+          ],
+        ),
+
+        heading('Marca SportLeague'),
+        // Cada opção já desenhada no fundo e nas cores do banner.
+        Row(
+          children: [
+            for (final brand in BannerBrand.values) ...[
+              if (brand != BannerBrand.values.first) const SizedBox(width: 8),
+              Expanded(
+                child: _BrandOption(
+                  label: brand.label,
+                  semanticsLabel: 'Marca ${brand.label}',
+                  background: _style.background,
+                  selected: brand == _style.brand,
+                  onTap: () => _change(_style.copyWith(brand: brand)),
+                  child: brand == BannerBrand.none
+                      ? Icon(
+                          Icons.block,
+                          color: _style.text.withValues(alpha: 0.6),
+                        )
+                      : BannerBrandMark(
+                          style: _style.copyWith(brand: brand),
+                          scale: brand == BannerBrand.logo ? 0.9 : 1.1,
+                        ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (_style.showBrand) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Cores da marca',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final color in BannerBrandColor.values) ...[
+                if (color != BannerBrandColor.values.first)
+                  const SizedBox(width: 8),
+                Expanded(
+                  child: _BrandOption(
+                    label: color.label,
+                    semanticsLabel: 'Cores da marca ${color.label}',
+                    background: _style.background,
+                    selected: color == _style.brandColor,
+                    onTap: () => _change(_style.copyWith(brandColor: color)),
+                    child: BannerBrandMark(
+                      style: _style.copyWith(brandColor: color),
+                      scale: _style.brand == BannerBrand.logo ? 0.9 : 1.1,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Uma opção da marca: a prévia no fundo do banner e o nome embaixo.
+class _BrandOption extends StatelessWidget {
+  const _BrandOption({
+    required this.label,
+    required this.semanticsLabel,
+    required this.background,
+    required this.selected,
+    required this.onTap,
+    required this.child,
+  });
+
+  final String label;
+  final String semanticsLabel;
+  final Color background;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              height: 56,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected ? scheme.primary : scheme.outlineVariant,
+                  width: selected ? 3 : 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: FittedBox(fit: BoxFit.scaleDown, child: child),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: selected ? scheme.primary : null),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
