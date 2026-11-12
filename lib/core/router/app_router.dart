@@ -10,6 +10,8 @@ import '../../features/athletes/presentation/athlete_form_page.dart';
 import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/banners/domain/banner_design.dart';
+import '../../features/banners/presentation/banner_editor_page.dart';
 import '../../features/championships/domain/championship.dart';
 import '../../features/championships/presentation/championship_form_page.dart';
 import '../../features/championships/presentation/championship_page.dart';
@@ -213,6 +215,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const PlayerInvitesPage(),
           ),
           GoRoute(path: 'dues', builder: (_, _) => const DuesPage()),
+          GoRoute(
+            path: 'banners',
+            builder: (_, state) =>
+                BannerEditorPage(args: state.extra as BannerArgs?),
+          ),
           GoRoute(path: 'plans', builder: (_, _) => const PlansPage()),
           GoRoute(path: 'finance', builder: (_, _) => const FinancePage()),
           GoRoute(

@@ -110,4 +110,8 @@ abstract final class Routes {
   /// Escolha de um time para o campeonato; recebe
   /// `ChampionshipTeamPickerArgs` em `extra`.
   static const championshipTeamPicker = '/home/championships/pick-team';
+
+  /// Editor de banners do time ativo (Premium); recebe `BannerArgs` em
+  /// `extra` (modelo e jogo para preencher) ou nada.
+  static const banners = '/home/banners';
 }

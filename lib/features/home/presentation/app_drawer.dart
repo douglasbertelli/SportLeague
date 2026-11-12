@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/plan_gate.dart';
 import '../../profile/domain/profile.dart';
+import '../../teams/data/team_repository.dart';
 
 /// Botão ☰ da barra da home, depois do modo claro/escuro: abre o
 /// [AppDrawer] (que fica no `endDrawer` do Scaffold).
@@ -18,7 +22,7 @@ class AppDrawerButton extends StatelessWidget {
 }
 
 /// Menu lateral (☰ no topo da home): as funcionalidades extras do app.
-/// Os campeonatos, a vaquinha e a mensalidade.
+/// Os campeonatos, a vaquinha, a mensalidade e os banners.
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, required this.profile});
 
@@ -95,6 +99,31 @@ class AppDrawer extends StatelessWidget {
           title: const Text('Mensalidade'),
           subtitle: const Text('Quem pagou o mês e quem está devendo'),
           onTap: () => _open(context, Routes.dues),
+        ),
+        // Banners do time ativo, para quem administra (Premium). O aviso do
+        // plano aparece por cima do menu; liberado, fecha o menu e abre.
+        Consumer(
+          builder: (context, ref, _) => !ref.watch(canManageTeamProvider)
+              ? const SizedBox.shrink()
+              : ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+                  leading: const Icon(Icons.auto_awesome_outlined),
+                  title: const Text('Banners'),
+                  subtitle: const Text(
+                    'Jogo, resultado, convocação e mais para as redes',
+                  ),
+                  onTap: () async {
+                    if (!await ensurePlanAllows(
+                          context,
+                          ref,
+                          PlanFeature.banners,
+                        ) ||
+                        !context.mounted) {
+                      return;
+                    }
+                    _open(context, Routes.banners);
+                  },
+                ),
         ),
       ],
     );
