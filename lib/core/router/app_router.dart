@@ -31,7 +31,6 @@ import '../../features/invites/presentation/invite_player_page.dart';
 import '../../features/invites/presentation/player_invites_page.dart';
 import '../../features/invites/presentation/team_invites_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
-import '../../features/plans/presentation/finance_page.dart';
 import '../../features/plans/presentation/plans_page.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile.dart';
@@ -226,7 +225,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 BannerEditorPage(args: state.extra as BannerArgs?),
           ),
           GoRoute(path: 'plans', builder: (_, _) => const PlansPage()),
-          GoRoute(path: 'finance', builder: (_, _) => const FinancePage()),
           GoRoute(
             path: 'championships',
             builder: (_, _) => const ChampionshipsPage(),
