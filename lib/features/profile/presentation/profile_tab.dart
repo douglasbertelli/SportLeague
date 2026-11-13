@@ -144,14 +144,6 @@ class _StaffProfile extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.plans),
         ),
-      if (profile.isAdmin)
-        ListTile(
-          leading: const Icon(Icons.account_balance_wallet_outlined),
-          title: const Text('Financeiro'),
-          subtitle: const Text('Valor da assinatura e pagamentos'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(Routes.finance),
-        ),
       const AppColorTile(),
       const ThemeModeTile(),
       // Some em aparelhos sem biometria cadastrada.

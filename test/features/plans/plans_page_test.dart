@@ -61,4 +61,73 @@ void main() {
       findsNothing,
     );
   });
+
+  // Regra das lojas: a assinatura é paga fora delas (Asaas, pelo site), então
+  // o app não mostra preço nem chama para assinar.
+  testWidgets('os planos não mostram preço nem botão de assinar', (
+    tester,
+  ) async {
+    tester.view
+      // Alta o bastante para os dois planos aparecerem inteiros.
+      ..physicalSize = const Size(1080, 6000)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          planFeaturesProvider.overrideWith(
+            (ref) async => [
+              PlanFeatureRow.fromMap({
+                'plan': 'free',
+                'feature': 'teams',
+                'quota': 1,
+              }),
+              PlanFeatureRow.fromMap({
+                'plan': 'premium',
+                'feature': 'teams',
+                'quota': null,
+              }),
+            ],
+          ),
+          planPricesProvider.overrideWith(
+            (ref) async => [
+              PlanPrice.fromMap({
+                'plan': 'free',
+                'monthly_cents': 0,
+                'extra_team_cents': 0,
+              }),
+              PlanPrice.fromMap({
+                'plan': 'premium',
+                'monthly_cents': 3000,
+                'extra_team_cents': 1500,
+                'trial_days': 15,
+              }),
+            ],
+          ),
+          planStatusProvider.overrideWith(
+            (ref) async => PlanStatus.fromMap({
+              'plan': 'free',
+              'quotas': {'teams': 1},
+              'usage': {'teams': 3},
+              'trial_available': true,
+            }),
+          ),
+        ],
+        child: const MaterialApp(home: PlansPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(r'R$'), findsNothing);
+    expect(find.textContaining('por mês'), findsNothing);
+    expect(find.textContaining('Assinatura'), findsNothing);
+    expect(find.text('Vários times'), findsOneWidget);
+    // O teste grátis não cobra nada: continua.
+    await tester.scrollUntilVisible(
+      find.text('Testar grátis por 15 dias'),
+      120,
+    );
+    expect(find.text('Testar grátis por 15 dias'), findsOneWidget);
+  });
 }

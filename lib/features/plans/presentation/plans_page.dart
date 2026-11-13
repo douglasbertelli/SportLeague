@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../fundraisers/domain/fundraiser.dart' show formatMoney;
 import '../../profile/domain/profile.dart';
 import '../data/plan_repository.dart';
 import '../domain/plan_status.dart';
@@ -125,7 +124,6 @@ class _PlanCard extends ConsumerWidget {
     final elite = plan == SubscriptionPlan.elite;
     final current = status?.plan == plan;
     final price = this.price;
-    final teams = status?.usage[PlanFeature.teams] ?? 0;
     final trialDays = price?.trialDays;
     final canTry =
         premium && (status?.trialAvailable ?? false) && trialDays != null;
@@ -170,57 +168,8 @@ class _PlanCard extends ConsumerWidget {
                   ),
               ],
             ),
-            if (price != null) ...[
-              const SizedBox(height: 8),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: price.isFree
-                          ? 'Grátis'
-                          : formatMoney(price.monthlyCents),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (!price.isFree)
-                      TextSpan(
-                        text: ' por mês',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                  ],
-                ),
-              ),
-              if (price.extraTeamCents > 0)
-                Text(
-                  'Com 1 time. Cada time a mais: + '
-                  '${formatMoney(price.extraTeamCents)} por mês.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              // O que o administrador pagaria com os times que já tem.
-              if (premium && !price.isFree && teams > 1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Com os seus $teams times: '
-                    '${formatMoney(price.totalFor(teams))} por mês.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
             if (elite) ...[
               const SizedBox(height: 8),
-              Text(
-                'Sem cobrança',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
               Text(
                 'Todas as funcionalidades liberadas, com os limites '
                 'combinados com você.',
@@ -239,7 +188,6 @@ class _PlanCard extends ConsumerWidget {
                   feature: feature,
                   quota: _quota(feature),
                   description: _row(feature)?.description,
-                  extraTeamCents: price?.extraTeamCents ?? 0,
                 ),
             if (premium && status?.paidPlan != SubscriptionPlan.premium) ...[
               const SizedBox(height: 16),
@@ -251,18 +199,6 @@ class _PlanCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-              OutlinedButton(
-                onPressed: null,
-                child: const Text('Assinatura em breve'),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'A assinatura ainda não está disponível no app.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
             ],
           ],
         ),
@@ -276,7 +212,6 @@ class _FeatureLine extends StatelessWidget {
     required this.feature,
     required this.quota,
     this.description,
-    this.extraTeamCents = 0,
   });
 
   final PlanFeature feature;
@@ -284,9 +219,6 @@ class _FeatureLine extends StatelessWidget {
 
   /// Texto do plano (do banco); nulo usa o padrão da funcionalidade.
   final String? description;
-
-  /// Preço de cada time a mais (para o rótulo de Times).
-  final int extraTeamCents;
 
   @override
   Widget build(BuildContext context) {
@@ -319,8 +251,9 @@ class _FeatureLine extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            describeQuota(feature, quota, extraTeamCents: extraTeamCents),
-            // "+ R$ 10,00" e, embaixo, "por time": alinhados à direita.
+            // Sem preço no app (regra das lojas): Times do Premium é
+            // "Vários times".
+            describeQuota(feature, quota),
             textAlign: TextAlign.end,
             style: theme.textTheme.labelLarge?.copyWith(
               color: included ? null : scheme.outline,
