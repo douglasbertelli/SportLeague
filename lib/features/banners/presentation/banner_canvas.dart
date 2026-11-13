@@ -530,12 +530,11 @@ class _Crest extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: switch (url) {
-        final url? => ClipOval(
-          child: Image.network(
-            url,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => fallback,
-          ),
+        // O escudo inteiro, sem cortar no círculo.
+        final url? => Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => fallback,
         ),
         null => fallback,
       },

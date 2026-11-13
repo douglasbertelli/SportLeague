@@ -62,6 +62,9 @@ class Profile {
     this.nickname,
     this.deletedAt,
     this.termsAcceptedAt,
+    this.publicEnabled = false,
+    this.publicSlug,
+    this.publicHandle,
   });
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -95,6 +98,9 @@ class Profile {
       final String at => DateTime.parse(at),
       _ => null,
     },
+    publicEnabled: map['public_enabled'] as bool? ?? false,
+    publicSlug: map['public_slug'] as String?,
+    publicHandle: map['public_handle'] as String?,
   );
 
   /// Nome usado pelo trigger `handle_new_user` quando o cadastro não traz um
@@ -136,6 +142,16 @@ class Profile {
 
   /// Capa do perfil do jogador: a imagem larga atrás da foto.
   final String? coverUrl;
+
+  /// Perfil público ligado: a página do site com a foto, os times e as
+  /// estatísticas, aberta a quem tiver o link.
+  final bool publicEnabled;
+
+  /// Código aleatório do link do perfil público (`/p/<código>`).
+  final String? publicSlug;
+
+  /// Nome de usuário escolhido (link /@nome).
+  final String? publicHandle;
 
   /// Apelido do jogador, o nome mostrado no perfil dele.
   final String? nickname;

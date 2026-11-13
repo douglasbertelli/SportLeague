@@ -352,6 +352,34 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Adversário primeiro: o mando depende dele.
+            InkWell(
+              onTap: _loading ? null : () => _pickOpponent(team),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Adversário',
+                  helperText: switch (opponent) {
+                    RegisteredOpponent() || SavedOpponent(teamId: _?) =>
+                      'O time adversário precisa aceitar o amistoso',
+                    _ => 'Time da plataforma ou time fictício',
+                  },
+                  // Jogo antigo sem modalidade num time com várias: o
+                  // adversário é escolhido de novo, já com a modalidade.
+                  errorText:
+                      _showErrors && (opponent == null || modality == null)
+                      ? 'Escolha o adversário'
+                      : null,
+                  suffixIcon: const Icon(Icons.search),
+                ),
+                isEmpty: opponent == null,
+                child: Text(switch (opponent) {
+                  null => '',
+                  GuestOpponent(:final name) => '$name (fictício)',
+                  final opponent => opponent.name,
+                }),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text('Jogar como', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
@@ -388,33 +416,6 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
                       ),
               ),
             ],
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _loading ? null : () => _pickOpponent(team),
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Adversário',
-                  helperText: switch (opponent) {
-                    RegisteredOpponent() || SavedOpponent(teamId: _?) =>
-                      'O time adversário precisa aceitar o amistoso',
-                    _ => 'Time da plataforma ou time fictício',
-                  },
-                  // Jogo antigo sem modalidade num time com várias: o
-                  // adversário é escolhido de novo, já com a modalidade.
-                  errorText:
-                      _showErrors && (opponent == null || modality == null)
-                      ? 'Escolha o adversário'
-                      : null,
-                  suffixIcon: const Icon(Icons.search),
-                ),
-                isEmpty: opponent == null,
-                child: Text(switch (opponent) {
-                  null => '',
-                  GuestOpponent(:final name) => '$name (fictício)',
-                  final opponent => opponent.name,
-                }),
-              ),
-            ),
             const SizedBox(height: 16),
             InkWell(
               onTap: _loading ? null : () => _pickDateTime(team),

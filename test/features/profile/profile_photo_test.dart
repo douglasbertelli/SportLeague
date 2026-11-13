@@ -254,7 +254,8 @@ void main() {
   testWidgets('Configurações: código, cor e endereço; o Sair por último', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(1080, 2400);
+    // Alto o bastante para todos os itens e o Sair caberem na tela.
+    tester.view.physicalSize = const Size(1080, 2800);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);
     await _pump(
@@ -270,13 +271,14 @@ void main() {
     expect(find.text('Jogador'), findsOneWidget);
     expect(find.textContaining('Plano'), findsNothing);
     double top(String text) => tester.getTopLeft(find.text(text)).dy;
-    expect(top('Meu código'), lessThan(top('Cor do app')));
+    expect(top('Meu código'), lessThan(top('Perfil público')));
+    expect(top('Perfil público'), lessThan(top('Cor do app')));
     expect(top('Cor do app'), lessThan(top('Endereço')));
     expect(top('Endereço'), lessThan(top('Sair')));
     // Os itens num só card; o Sair à parte.
     Finder cardOf(String text) =>
         find.ancestor(of: find.text(text), matching: find.byType(Card)).first;
-    for (final other in ['Cor do app', 'Endereço']) {
+    for (final other in ['Perfil público', 'Cor do app', 'Endereço']) {
       expect(
         find.descendant(of: cardOf('Meu código'), matching: find.text(other)),
         findsOneWidget,

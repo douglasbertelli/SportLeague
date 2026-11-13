@@ -6,6 +6,7 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/circle_image.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../games/data/opponent_repository.dart';
@@ -173,12 +174,12 @@ class _EditGuestSheetState extends ConsumerState<_EditGuestSheet> {
               child: InkWell(
                 onTap: _chooseLogo,
                 customBorder: const CircleBorder(),
-                child: CircleAvatar(
+                // O símbolo inteiro, sem cortar no círculo (como o TeamLogo).
+                child: CircleImage(
+                  image: image,
                   radius: 40,
-                  backgroundColor: colors.surfaceContainerHighest,
-                  foregroundImage: image,
-                  onForegroundImageError: image == null ? null : (_, _) {},
-                  child: Icon(
+                  whole: true,
+                  placeholder: Icon(
                     Icons.shield_outlined,
                     size: 36,
                     color: colors.onSurfaceVariant,
