@@ -23,6 +23,9 @@ abstract final class Routes {
   /// Código pessoal do jogador ou do técnico (aba Config).
   static const myCode = '/home/my-code';
 
+  /// Perfil público: ligar, nome de usuário e os links (aba Perfil/Config).
+  static const publicProfile = '/home/public-profile';
+
   /// Central de notificações (sino do topo).
   static const notifications = '/home/notifications';
   static const teams = '/home/teams';

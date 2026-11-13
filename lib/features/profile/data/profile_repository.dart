@@ -83,6 +83,21 @@ class ProfileRepository {
   /// Gera outro código pessoal (JG ou TC); o antigo deixa de valer.
   Future<String> regenerateCode() => _client.rpc<String>('regenerate_my_code');
 
+  /// Liga ou desliga o perfil público; com [newLink], troca o código do
+  /// link (o antigo para de funcionar). Devolve o código atual.
+  Future<String> setPublicProfile({
+    required bool enabled,
+    bool newLink = false,
+  }) => _client.rpc<String>(
+    'set_public_profile',
+    params: {'p_enabled': enabled, 'p_new_link': newLink},
+  );
+
+  /// Escolhe o nome de usuário do link /@nome (vazio tira). O banco confere
+  /// o formato e se o nome está livre. Devolve o nome salvo.
+  Future<String?> setPublicHandle(String handle) =>
+      _client.rpc<String?>('set_public_handle', params: {'p_handle': handle});
+
   static const _photoBucket = 'profile-photos';
 
   /// Pasta do próprio usuário: as regras do Storage só deixam ele gravar.

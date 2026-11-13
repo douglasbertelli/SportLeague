@@ -119,6 +119,17 @@ class _StaffProfile extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.myCode),
         ),
+      ListTile(
+        leading: const Icon(Icons.public),
+        title: const Text('Perfil público'),
+        subtitle: Text(
+          profile.publicEnabled
+              ? 'Ligado · ${profile.publicHandle == null ? 'link com código' : '@${profile.publicHandle}'}'
+              : 'Uma página com seus números para compartilhar',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(Routes.publicProfile),
+      ),
       // Só o administrador tem plano.
       if (profile.isAdmin)
         ListTile(

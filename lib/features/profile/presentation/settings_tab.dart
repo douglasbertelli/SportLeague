@@ -46,6 +46,18 @@ class SettingsTab extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.myCode),
         ),
+      if (profile != null)
+        ListTile(
+          leading: const Icon(Icons.public),
+          title: const Text('Perfil público'),
+          subtitle: Text(
+            profile.publicEnabled
+                ? 'Ligado · ${profile.publicHandle == null ? 'link com código' : '@${profile.publicHandle}'}'
+                : 'Uma página com seus números para compartilhar',
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(Routes.publicProfile),
+        ),
       const AppColorTile(),
       const ThemeModeTile(),
       // Some em aparelhos sem biometria cadastrada.
