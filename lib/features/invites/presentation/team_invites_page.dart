@@ -54,45 +54,17 @@ class TeamInvitesPage extends ConsumerWidget {
   }
 }
 
-/// Código do time com Compartilhar, Copiar e Gerar outro.
-class _InviteCodeCard extends ConsumerStatefulWidget {
+/// Código do time com Compartilhar e Copiar. O código é fixo: é ele que
+/// circula entre os jogadores.
+class _InviteCodeCard extends ConsumerWidget {
   const _InviteCodeCard({required this.team});
 
   final Team team;
 
   @override
-  ConsumerState<_InviteCodeCard> createState() => _InviteCodeCardState();
-}
-
-class _InviteCodeCardState extends ConsumerState<_InviteCodeCard> {
-  bool _saving = false;
-
-  Future<void> _regenerate() async {
-    final confirmed = await confirmAction(
-      context,
-      title: 'Gerar outro código?',
-      message:
-          'O código atual deixa de valer: quem ainda não entrou vai precisar '
-          'do novo. Quem já está no time continua.',
-      confirmLabel: 'Gerar outro',
-      confirmIcon: Icons.autorenew,
-    );
-    if (!confirmed) return;
-    setState(() => _saving = true);
-    try {
-      await ref.read(inviteRepositoryProvider).regenerateCode(widget.team.id!);
-      ref.invalidate(inviteCodeProvider(widget.team.id!));
-    } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final code = ref.watch(inviteCodeProvider(widget.team.id!)).value;
+    final code = ref.watch(inviteCodeProvider(team.id!)).value;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -125,44 +97,24 @@ class _InviteCodeCardState extends ConsumerState<_InviteCodeCard> {
             FilledButton.icon(
               onPressed: code == null
                   ? null
-                  : () => ref.read(shareTextProvider)(
-                      inviteMessage(widget.team, code),
-                    ),
+                  : () =>
+                        ref.read(shareTextProvider)(inviteMessage(team, code)),
               icon: const Icon(Icons.share_outlined),
               label: const Text('Compartilhar'),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(88, 48),
-                    ),
-                    onPressed: code == null
-                        ? null
-                        : () async {
-                            await Clipboard.setData(ClipboardData(text: code));
-                            if (context.mounted) {
-                              showErrorSnackBar(context, 'Código copiado.');
-                            }
-                          },
-                    icon: const Icon(Icons.copy),
-                    label: const Text('Copiar'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(88, 48),
-                    ),
-                    onPressed: _saving || code == null ? null : _regenerate,
-                    icon: const Icon(Icons.autorenew),
-                    label: const Text('Gerar outro'),
-                  ),
-                ),
-              ],
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(88, 48)),
+              onPressed: code == null
+                  ? null
+                  : () async {
+                      await Clipboard.setData(ClipboardData(text: code));
+                      if (context.mounted) {
+                        showErrorSnackBar(context, 'Código copiado.');
+                      }
+                    },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copiar'),
             ),
           ],
         ),

@@ -26,10 +26,6 @@ class InviteRepository {
     return row?['code'] as String?;
   }
 
-  /// Gera outro código; o antigo deixa de valer.
-  Future<String> regenerateCode(String teamId) =>
-      _client.rpc<String>('regenerate_invite_code', params: {'p_team': teamId});
-
   /// Pedidos para entrar no time, mais recentes primeiro.
   Future<List<TeamInvite>> teamRequests(String teamId) =>
       _teamInvites(teamId, direction: 'request');

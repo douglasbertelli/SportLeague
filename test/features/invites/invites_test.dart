@@ -43,7 +43,6 @@ class FakeInviteRepository implements InviteRepository {
   final canceled = <String>[];
   final requests = <(String, String)>[];
   final joined = <String>[];
-  var regenerated = 0;
 
   /// Técnicos por time.
   final coaches = <String, List<PlayerSummary>>{};
@@ -58,12 +57,6 @@ class FakeInviteRepository implements InviteRepository {
 
   @override
   Future<String?> inviteCode(String teamId) async => codes[teamId];
-
-  @override
-  Future<String> regenerateCode(String teamId) async {
-    regenerated++;
-    return codes[teamId]!;
-  }
 
   @override
   Future<List<TeamInvite>> teamRequests(String teamId) async => [
@@ -313,16 +306,8 @@ void main() {
     expect(shared.single, contains('ABCD2345'));
     expect(shared.single, contains('Amigos FC'));
 
-    await tester.tap(find.text('Gerar outro'));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(BottomSheet),
-        matching: find.text('Gerar outro'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(invites.regenerated, 1);
+    // O código é fixo: não há Gerar outro.
+    expect(find.text('Gerar outro'), findsNothing);
 
     // Pendentes com Aceitar/Recusar; o aceito vai para o histórico.
     expect(find.text('Pedidos para entrar (2)'), findsOneWidget);
