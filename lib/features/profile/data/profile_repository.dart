@@ -80,9 +80,6 @@ class ProfileRepository {
   /// Reativa a conta (só nos 7 dias).
   Future<void> cancelDeletion() => _client.rpc<void>('cancel_account_deletion');
 
-  /// Gera outro código pessoal (JG ou TC); o antigo deixa de valer.
-  Future<String> regenerateCode() => _client.rpc<String>('regenerate_my_code');
-
   /// Liga ou desliga o perfil público; com [newLink], troca o código do
   /// link (o antigo para de funcionar). Devolve o código atual.
   Future<String> setPublicProfile({

@@ -23,7 +23,6 @@ import '../teams/fakes.dart';
 class _FakeProfileRepository implements ProfileRepository {
   final uploaded = <String>[];
   final removed = <String>[];
-  var regenerated = 0;
   String? renamed;
   String? nickname;
   final coverUploaded = <String>[];
@@ -43,12 +42,6 @@ class _FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> updateNickname(String userId, String value) async =>
       nickname = value;
-
-  @override
-  Future<String> regenerateCode() async {
-    regenerated++;
-    return 'JG9Z8Y7X';
-  }
 
   @override
   Future<void> uploadPhoto(String userId, PickedImage image) async =>
@@ -290,8 +283,10 @@ void main() {
     );
   });
 
-  testWidgets('página Meu código do jogador: JG e gerar outro', (tester) async {
-    final profiles = await _pump(
+  testWidgets('página Meu código do jogador: JG fixo, sem gerar outro', (
+    tester,
+  ) async {
+    await _pump(
       tester,
       _profile(UserRole.player, code: 'JG7K3M9Q'),
       page: const MyCodePage(),
@@ -299,11 +294,9 @@ void main() {
     expect(find.text('JG7K3M9Q'), findsOneWidget);
     expect(find.textContaining('como jogador'), findsOneWidget);
 
-    await tester.tap(find.text('Gerar outro'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Gerar outro').last);
-    await tester.pumpAndSettle();
-    expect(profiles.regenerated, 1);
+    expect(find.text('Compartilhar'), findsOneWidget);
+    expect(find.text('Copiar'), findsOneWidget);
+    expect(find.text('Gerar outro'), findsNothing);
   });
 
   testWidgets('o Perfil do técnico continua com tudo, sem plano', (

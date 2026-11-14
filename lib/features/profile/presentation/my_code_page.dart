@@ -2,48 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../invites/data/invite_repository.dart';
 import '../data/profile_repository.dart';
 
 /// Meu código (Perfil do jogador e do técnico): o código pessoal, JG ou TC,
-/// com Compartilhar, Copiar e Gerar outro. O administrador digita o código
-/// em Convidar para chamar para o time.
-class MyCodePage extends ConsumerStatefulWidget {
+/// com Compartilhar e Copiar. O código é fixo; o administrador digita o
+/// código em Convidar para chamar para o time.
+class MyCodePage extends ConsumerWidget {
   const MyCodePage({super.key});
 
   @override
-  ConsumerState<MyCodePage> createState() => _MyCodePageState();
-}
-
-class _MyCodePageState extends ConsumerState<MyCodePage> {
-  bool _saving = false;
-
-  Future<void> _regenerate() async {
-    final confirmed = await confirmAction(
-      context,
-      title: 'Gerar outro código?',
-      message:
-          'O código atual deixa de valer: quem ainda não te convidou vai '
-          'precisar do novo. Os times em que você já está continuam.',
-      confirmLabel: 'Gerar outro',
-      confirmIcon: Icons.autorenew,
-    );
-    if (!confirmed) return;
-    setState(() => _saving = true);
-    try {
-      await ref.read(profileRepositoryProvider).regenerateCode();
-      ref.invalidate(currentProfileProvider);
-    } catch (error) {
-      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final profile = ref.watch(currentProfileProvider).value;
     final code = profile?.code;
@@ -96,35 +66,18 @@ class _MyCodePageState extends ConsumerState<MyCodePage> {
                   label: const Text('Compartilhar'),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(88, 48),
-                        ),
-                        onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: code));
-                          if (context.mounted) {
-                            showErrorSnackBar(context, 'Código copiado.');
-                          }
-                        },
-                        icon: const Icon(Icons.copy),
-                        label: const Text('Copiar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(88, 48),
-                        ),
-                        onPressed: _saving ? null : _regenerate,
-                        icon: const Icon(Icons.autorenew),
-                        label: const Text('Gerar outro'),
-                      ),
-                    ),
-                  ],
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(88, 48),
+                  ),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (context.mounted) {
+                      showErrorSnackBar(context, 'Código copiado.');
+                    }
+                  },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copiar'),
                 ),
               ],
             ),
