@@ -12,8 +12,7 @@ import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 
 /// Endereço do site, onde fica a página pública.
-String get _webUrl =>
-    Env.webUrl.isEmpty ? 'https://app.sportleague.com.br' : Env.webUrl;
+String get _webUrl => Env.siteUrl;
 
 /// Perfil público (todos os papéis): ligar ou desligar a página do site com a
 /// foto, os times e as estatísticas da temporada; escolher o nome de usuário

@@ -305,6 +305,7 @@ void main() {
     await tester.pump();
     expect(shared.single, contains('ABCD2345'));
     expect(shared.single, contains('Amigos FC'));
+    expect(shared.single, contains('/convite/ABCD2345'));
 
     // O código é fixo: não há Gerar outro.
     expect(find.text('Gerar outro'), findsNothing);
