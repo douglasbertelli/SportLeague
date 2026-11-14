@@ -74,7 +74,12 @@ class VenueRepository {
     await storage.uploadBinary(
       path,
       image.bytes,
-      fileOptions: FileOptions(contentType: image.contentType, upsert: true),
+      // A URL muda a cada envio (cacheNonce): o aparelho guarda por 1 ano.
+      fileOptions: FileOptions(
+        cacheControl: '31536000',
+        contentType: image.contentType,
+        upsert: true,
+      ),
     );
     return storage.getPublicUrl(
       path,
