@@ -18,6 +18,11 @@ abstract final class Env {
   /// app só avisa que o cadastro é pelo site.
   static const webUrl = String.fromEnvironment('WEB_URL');
 
+  /// Endereço do site para links compartilhados (perfil público, convite):
+  /// o [webUrl] ou, sem ele, o site de produção.
+  static String get siteUrl =>
+      webUrl.isEmpty ? 'https://app.sportleague.com.br' : webUrl;
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }

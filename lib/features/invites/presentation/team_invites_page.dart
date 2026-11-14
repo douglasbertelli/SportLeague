@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/env.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -13,10 +14,14 @@ import '../../teams/domain/team.dart';
 import '../data/invite_repository.dart';
 import '../domain/team_invite.dart';
 
-/// Texto que vai no WhatsApp com o código do time.
+/// Link do convite: a página do site com o time e o botão de entrar.
+String inviteLink(String code) => '${Env.siteUrl}/convite/$code';
+
+/// Texto que vai no WhatsApp: o link e, para quem prefere o app, o código.
+/// A mesma mensagem do site.
 String inviteMessage(Team team, String code) =>
-    'Entre no time ${team.name} no SportLeague! No app, vá em '
-    'Meus convites › Entrar com código e digite: $code';
+    'Entre no time ${team.name} no SportLeague: ${inviteLink(code)}\n\n'
+    'Ou, no app, vá em Meus convites › Entrar com código e digite: $code';
 
 /// Convites do time ativo (administrador): o código para mandar aos
 /// jogadores e os pedidos para entrar no time.
