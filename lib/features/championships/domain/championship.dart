@@ -68,6 +68,8 @@ class Championship {
     this.groupSize,
     this.knockoutFill,
     this.status = ChampionshipStatus.draft,
+    this.publicEnabled = false,
+    this.publicSlug,
   });
 
   factory Championship.fromMap(Map<String, dynamic> map) => Championship(
@@ -83,6 +85,8 @@ class Championship {
     groupSize: map['group_size'] as int?,
     knockoutFill: KnockoutFill.fromKey(map['knockout_fill'] as String?),
     status: ChampionshipStatus.fromName(map['status'] as String),
+    publicEnabled: map['public_enabled'] as bool? ?? false,
+    publicSlug: map['public_slug'] as String?,
   );
 
   final String? id;
@@ -102,6 +106,11 @@ class Championship {
   final int? groupSize;
   final KnockoutFill? knockoutFill;
   final ChampionshipStatus status;
+
+  /// Link público (site, `/c/<código>`) ligado e o código; nulo até ligar a
+  /// primeira vez. Muda só pelo `setPublic` do repositório.
+  final bool publicEnabled;
+  final String? publicSlug;
 
   /// "Pontos corridos · turno e returno", "Grupos + mata-mata · 2 grupos".
   String get summary => switch (format) {
@@ -138,7 +147,11 @@ class Championship {
     'status': status.name,
   };
 
-  Championship copyWith({ChampionshipStatus? status}) => Championship(
+  Championship copyWith({
+    ChampionshipStatus? status,
+    bool? publicEnabled,
+    String? publicSlug,
+  }) => Championship(
     id: id,
     ownerId: ownerId,
     name: name,
@@ -151,6 +164,8 @@ class Championship {
     groupSize: groupSize,
     knockoutFill: knockoutFill,
     status: status ?? this.status,
+    publicEnabled: publicEnabled ?? this.publicEnabled,
+    publicSlug: publicSlug ?? this.publicSlug,
   );
 }
 

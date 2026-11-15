@@ -48,6 +48,18 @@ class ChampionshipRepository {
   Future<void> delete(String id) =>
       _client.from('championships').delete().eq('id', id);
 
+  /// Liga ou desliga o link público do campeonato [id] (só o organizador);
+  /// com [newLink], troca o código (o link antigo para de funcionar).
+  /// Devolve o código atual.
+  Future<String> setPublic(
+    String id, {
+    required bool enabled,
+    bool newLink = false,
+  }) => _client.rpc<String>(
+    'set_championship_public',
+    params: {'p_championship': id, 'p_enabled': enabled, 'p_new_link': newLink},
+  );
+
   Future<List<ChampionshipTeam>> fetchTeams(String championshipId) async {
     final rows = await _client
         .from('championship_teams')

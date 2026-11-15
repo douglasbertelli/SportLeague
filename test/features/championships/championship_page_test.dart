@@ -15,6 +15,8 @@ import 'package:sport_league/features/championships/domain/championship_rules.da
 import 'package:sport_league/features/championships/presentation/championship_page.dart';
 import 'package:sport_league/features/championships/presentation/share_championship.dart';
 import 'package:sport_league/features/games/presentation/share_result.dart';
+import 'package:sport_league/features/invites/data/invite_repository.dart'
+    show shareTextProvider;
 import 'package:sport_league/features/teams/domain/team.dart';
 
 /// Campeonato em memória, com as mesmas regras do banco que a tela usa.
@@ -47,6 +49,22 @@ class FakeChampionshipRepository implements ChampionshipRepository {
 
   @override
   Future<void> delete(String id) async => deleted = true;
+
+  @override
+  Future<String> setPublic(
+    String id, {
+    required bool enabled,
+    bool newLink = false,
+  }) async {
+    final slug = championship.publicSlug == null || newLink
+        ? 'cod${_next++}'
+        : championship.publicSlug!;
+    championship = championship.copyWith(
+      publicEnabled: enabled,
+      publicSlug: slug,
+    );
+    return slug;
+  }
 
   @override
   Future<List<ChampionshipPlayerTotal>> fetchPlayerTotals(String id) async =>
@@ -510,7 +528,7 @@ void main() {
     );
 
     await tester.runAsync(() async {
-      await tester.tap(find.text('Compartilhar'));
+      await tester.tap(find.text('Compartilhar imagem'));
       await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     await tester.pumpAndSettle();
@@ -518,13 +536,73 @@ void main() {
     expect(shared.single.text, 'Time a é campeão do Copa do Bairro!');
   });
 
-  testWidgets('antes da tabela não há compartilhar', (tester) async {
+  testWidgets('antes da tabela, só o organizador vê o compartilhar', (
+    tester,
+  ) async {
     final repository = FakeChampionshipRepository(
       _championship(ChampionshipFormat.league),
       [_entry('a')],
     );
-    await _pump(tester, repository);
+    await _pump(tester, repository, userId: 'u2');
     expect(find.byTooltip('Compartilhar campeonato'), findsNothing);
+  });
+
+  testWidgets('organizador liga o link público e compartilha', (tester) async {
+    final texts = <String>[];
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league),
+      [_entry('a')],
+    );
+    await _pump(
+      tester,
+      repository,
+      overrides: [
+        shareTextProvider.overrideWithValue((text) async => texts.add(text)),
+      ],
+    );
+
+    await tester.tap(find.byTooltip('Compartilhar campeonato'));
+    await tester.pumpAndSettle();
+    // Antes da tabela não há imagem; o link começa desligado.
+    expect(find.text('Compartilhar imagem'), findsNothing);
+    expect(find.text('Compartilhar link'), findsNothing);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(repository.championship.publicEnabled, isTrue);
+    final url = publicChampionshipUrl(repository.championship.publicSlug!);
+    expect(find.text(url), findsOneWidget);
+
+    await tester.tap(find.text('Compartilhar link'));
+    await tester.pumpAndSettle();
+    expect(texts.single, 'Acompanhe o Copa do Bairro no SportLeague: $url');
+
+    // Trocar o link gera outro código.
+    await tester.tap(find.text('Trocar link'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Trocar'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(publicChampionshipUrl(repository.championship.publicSlug!)),
+      findsOneWidget,
+    );
+    expect(find.text(url), findsNothing);
+  });
+
+  testWidgets('com o link ligado, quem acompanha também compartilha', (
+    tester,
+  ) async {
+    final repository = FakeChampionshipRepository(
+      _championship(ChampionshipFormat.league)
+          .copyWith(publicEnabled: true, publicSlug: 'abc123'),
+      [_entry('a')],
+    );
+    await _pump(tester, repository, userId: 'u2');
+    await tester.tap(find.byTooltip('Compartilhar campeonato'));
+    await tester.pumpAndSettle();
+    expect(find.text(publicChampionshipUrl('abc123')), findsOneWidget);
+    expect(find.byType(Switch), findsNothing);
+    expect(find.text('Trocar link'), findsNothing);
   });
 
   testWidgets('sem times suficientes não gera', (tester) async {
