@@ -1,74 +1,257 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/config/env.dart';
+import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/presentation/share_result.dart'
     show capturePng, shareImageProvider;
+import '../../invites/data/invite_repository.dart' show shareTextProvider;
 import '../../teams/presentation/team_logo.dart';
+import '../data/championship_repository.dart';
 import '../domain/championship.dart';
 import '../domain/championship_rules.dart';
 
-/// Mostra a prévia do campeonato como imagem (classificação ou final e, se
-/// acabou, o campeão) e, no Compartilhar, manda para o app escolhido.
+/// Link da página pública do campeonato no site (sem login).
+String publicChampionshipUrl(String slug) => '${Env.siteUrl}/c/$slug';
+
+/// Compartilhar o campeonato: o link público (página no site para quem não
+/// tem conta: classificação, jogos e artilharia, sempre em dia) e a imagem
+/// (classificação ou final e, se acabou, o campeão). O organizador liga,
+/// desliga e troca o link aqui; [onChanged] avisa a tela para recarregar.
 Future<void> shareChampionship(
   BuildContext context,
   WidgetRef ref, {
   required Championship championship,
   required List<ChampionshipTeam> teams,
   required List<ChampionshipMatch> matches,
-}) async {
-  final boundary = GlobalKey();
-  final champion = championOf(championship, teams, matches);
-  final text = champion == null
-      ? '${championship.name} · ${championship.modality.label}'
-      : '$champion é campeão do ${championship.name}!';
+  bool isOwner = false,
+  VoidCallback? onChanged,
+}) => showAppSheet<void>(
+  context,
+  builder: (_) => _ShareSheet(
+    championship: championship,
+    teams: teams,
+    matches: matches,
+    isOwner: isOwner,
+    onChanged: onChanged,
+  ),
+);
 
-  await showAppSheet<void>(
-    context,
-    builder: (sheetContext) => AppSheet(
+class _ShareSheet extends ConsumerStatefulWidget {
+  const _ShareSheet({
+    required this.championship,
+    required this.teams,
+    required this.matches,
+    required this.isOwner,
+    this.onChanged,
+  });
+
+  final Championship championship;
+  final List<ChampionshipTeam> teams;
+  final List<ChampionshipMatch> matches;
+  final bool isOwner;
+  final VoidCallback? onChanged;
+
+  @override
+  ConsumerState<_ShareSheet> createState() => _ShareSheetState();
+}
+
+class _ShareSheetState extends ConsumerState<_ShareSheet> {
+  final _boundary = GlobalKey();
+  late var _enabled = widget.championship.publicEnabled;
+  late var _slug = widget.championship.publicSlug;
+  var _saving = false;
+
+  Championship get _c => widget.championship;
+
+  Future<void> _setPublic({required bool enabled, bool newLink = false}) async {
+    setState(() => _saving = true);
+    try {
+      final slug = await ref
+          .read(championshipRepositoryProvider)
+          .setPublic(_c.id!, enabled: enabled, newLink: newLink);
+      if (mounted) {
+        setState(() {
+          _enabled = enabled;
+          _slug = slug;
+        });
+      }
+      widget.onChanged?.call();
+    } catch (error) {
+      if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _newLink() async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Trocar o link?',
+      message: 'O link atual para de funcionar. Mande o novo a quem acompanha.',
+      confirmLabel: 'Trocar',
+      confirmIcon: Icons.autorenew,
+    );
+    if (confirmed) await _setPublic(enabled: true, newLink: true);
+  }
+
+  Future<void> _shareImage() async {
+    final champion = championOf(_c, widget.teams, widget.matches);
+    final text = champion == null
+        ? '${_c.name} · ${_c.modality.label}'
+        : '$champion é campeão do ${_c.name}!';
+    final png = await capturePng(_boundary);
+    if (png == null) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Não foi possível gerar a imagem.');
+      }
+      return;
+    }
+    await ref.read(shareImageProvider)(png, text);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final slug = _slug;
+    final url = _enabled && slug != null ? publicChampionshipUrl(slug) : null;
+    // Antes da tabela não há imagem (nem classificação nem final).
+    final hasImage = _c.status != ChampionshipStatus.draft;
+
+    return AppSheet(
       title: 'Compartilhar campeonato',
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 380),
-          child: FittedBox(
-            child: RepaintBoundary(
-              key: boundary,
-              child: ChampionshipShareCard(
-                championship: championship,
-                teams: teams,
-                matches: matches,
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Link público', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+            url != null
+                ? 'Quem tiver o link acompanha a classificação, os jogos e a '
+                      'artilharia no site, sem precisar de conta.'
+                : widget.isOwner
+                ? 'Ligue para mandar um link a quem não usa o app. Só aparecem '
+                      'os times, os jogos e os números do campeonato.'
+                : 'O organizador ainda não ligou o link público.',
+            style: muted,
+          ),
+          if (widget.isOwner) ...[
+            const SizedBox(height: 8),
+            Card(
+              child: SwitchListTile(
+                title: const Text('Link público'),
+                subtitle: Text(
+                  _enabled
+                      ? 'Quem tiver o link vê'
+                      : 'Desligado: o link não abre',
+                ),
+                value: _enabled,
+                onChanged: _saving ? null : (on) => _setPublic(enabled: on),
               ),
             ),
-          ),
-        ),
+          ],
+          if (url != null) ...[
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                title: Text(url, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  tooltip: 'Copiar link',
+                  icon: const Icon(Icons.copy),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: url));
+                    if (context.mounted) {
+                      showErrorSnackBar(context, 'Link copiado.');
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () => ref.read(shareTextProvider)(
+                'Acompanhe o ${_c.name} no SportLeague: $url',
+              ),
+              icon: const Icon(Icons.link),
+              label: const Text('Compartilhar link'),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => launchUrl(
+                      Uri.parse(url),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Ver página'),
+                  ),
+                ),
+                if (widget.isOwner) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _newLink,
+                      icon: const Icon(Icons.autorenew),
+                      label: const Text('Trocar link'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          if (hasImage) ...[
+            const SizedBox(height: 24),
+            Text('Imagem', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 380),
+                child: FittedBox(
+                  child: RepaintBoundary(
+                    key: _boundary,
+                    child: ChampionshipShareCard(
+                      championship: _c,
+                      teams: widget.teams,
+                      matches: widget.matches,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
       actions: [
-        FilledButton.icon(
-          onPressed: () async {
-            final png = await capturePng(boundary);
-            if (png == null) {
-              if (sheetContext.mounted) {
-                showErrorSnackBar(
-                  sheetContext,
-                  'Não foi possível gerar a imagem.',
-                );
-              }
-              return;
-            }
-            await ref.read(shareImageProvider)(png, text);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-          },
-          icon: const Icon(Icons.share_outlined),
-          label: const Text('Compartilhar'),
-        ),
+        if (hasImage)
+          url == null
+              ? FilledButton.icon(
+                  onPressed: _shareImage,
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Compartilhar imagem'),
+                )
+              : OutlinedButton.icon(
+                  onPressed: _shareImage,
+                  icon: const Icon(Icons.image_outlined),
+                  label: const Text('Compartilhar imagem'),
+                ),
         const SheetBackButton(label: 'Fechar'),
       ],
-    ),
-  );
+    );
+  }
 }
 
 /// O campeão: o vencedor da final ou o líder dos pontos corridos (com o

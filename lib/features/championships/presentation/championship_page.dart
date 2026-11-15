@@ -466,9 +466,10 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
         appBar: AppBar(
           title: Text(championship.name),
           actions: [
-            // Com a tabela gerada, todos compartilham (classificação, final
-            // e o campeão).
-            if (!draft)
+            // Com a tabela gerada, todos compartilham a imagem; o link
+            // público, o organizador liga a qualquer momento e, ligado,
+            // todos mandam.
+            if (!draft || isOwner || championship.publicEnabled)
               IconButton(
                 tooltip: 'Compartilhar campeonato',
                 icon: const Icon(Icons.share_outlined),
@@ -478,6 +479,8 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
                   championship: championship,
                   teams: teams,
                   matches: matches,
+                  isOwner: isOwner,
+                  onChanged: _refresh,
                 ),
               ),
             if (isOwner)
