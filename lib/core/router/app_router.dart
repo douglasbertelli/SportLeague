@@ -9,6 +9,7 @@ import '../../features/availability/presentation/availability_page.dart';
 import '../../features/athletes/presentation/athlete_form_page.dart';
 import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
+import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/banners/domain/banner_design.dart';
 import '../../features/banners/presentation/banner_editor_page.dart';
@@ -51,7 +52,7 @@ import '../../features/venues/presentation/venues_page.dart';
 import '../supabase/supabase_providers.dart';
 import 'routes.dart';
 
-const _publicRoutes = {Routes.login};
+const _publicRoutes = {Routes.login, Routes.forgotPassword};
 
 /// Abertos em qualquer situação (com ou sem login, antes do cadastro
 /// terminar).
@@ -91,7 +92,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.acceptTerms,
         builder: (_, _) => const AcceptTermsPage(),
       ),
-      GoRoute(path: Routes.login, builder: (_, _) => const LoginPage()),
+      GoRoute(
+        path: Routes.login,
+        builder: (_, _) => const LoginPage(),
+        routes: [
+          GoRoute(
+            path: 'forgot-password',
+            builder: (_, state) =>
+                ForgotPasswordPage(email: state.extra as String?),
+          ),
+        ],
+      ),
       GoRoute(
         path: Routes.onboardingProfile,
         builder: (_, _) => const CompleteProfilePage(),
