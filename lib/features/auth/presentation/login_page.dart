@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/security/biometrics.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
@@ -54,23 +56,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _showMessage(friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _forgotPassword() async {
-    final email = _emailController.text;
-    if (Validators.email(email) != null) {
-      _showMessage('Informe um e-mail válido para recuperar a senha.');
-      return;
-    }
-    try {
-      await ref.read(authRepositoryProvider).sendPasswordReset(email);
-      _showMessage(
-        'Enviamos um link para $email. Abra no celular, crie a senha nova e '
-        'volte aqui para entrar.',
-      );
-    } catch (error) {
-      _showMessage(friendlyErrorMessage(error));
     }
   }
 
@@ -236,7 +221,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       Align(
         alignment: Alignment.centerRight,
         child: TextButton(
-          onPressed: _loading ? null : _forgotPassword,
+          onPressed: _loading
+              ? null
+              : () => context.push(
+                  Routes.forgotPassword,
+                  extra: _emailController.text.trim(),
+                ),
           child: const Text('Esqueci minha senha'),
         ),
       ),

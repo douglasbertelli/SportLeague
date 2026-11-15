@@ -1,6 +1,9 @@
 abstract final class Routes {
   static const splash = '/splash';
   static const login = '/login';
+
+  /// Esqueci minha senha (sem login); recebe o e-mail já digitado em `extra`.
+  static const forgotPassword = '/login/forgot-password';
   static const onboardingProfile = '/onboarding/profile';
   static const onboardingAddress = '/onboarding/address';
 
