@@ -79,6 +79,15 @@ void main() {
     // contrasta com o fundo branco.
     expect(AppTheme.dark().colorScheme.primary, const Color(0xFF07F469));
     expect(AppTheme.dark().colorScheme.onPrimary, Colors.black);
+    // No escuro, fundo preto (#000000) e cartões em cinza neutro, sem o tom
+    // verde (como o site).
+    expect(AppTheme.dark().colorScheme.surface, Colors.black);
+    expect(
+      AppTheme.dark().colorScheme.surfaceContainer,
+      const Color(0xFF121212),
+    );
+    // No claro, o fundo continua o gerado pela cor.
+    expect(AppTheme.light().colorScheme.surface, isNot(Colors.black));
     expect(
       ThemeData.estimateBrightnessForColor(
         AppTheme.light().colorScheme.primary,

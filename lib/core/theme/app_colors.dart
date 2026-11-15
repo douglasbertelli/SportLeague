@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 /// inteiro, claro e escuro, é gerado a partir dela.
 class AppColor {
   /// Cor com tom: a paleta vem dela.
-  const AppColor(this.id, this.name, this.color, {this.darkPrimary})
-    : lightAccent = null,
-      darkAccent = null,
-      pureBlack = false;
+  const AppColor(
+    this.id,
+    this.name,
+    this.color, {
+    this.darkPrimary,
+    this.pureBlack = false,
+  }) : lightAccent = null,
+       darkAccent = null;
 
   /// Cinza ou preto: superfícies neutras e o destaque nos tons dados (no
   /// escuro, um tom claro, senão o destaque some no fundo).
@@ -40,8 +44,26 @@ class AppColor {
 
   bool get isNeutral => lightAccent != null;
 
-  /// Esquema de cores do tema [brightness].
+  /// Esquema de cores do tema [brightness]. Com [pureBlack], no escuro o
+  /// fundo é preto (#000000) e as superfícies, cinzas neutros (os mesmos do
+  /// site), sem o tom da cor.
   ColorScheme scheme(Brightness brightness) {
+    final scheme = _scheme(brightness);
+    return pureBlack && brightness == Brightness.dark
+        ? scheme.copyWith(
+            surface: Colors.black,
+            surfaceDim: Colors.black,
+            surfaceBright: const Color(0xFF242424),
+            surfaceContainerLowest: Colors.black,
+            surfaceContainerLow: const Color(0xFF0A0A0A),
+            surfaceContainer: const Color(0xFF121212),
+            surfaceContainerHigh: const Color(0xFF1A1A1A),
+            surfaceContainerHighest: const Color(0xFF242424),
+          )
+        : scheme;
+  }
+
+  ColorScheme _scheme(Brightness brightness) {
     final accent = brightness == Brightness.dark ? darkAccent : lightAccent;
     if (accent == null) {
       final scheme = ColorScheme.fromSeed(
@@ -66,17 +88,7 @@ class AppColor {
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
         ? Colors.white
         : Colors.black;
-    final scheme = base.copyWith(primary: accent, onPrimary: onAccent);
-    return pureBlack && brightness == Brightness.dark
-        ? scheme.copyWith(
-            surface: Colors.black,
-            surfaceContainerLowest: Colors.black,
-            surfaceContainerLow: const Color(0xFF0A0A0A),
-            surfaceContainer: const Color(0xFF121212),
-            surfaceContainerHigh: const Color(0xFF1A1A1A),
-            surfaceContainerHighest: const Color(0xFF242424),
-          )
-        : scheme;
+    return base.copyWith(primary: accent, onPrimary: onAccent);
   }
 }
 
@@ -88,6 +100,8 @@ const appColors = <AppColor>[
     'Verde SportLeague',
     Color(0xFF07F469),
     darkPrimary: Color(0xFF07F469),
+    // O padrão: no escuro, fundo preto como o site e o logo.
+    pureBlack: true,
   ),
   AppColor('lime', 'Verde-limão', Color(0xFF7CB342)),
   AppColor('olive', 'Oliva', Color(0xFF808000)),
