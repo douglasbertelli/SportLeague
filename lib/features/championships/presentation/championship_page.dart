@@ -213,13 +213,48 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
     });
   }
 
-  /// Grupos encerrados: monta o mata-mata com os classificados.
+  /// Grupos (ou liga) encerrados: monta o mata-mata com os classificados.
   Future<void> _startKnockout(
     Championship championship,
     List<ChampionshipTeam> teams,
     List<ChampionshipMatch> matches,
   ) async {
     final names = {for (final t in teams) t.id: t.name};
+    if (championship.format == ChampionshipFormat.leagueKnockout) {
+      final qualifiers = championship.knockoutQualifiers!;
+      final ok = await confirmAction(
+        context,
+        title: 'Gerar o mata-mata?',
+        message:
+            'Os $qualifiers primeiros da classificação vão para o mata-mata '
+            '(o 1º pega o último classificado, o 2º o penúltimo…). '
+            'Corrigir um placar da liga depois não muda o chaveamento.',
+        confirmLabel: 'Gerar mata-mata',
+      );
+      if (!ok) return;
+      final table = standings(
+        [
+          for (final t in teams)
+            if (t.status == EntryStatus.accepted) t.id,
+        ],
+        matches.where((m) => m.stage == MatchStage.league),
+        names: names,
+      );
+      final rounds = matches
+          .where((m) => m.stage == MatchStage.league)
+          .map((m) => m.round)
+          .fold(0, max);
+      await _run(
+        () => _repository.addMatches(
+          _id,
+          knockoutBracket(
+            knockoutFromLeague(table, qualifiers),
+            firstRound: rounds + 1,
+          ),
+        ),
+      );
+      return;
+    }
     final byGroup = [
       for (final label in groupLabels.take(championship.groupCount!))
         standings(
@@ -619,13 +654,18 @@ class _TableTab extends StatelessWidget {
           const SizedBox(height: 16),
         ],
         switch (championship.format) {
-          ChampionshipFormat.league => _StandingsTable(
+          ChampionshipFormat.league ||
+          ChampionshipFormat.leagueKnockout => _StandingsTable(
+            title: championship.format == ChampionshipFormat.leagueKnockout
+                ? 'Liga (passam ${championship.knockoutQualifiers})'
+                : null,
+            qualifiers: championship.knockoutQualifiers,
             rows: standings(
               [
                 for (final t in teams)
                   if (t.status == EntryStatus.accepted) t.id,
               ],
-              matches,
+              matches.where((m) => m.stage == MatchStage.league),
               names: names,
             ),
             names: names,
@@ -684,9 +724,9 @@ class _TableTab extends StatelessWidget {
           ChampionshipFormat.knockout => const SizedBox.shrink(),
         },
         if (knockout.isNotEmpty) ...[
-          if (championship.format == ChampionshipFormat.groups)
+          if (championship.format != ChampionshipFormat.knockout)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(top: 16, bottom: 8),
               child: Text(
                 'Mata-mata',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -931,9 +971,11 @@ class _MatchesTab extends StatelessWidget {
     }
     final theme = Theme.of(context);
     final running = championship.status == ChampionshipStatus.running;
+    // Grupos ou liga com placar em todos os jogos: falta o mata-mata.
     final groupsDone =
-        championship.format == ChampionshipFormat.groups &&
-        matches.every((m) => m.stage != MatchStage.group || m.hasScore) &&
+        (championship.format == ChampionshipFormat.groups ||
+            championship.format == ChampionshipFormat.leagueKnockout) &&
+        matches.every((m) => m.stage == MatchStage.knockout || m.hasScore) &&
         !matches.any((m) => m.stage == MatchStage.knockout);
     final leagueDone =
         championship.format == ChampionshipFormat.league &&

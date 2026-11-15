@@ -3,25 +3,38 @@ import '../../teams/domain/team.dart';
 /// Como o campeonato é disputado (escolhido por quem cria).
 enum ChampionshipFormat {
   league(
+    'league',
     'Pontos corridos',
     'Todos contra todos; campeão é quem soma mais pontos',
   ),
+  leagueKnockout(
+    'league_knockout',
+    'Liga + mata-mata',
+    'Todos contra todos e os primeiros colocados fazem o mata-mata',
+  ),
   knockout(
+    'knockout',
     'Mata-mata',
     'Jogos eliminatórios até a final; empate vai para os pênaltis',
   ),
   groups(
+    'groups',
     'Grupos + mata-mata',
     'Fase de grupos e os melhores de cada grupo no mata-mata',
   );
 
-  const ChampionshipFormat(this.label, this.description);
+  const ChampionshipFormat(this.key, this.label, this.description);
 
+  /// Como fica no banco.
+  final String key;
   final String label;
   final String description;
 
-  static ChampionshipFormat fromName(String value) =>
-      values.firstWhere((format) => format.name == value);
+  /// Tem a fase de todos contra todos (classificação única).
+  bool get hasLeague => this == league || this == leagueKnockout;
+
+  static ChampionshipFormat fromKey(String value) =>
+      values.firstWhere((format) => format.key == value);
 }
 
 /// Grupos + mata-mata: como completar o mata-mata quando os classificados
@@ -67,6 +80,7 @@ class Championship {
     this.teamCount,
     this.groupSize,
     this.knockoutFill,
+    this.knockoutQualifiers,
     this.status = ChampionshipStatus.draft,
     this.publicEnabled = false,
     this.publicSlug,
@@ -77,13 +91,14 @@ class Championship {
     ownerId: map['owner_id'] as String,
     name: map['name'] as String,
     modality: Modality.fromName(map['modality'] as String),
-    format: ChampionshipFormat.fromName(map['format'] as String),
+    format: ChampionshipFormat.fromKey(map['format'] as String),
     doubleRound: map['double_round'] as bool? ?? false,
     groupCount: map['group_count'] as int?,
     qualifiersPerGroup: map['qualifiers_per_group'] as int?,
     teamCount: map['team_count'] as int?,
     groupSize: map['group_size'] as int?,
     knockoutFill: KnockoutFill.fromKey(map['knockout_fill'] as String?),
+    knockoutQualifiers: map['knockout_qualifiers'] as int?,
     status: ChampionshipStatus.fromName(map['status'] as String),
     publicEnabled: map['public_enabled'] as bool? ?? false,
     publicSlug: map['public_slug'] as String?,
@@ -105,6 +120,9 @@ class Championship {
   final int? teamCount;
   final int? groupSize;
   final KnockoutFill? knockoutFill;
+
+  /// Liga + mata-mata: quantos primeiros colocados vão ao mata-mata.
+  final int? knockoutQualifiers;
   final ChampionshipStatus status;
 
   /// Link público (site, `/c/<código>`) ligado e o código; nulo até ligar a
@@ -116,6 +134,9 @@ class Championship {
   String get summary => switch (format) {
     ChampionshipFormat.league =>
       '${format.label} · ${doubleRound ? 'turno e returno' : 'turno único'}',
+    ChampionshipFormat.leagueKnockout =>
+      '${format.label} · ${doubleRound ? 'turno e returno' : 'turno único'}, '
+          '$knockoutQualifiers primeiros no mata-mata',
     ChampionshipFormat.knockout => format.label,
     ChampionshipFormat.groups =>
       '${format.label} · ${teamCount == null ? '' : '$teamCount times, '}'
@@ -133,7 +154,7 @@ class Championship {
     'owner_id': ownerId,
     'name': name.trim(),
     'modality': modality.name,
-    'format': format.name,
+    'format': format.key,
     'double_round': format != ChampionshipFormat.knockout && doubleRound,
     'group_count': format == ChampionshipFormat.groups ? groupCount : null,
     'qualifiers_per_group': format == ChampionshipFormat.groups
@@ -143,6 +164,9 @@ class Championship {
     'group_size': format == ChampionshipFormat.groups ? groupSize : null,
     'knockout_fill': format == ChampionshipFormat.groups
         ? knockoutFill?.key
+        : null,
+    'knockout_qualifiers': format == ChampionshipFormat.leagueKnockout
+        ? knockoutQualifiers
         : null,
     'status': status.name,
   };
@@ -163,6 +187,7 @@ class Championship {
     teamCount: teamCount,
     groupSize: groupSize,
     knockoutFill: knockoutFill,
+    knockoutQualifiers: knockoutQualifiers,
     status: status ?? this.status,
     publicEnabled: publicEnabled ?? this.publicEnabled,
     publicSlug: publicSlug ?? this.publicSlug,

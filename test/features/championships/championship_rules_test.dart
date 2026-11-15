@@ -211,6 +211,79 @@ void main() {
     expect(cannotGenerate(groups, 6), isNull);
   });
 
+  group('liga + mata-mata', () {
+    const champ = Championship(
+      ownerId: 'u1',
+      name: 'Copa',
+      modality: Modality.society,
+      format: ChampionshipFormat.leagueKnockout,
+      knockoutQualifiers: 8,
+    );
+
+    test('todos contra todos na liga, sem mata-mata ainda', () {
+      final ids = [for (var i = 0; i < 10; i++) 't$i'];
+      final matches = planChampionship(champ, ids, random: Random(1));
+      expect(matches, hasLength(45));
+      expect(matches.every((m) => m.stage == MatchStage.league), isTrue);
+    });
+
+    test('precisa de mais times que classificados', () {
+      expect(cannotGenerate(champ, 8), contains('pelo menos 9'));
+      expect(cannotGenerate(champ, 9), isNull);
+      const two = Championship(
+        ownerId: 'u1',
+        name: 'Copa',
+        modality: Modality.society,
+        format: ChampionshipFormat.leagueKnockout,
+        knockoutQualifiers: 2,
+      );
+      expect(cannotGenerate(two, 2), contains('pelo menos 3'));
+      expect(cannotGenerate(two, 3), isNull);
+    });
+
+    test('os 8 primeiros: 1º x 8º, 4º x 5º, 2º x 7º, 3º x 6º', () {
+      final table = [for (var i = 1; i <= 10; i++) StandingRow('p$i')];
+      expect(knockoutFromLeague(table, 8), [
+        'p1', 'p8', 'p4', 'p5', 'p2', 'p7', 'p3', 'p6', //
+      ]);
+      expect(knockoutFromLeague(table, 2), ['p1', 'p2']);
+    });
+
+    test('classificados que não fecham: os melhores folgam', () {
+      final table = [for (var i = 1; i <= 8; i++) StandingRow('p$i')];
+      final bracket = knockoutFromLeague(table, 6);
+      expect(bracket, ['p1', null, 'p4', 'p5', 'p2', null, 'p3', 'p6']);
+      const layout = LeagueKnockoutLayout(6);
+      expect((layout.bracket, layout.byes), (8, 2));
+
+      final matches = knockoutBracket(bracket, firstRound: 8);
+      final first = matches.where((m) => m.round == 8).toList();
+      expect(first.map((m) => (m.homeId, m.awayId)), [
+        ('p4', 'p5'),
+        ('p3', 'p6'),
+      ]);
+      // Quem folga já está na semifinal, esperando o adversário.
+      final semis = matches.where((m) => m.round == 9).toList();
+      expect(semis.map((m) => (m.homeId, m.awayId)), [
+        ('p1', null),
+        ('p2', null),
+      ]);
+    });
+
+    test('resumo', () {
+      expect(
+        champ.summary,
+        'Liga + mata-mata · turno único, 8 primeiros no mata-mata',
+      );
+      expect(champ.toMap()['knockout_qualifiers'], 8);
+      expect(champ.toMap()['format'], 'league_knockout');
+      expect(
+        Championship.fromMap({...champ.toMap(), 'id': 'c1'}).knockoutQualifiers,
+        8,
+      );
+    });
+  });
+
   group('grupos flexíveis', () {
     test('divide o mais parelho possível e descreve', () {
       final even = GroupsLayout.fromMax(
