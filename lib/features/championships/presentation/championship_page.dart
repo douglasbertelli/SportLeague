@@ -1131,12 +1131,28 @@ class _MatchTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(
-                '$details$penalties',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
+              // Com a seta, quem organiza vê que o card abre as ações.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      '$details$penalties',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
