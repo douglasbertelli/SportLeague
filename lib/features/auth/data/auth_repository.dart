@@ -129,8 +129,13 @@ class AuthRepository {
     return true;
   }
 
-  Future<void> sendPasswordReset(String email) =>
-      _auth.resetPasswordForEmail(email.trim());
+  /// Manda o link para criar uma senha nova. O link abre a página Nova senha
+  /// do site (passando por /auth/callback, que entra na conta pelo token do
+  /// link); depois a pessoa volta ao app e entra com a senha nova.
+  Future<void> sendPasswordReset(String email) => _auth.resetPasswordForEmail(
+    email.trim(),
+    redirectTo: '${Env.siteUrl}/auth/callback?next=/nova-senha',
+  );
 
   Future<void> signOut() async {
     await beforeSignOut?.call();
