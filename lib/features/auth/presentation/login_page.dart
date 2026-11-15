@@ -65,7 +65,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
     try {
       await ref.read(authRepositoryProvider).sendPasswordReset(email);
-      _showMessage('Enviamos um link de recuperação para $email.');
+      _showMessage(
+        'Enviamos um link para $email. Abra no celular, crie a senha nova e '
+        'volte aqui para entrar.',
+      );
     } catch (error) {
       _showMessage(friendlyErrorMessage(error));
     }
