@@ -191,8 +191,15 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
     final athlete = widget.athlete!;
     final confirmed = await confirmDelete(
       context,
-      title: 'Excluir atleta?',
-      message: '${athlete.displayName} será removido do time.',
+      title: 'Excluir atleta de vez?',
+      // Apagar o atleta apaga junto (no banco) a súmula, as escalações, as
+      // presenças e os pagamentos dele: deixar claro e sugerir inativar.
+      message:
+          '${athlete.displayName} e todo o histórico dele no time serão '
+          'apagados: números da súmula (gols, assistências, cartões, '
+          'craque), escalações, presenças e pagamentos de mensalidade e '
+          'vaquinha. Não dá para desfazer.\n\nSe ele só saiu do time, '
+          'cancele e use Inativar: o histórico fica.',
     );
     if (!confirmed) return;
     await _run(
