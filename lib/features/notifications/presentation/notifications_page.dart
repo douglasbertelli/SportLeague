@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../games/data/games_tab_request.dart';
 import '../../games/domain/game.dart';
 import '../../games/presentation/presence.dart';
+import '../../plans/presentation/billing_visibility.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -152,8 +153,9 @@ class NotificationsPage extends ConsumerWidget {
           extra: notification.championshipId,
           needsAction: notification.kind == 'championship_invite',
         ),
-      // Teste do Premium acabando ou terminado: tocar abre os planos.
-      'plan' => const NotificationAction.page(
+      // Teste do Premium acabando ou terminado: tocar abre os planos (só no
+      // Web; no app fica só o aviso).
+      'plan' when billingVisible => const NotificationAction.page(
         'Ver planos',
         Icons.workspace_premium_outlined,
         Routes.plans,
