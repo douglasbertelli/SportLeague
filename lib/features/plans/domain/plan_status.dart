@@ -70,8 +70,8 @@ class PlanStatus {
     return PlanStatus(
       plan: SubscriptionPlan.fromName(map['plan'] as String),
       paidPlan: paidPlan,
-      // O teste só vale no Gratuito: quem passou para o Premium ou o Elite
-      // com um teste ainda em andamento não está "em teste".
+      // O teste só vale no Gratuito: quem passou para o Premium com um teste
+      // ainda em andamento não está "em teste".
       trialEndsAt: switch (map['trial_ends_at']) {
         final String at
             when paidPlan == null || paidPlan == SubscriptionPlan.free =>
@@ -190,15 +190,6 @@ String planLimitMessage(PlanFeature feature, Quota quota) => switch (feature) {
         'aniversariante, campeão), com as cores e fontes que você escolher, '
         'são do plano Premium.',
 };
-
-/// Mensagem do limite no Elite, combinado com cada cliente.
-String eliteLimitMessage(PlanFeature feature, Quota quota) {
-  final limit = quota == null || quota == 0
-      ? ''
-      : ' (${describeQuota(feature, quota).toLowerCase()})';
-  return 'Você chegou ao limite de ${feature.label.toLowerCase()} combinado '
-      'para o seu plano Elite$limit. Para aumentar, fale com a gente.';
-}
 
 /// Funcionalidade do erro `plan_limit:<chave>` que o banco devolve.
 PlanFeature? planLimitFeature(String message) {
