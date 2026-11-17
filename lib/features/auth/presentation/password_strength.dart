@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/password_rules.dart';
 
-/// Barra de força e as regras, compactas, logo abaixo do campo de senha: vão
-/// ficando marcadas enquanto a senha é digitada (as mesmas regras do site).
+/// Card compacto abaixo do campo de senha, com a barra de força e as regras,
+/// que vão ficando marcadas enquanto a senha é digitada (as mesmas do site).
 class PasswordStrength extends StatelessWidget {
   const PasswordStrength({
     super.key,
@@ -29,8 +29,13 @@ class PasswordStrength extends StatelessWidget {
     final hasEmail =
         password.isNotEmpty && passwordContainsEmail(password, email);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
