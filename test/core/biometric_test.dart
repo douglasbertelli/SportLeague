@@ -304,8 +304,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('E-mail'), findsOneWidget);
     expect(find.text('Google'), findsOneWidget);
-    // A conta é criada no site: sem WEB_URL, só o aviso.
-    expect(find.textContaining('Crie pelo site'), findsOneWidget);
+    expect(find.text('Criar conta'), findsOneWidget);
     // E dá para voltar para a biometria.
     await tester.ensureVisible(find.text('Entrar como Ana'));
     await tester.tap(find.text('Entrar como Ana'));
