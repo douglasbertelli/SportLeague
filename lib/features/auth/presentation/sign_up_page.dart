@@ -176,7 +176,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           onPressed: _submit,
         ),
         const SizedBox(height: 24),
-        SocialSignInButtons(enabled: !_loading),
+        SocialSignInButtons(enabled: !_loading, compact: true),
       ],
     );
   }
