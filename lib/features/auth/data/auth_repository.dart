@@ -39,6 +39,10 @@ class AuthRepository {
   /// (`terms_accepted_at`) e ainda sem tipo de perfil: ele é escolhido na
   /// etapa seguinte, como no login social.
   ///
+  /// O link de confirmação do e-mail leva à página Conta confirmada do site
+  /// (a mesma do cadastro do site vindo do app), que abre o app; sem ele, o
+  /// Supabase mandaria para o login do site.
+  ///
   /// Retorna `true` se o e-mail ainda precisa ser confirmado (sem sessão).
   Future<bool> signUp({
     required String fullName,
@@ -48,6 +52,7 @@ class AuthRepository {
     final response = await _auth.signUp(
       email: email.trim(),
       password: password,
+      emailRedirectTo: '${Env.siteUrl}/conta-confirmada',
       data: {
         'full_name': fullName.trim(),
         'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
