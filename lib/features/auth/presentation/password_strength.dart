@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/password_rules.dart';
 
-/// Barra de força e a lista das regras, que vão ficando marcadas enquanto a
-/// senha é digitada (igual ao cadastro do site).
+/// Barra de força e as regras, compactas, logo abaixo do campo de senha: vão
+/// ficando marcadas enquanto a senha é digitada (as mesmas regras do site).
 class PasswordStrength extends StatelessWidget {
   const PasswordStrength({
     super.key,
@@ -28,109 +28,87 @@ class PasswordStrength extends StatelessWidget {
     };
     final hasEmail =
         password.isNotEmpty && passwordContainsEmail(password, email);
-    final small = theme.textTheme.bodySmall;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               for (var n = 1; n <= 4; n++) ...[
-                if (n > 1) const SizedBox(width: 6),
+                if (n > 1) const SizedBox(width: 4),
                 Expanded(
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    height: 6,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: n <= score
                           ? color
                           : scheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
               ],
-              SizedBox(
-                width: 88,
-                child: Text(
-                  label,
-                  textAlign: TextAlign.right,
-                  style: small?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          for (final rule in passwordRules)
-            _RuleRow(ok: rule.test(password), label: rule.label),
-          if (hasEmail)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, size: 16, color: scheme.error),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Não use o seu e-mail na senha',
-                    style: small?.copyWith(color: scheme.error),
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 14,
+            runSpacing: 4,
+            children: [
+              for (final rule in passwordRules)
+                _Rule(ok: rule.test(password), label: rule.shortLabel),
+              if (hasEmail)
+                const _Rule(ok: false, label: 'Sem o seu e-mail', error: true),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _RuleRow extends StatelessWidget {
-  const _RuleRow({required this.ok, required this.label});
+class _Rule extends StatelessWidget {
+  const _Rule({required this.ok, required this.label, this.error = false});
 
   final bool ok;
   final String label;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: ok ? scheme.primary : null,
-              border: ok ? null : Border.all(color: scheme.outline),
-            ),
-            child: ok
-                ? Icon(Icons.check, size: 11, color: scheme.onPrimary)
-                : null,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: ok ? scheme.onSurface : scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final color = error
+        ? scheme.error
+        : ok
+        ? scheme.primary
+        : scheme.onSurfaceVariant;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          error
+              ? Icons.error_outline
+              : ok
+              ? Icons.check_circle
+              : Icons.radio_button_unchecked,
+          size: 14,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color)),
+      ],
     );
   }
 }

@@ -150,7 +150,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   validator: (value) =>
                       passwordProblem(value ?? '', _emailController.text),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 // Atualiza a cada letra da senha (e do e-mail, que não pode
                 // estar nela).
                 ListenableBuilder(
