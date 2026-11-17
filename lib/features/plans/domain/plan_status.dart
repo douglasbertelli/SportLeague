@@ -70,8 +70,8 @@ class PlanStatus {
     return PlanStatus(
       plan: SubscriptionPlan.fromName(map['plan'] as String),
       paidPlan: paidPlan,
-      // O teste só vale no Gratuito: quem passou para o Premium com um teste
-      // ainda em andamento não está "em teste".
+      // O teste só vale no Gratuito: quem passou para o Premium ou o Vip
+      // com um teste ainda em andamento não está "em teste".
       trialEndsAt: switch (map['trial_ends_at']) {
         final String at
             when paidPlan == null || paidPlan == SubscriptionPlan.free =>

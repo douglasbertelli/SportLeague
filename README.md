@@ -373,7 +373,7 @@ supabase/
 
 | Tabela          | Descrição                                                        |
 | --------------- | ---------------------------------------------------------------- |
-| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta), capa do jogador (`cover_url`, na mesma pasta), apelido do jogador (`nickname`, até 40 caracteres, mostrado no perfil dele) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). Jogador e técnico têm um **código pessoal** (`code`: JG ou TC + 6), criado pelo banco com o papel e trocado só por `regenerate_my_code`; o administrador convida pelo código. A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números, no Início) |
+| `profiles`      | Criado automaticamente no cadastro; papel (`admin`/`player`/`coach`), plano (`free`/`premium`/`elite`), foto (o técnico e o jogador enviam a deles pelo Perfil, no Storage público `profile-photos`, cada um na própria pasta), capa do jogador (`cover_url`, na mesma pasta), apelido do jogador (`nickname`, até 40 caracteres, mostrado no perfil dele) e dados de atleta do jogador (nascimento, posição preferida, pé dominante e altura). Jogador e técnico têm um **código pessoal** (`code`: JG ou TC + 6), criado pelo banco com o papel e trocado só por `regenerate_my_code`; o administrador convida pelo código. A função `my_player_totals` dá os números do jogador logado em cada time em que é atleta (Meus números, no Início) |
 | `addresses`     | Um endereço por perfil, visível só para o dono                   |
 | `teams`         | Times; apenas administradores criam, e cada um pode ter vários. Modalidades (futsal, society, campo, areia, desafio), joga como (mandante, visitante, ambos — o amistoso só é marcado num mando que os dois times aceitam), gênero, faixa de idade (livre, base com idade mínima e máxima, master com idade mínima), fundação, contatos, local do time, logo, capa e até 3 uniformes |
 | `team_players`  | Atletas do time (com ou sem conta no app), com foto; só o dono do time altera |
@@ -454,7 +454,7 @@ O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
 conta nova começa sem papel até o usuário escolher.
 
-### Planos (Gratuito e Premium)
+### Planos (Gratuito, Premium e Vip)
 
 O plano é do administrador e vale para os times dele; jogadores e técnicos
 não têm plano. O que cada plano libera fica na tabela `plan_features`
@@ -492,10 +492,16 @@ Premium (`private.effective_plan`). O cron `trial-reminders` (9h de
 Brasília) avisa faltando até 3 dias e quando termina. Sem `trial_days`, o
 teste some do app.
 
+**Vip**: plano para clientes VIP, dado pelo painel do dono (ou à mão, como
+abaixo, com `plan = 'elite'`). Sem cobrança, sem teste e sem linhas em
+`plan_features` nem em `plans`: tudo liberado, inclusive funcionalidades
+novas. A tela Planos mostra só o cartão do Vip para quem está nele e não o
+mostra para os outros.
+
 **Limites por cliente** (`private.plan_overrides`: `profile_id`, `feature`,
 `quota`): uma linha vale no lugar do limite do plano para aquela pessoa
 (`private.plan_quota` e `plan_status()` já consideram). Hoje não há linhas
-nem quem grave nela.
+nem quem grave nela: o Vip não tem limite nenhum.
 
 **Financeiro** (perfil do administrador): o plano, o valor mensal do
 Premium com os times ativos (times inativos não são cobrados) e os
