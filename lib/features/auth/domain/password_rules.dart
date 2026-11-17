@@ -2,21 +2,42 @@
 /// `src/lib/password.ts`): mínimo 8, letras maiúsculas e minúsculas, números
 /// e símbolos, e sem o e-mail.
 class PasswordRule {
-  const PasswordRule(this.id, this.label, this.test);
+  const PasswordRule(this.id, this.label, this.shortLabel, this.test);
 
   final String id;
+
+  /// Texto completo, usado na mensagem de erro do campo.
   final String label;
+
+  /// Texto curto, para a lista compacta abaixo do campo.
+  final String shortLabel;
   final bool Function(String password) test;
 }
 
 final passwordRules = <PasswordRule>[
-  PasswordRule('length', 'Pelo menos 8 caracteres', (p) => p.length >= 8),
-  PasswordRule('upper', 'Uma letra maiúscula', (p) => p.contains(_upper)),
-  PasswordRule('lower', 'Uma letra minúscula', (p) => p.contains(_lower)),
-  PasswordRule('digit', 'Um número', (p) => p.contains(_digit)),
+  PasswordRule(
+    'length',
+    'Pelo menos 8 caracteres',
+    '8+ caracteres',
+    (p) => p.length >= 8,
+  ),
+  PasswordRule(
+    'upper',
+    'Uma letra maiúscula',
+    'Maiúscula',
+    (p) => p.contains(_upper),
+  ),
+  PasswordRule(
+    'lower',
+    'Uma letra minúscula',
+    'Minúscula',
+    (p) => p.contains(_lower),
+  ),
+  PasswordRule('digit', 'Um número', 'Número', (p) => p.contains(_digit)),
   PasswordRule(
     'symbol',
     'Um símbolo (ex.: ! @ # \$ %)',
+    'Símbolo (!@#\$%)',
     (p) => p.contains(_symbol),
   ),
 ];

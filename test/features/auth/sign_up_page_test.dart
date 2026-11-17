@@ -100,7 +100,7 @@ void main() {
     // Com o e-mail dentro da senha, também não.
     await tester.enterText(fields.at(2), 'Joao@2024x');
     await tester.pump();
-    expect(find.text('Não use o seu e-mail na senha'), findsOneWidget);
+    expect(find.text('Sem o seu e-mail'), findsOneWidget);
   });
 
   testWidgets('senhas diferentes não cadastram', (tester) async {
