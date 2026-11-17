@@ -4,6 +4,9 @@ abstract final class Routes {
 
   /// Esqueci minha senha (sem login); recebe o e-mail já digitado em `extra`.
   static const forgotPassword = '/login/forgot-password';
+
+  /// Criar conta com e-mail e senha (sem login).
+  static const signUp = '/login/signup';
   static const onboardingProfile = '/onboarding/profile';
   static const onboardingAddress = '/onboarding/address';
 
