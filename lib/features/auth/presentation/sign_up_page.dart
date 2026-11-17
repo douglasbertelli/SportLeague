@@ -9,6 +9,8 @@ import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../data/auth_repository.dart';
+import '../domain/password_rules.dart';
+import 'password_strength.dart';
 import 'social_sign_in_buttons.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -129,7 +131,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Senha',
-                    helperText: 'Mínimo de 8 caracteres',
                     suffixIcon: IconButton(
                       tooltip: _obscurePassword
                           ? 'Mostrar senha'
@@ -146,7 +147,21 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   obscureText: _obscurePassword,
                   autofillHints: const [AutofillHints.newPassword],
                   textInputAction: TextInputAction.next,
-                  validator: Validators.password,
+                  validator: (value) =>
+                      passwordProblem(value ?? '', _emailController.text),
+                ),
+                const SizedBox(height: 12),
+                // Atualiza a cada letra da senha (e do e-mail, que não pode
+                // estar nela).
+                ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _passwordController,
+                    _emailController,
+                  ]),
+                  builder: (_, _) => PasswordStrength(
+                    password: _passwordController.text,
+                    email: _emailController.text,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

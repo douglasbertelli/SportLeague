@@ -39,7 +39,8 @@ String friendlyErrorMessage(Object error) {
         return 'Essa senha já apareceu em vazamentos de dados. '
             'Escolha outra.';
       }
-      return 'Senha fraca. Use pelo menos 8 caracteres.';
+      return 'Senha fraca. Use 8 caracteres ou mais, com letras maiúsculas '
+          'e minúsculas, números e símbolos.';
     }
     if (error.statusCode == '429') {
       return 'Muitas tentativas. Aguarde um pouco e tente novamente.';
