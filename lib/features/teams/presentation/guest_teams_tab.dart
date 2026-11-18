@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
+import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
@@ -11,7 +12,55 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../games/data/opponent_repository.dart';
 import '../../games/domain/opponent.dart';
+import '../../games/presentation/guest_team_sheet.dart';
+import '../data/team_repository.dart';
+import '../domain/team.dart';
 import 'team_logo.dart';
+
+/// Cria um time fictício pela aba Fictícios: nome, símbolo e a modalidade
+/// (marcada a do time escolhido).
+Future<void> createGuestTeamFromTab(BuildContext context, WidgetRef ref) async {
+  final selected = ref.read(selectedTeamProvider).value;
+  final draft = await showAppSheet<GuestTeamDraft>(
+    context,
+    builder: (_) => GuestTeamSheet(
+      initialName: '',
+      message:
+          'Para adversários que não estão no SportLeague. Ele fica salvo '
+          'para os amistosos e campeonatos da modalidade, e só você vê.',
+      submitLabel: 'Criar',
+      modalities: Modality.values,
+      initialModality: selected?.modalities.firstOrNull,
+    ),
+  );
+  if (draft == null || !context.mounted) return;
+  try {
+    await createGuestTeam(
+      ref.read(opponentRepositoryProvider),
+      GuestTeam(
+        ownerId: ref.read(currentUserIdProvider)!,
+        name: draft.name,
+        modality: draft.modality ?? Modality.values.first,
+      ),
+      draft.logo,
+      onLogoError: () {
+        if (context.mounted) {
+          showErrorSnackBar(
+            context,
+            'O time foi criado, mas o símbolo não foi enviado. Toque nele '
+            'para tentar de novo.',
+          );
+        }
+      },
+    );
+  } catch (error) {
+    if (context.mounted) {
+      showErrorSnackBar(context, friendlyErrorMessage(error));
+    }
+  } finally {
+    ref.invalidate(myGuestTeamsProvider);
+  }
+}
 
 /// Aba Fictícios de Meus times: os adversários fora da plataforma que o
 /// administrador criou, com o nome e o símbolo para editar.
@@ -68,13 +117,14 @@ class GuestTeamsTab extends ConsumerWidget {
               title: 'Nenhum time fictício',
               message:
                   'Times fictícios são adversários que não estão no '
-                  'SportLeague. Crie ao marcar um amistoso ou ao adicionar um '
-                  'time num campeonato.',
+                  'SportLeague. Crie aqui no "Novo fictício", ao marcar um '
+                  'amistoso ou ao adicionar um time num campeonato.',
             )
           : RefreshIndicator(
               onRefresh: () => ref.refresh(myGuestTeamsProvider.future),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                // Espaço no fim para o botão "Novo fictício" não cobrir.
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 children: [
                   Text(
                     'Só você vê os seus times fictícios.',
