@@ -41,11 +41,24 @@ enum PlanFeature {
 /// Limite de uma funcionalidade: nulo = sem limite, 0 = bloqueada.
 typedef Quota = int?;
 
+/// Onde a assinatura do Premium foi feita.
+enum BillingSource {
+  /// App Store / Google Play (Adapty), no app.
+  store,
+
+  /// Asaas, no site.
+  asaas;
+
+  static BillingSource? fromName(String? name) =>
+      values.where((source) => source.name == name).firstOrNull;
+}
+
 /// Plano do usuário, os limites dele e quanto já usa.
 class PlanStatus {
   const PlanStatus({
     required this.plan,
     this.paidPlan,
+    this.billingSource,
     this.trialEndsAt,
     this.trialAvailable = false,
     this.quotas = const {},
@@ -70,6 +83,7 @@ class PlanStatus {
     return PlanStatus(
       plan: SubscriptionPlan.fromName(map['plan'] as String),
       paidPlan: paidPlan,
+      billingSource: BillingSource.fromName(map['billing_source'] as String?),
       // O teste só vale no Gratuito: quem passou para o Premium ou o Vip
       // com um teste ainda em andamento não está "em teste".
       trialEndsAt: switch (map['trial_ends_at']) {
@@ -93,6 +107,9 @@ class PlanStatus {
 
   /// O plano assinado (o Gratuito durante o teste).
   final SubscriptionPlan? paidPlan;
+
+  /// Onde o Premium foi assinado (loja ou site); nulo sem assinatura.
+  final BillingSource? billingSource;
 
   /// Fim do teste do Premium em andamento.
   final DateTime? trialEndsAt;

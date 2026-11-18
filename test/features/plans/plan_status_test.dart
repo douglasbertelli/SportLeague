@@ -69,6 +69,18 @@ void main() {
     expect(premium.onTrial, isFalse);
   });
 
+  test('de onde vem a assinatura (loja, site ou nenhuma)', () {
+    PlanStatus read(Object? source) => PlanStatus.fromMap({
+      'plan': 'premium',
+      'paid_plan': 'premium',
+      'billing_source': source,
+    });
+    expect(read('store').billingSource, BillingSource.store);
+    expect(read('asaas').billingSource, BillingSource.asaas);
+    expect(read(null).billingSource, isNull);
+    expect(read('outra').billingSource, isNull);
+  });
+
   test('teste em andamento no Gratuito continua aparecendo', () {
     final trial = PlanStatus.fromMap({
       'plan': 'premium',

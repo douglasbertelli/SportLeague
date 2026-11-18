@@ -60,6 +60,16 @@ Deno.serve(async (request) => {
   if (!profile || profile.role !== "admin") return json({ error: "not_admin" }, 403);
   if (profile.plan === "elite") return json({ error: "elite" }, 409);
 
+  // Quem já assina pela loja (app) não assina de novo pelo site.
+  const { data: store } = await admin
+    .from("store_subscriptions")
+    .select("active, expires_at")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (store?.active && (!store.expires_at || new Date(store.expires_at) > new Date())) {
+    return json({ error: "subscribed_in_app" }, 409);
+  }
+
   const { data: address } = await admin
     .from("addresses")
     .select("zip_code, street, number, complement, neighborhood")

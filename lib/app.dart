@@ -8,6 +8,7 @@ import 'core/security/biometric_gate.dart';
 import 'core/theme/app_color_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'features/plans/data/store_billing.dart';
 
 class SportLeagueApp extends ConsumerWidget {
   const SportLeagueApp({super.key});
@@ -27,9 +28,13 @@ class SportLeagueApp extends ConsumerWidget {
       supportedLocales: const [Locale('pt', 'BR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // Com "Entrar com biometria" ligado, a digital ou o rosto desbloqueia.
-      // O push registra o aparelho e, ao tocar, abre as notificações.
-      builder: (context, child) =>
-          BiometricGate(child: PushNotificationsListener(child: child!)),
+      // O push registra o aparelho e, ao tocar, abre as notificações. A
+      // compra pelas lojas (Adapty) acompanha a conta que entrou.
+      builder: (context, child) => BiometricGate(
+        child: PushNotificationsListener(
+          child: StoreBillingListener(child: child!),
+        ),
+      ),
     );
   }
 }

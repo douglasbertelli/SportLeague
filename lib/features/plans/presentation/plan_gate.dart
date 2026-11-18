@@ -19,22 +19,11 @@ Future<void> showPremiumSheet(
   context,
   builder: (sheetContext) => Consumer(
     builder: (sheetContext, ref, _) {
-      // No app das lojas: só o aviso, sem planos nem teste (ver
-      // billingVisible).
-      if (!billingVisible) {
-        return AppSheet(
-          title: 'Recurso do plano Premium',
-          message: planLimitMessage(feature, quota),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(sheetContext).pop(),
-              child: const Text('Entendi'),
-            ),
-          ],
-        );
-      }
+      // O teste grátis sem cartão é do site; no app das lojas o Premium é
+      // assinado pela loja (ver billingVisible).
       final trialAvailable =
-          ref.watch(planStatusProvider).value?.trialAvailable ?? false;
+          billingVisible &&
+          (ref.watch(planStatusProvider).value?.trialAvailable ?? false);
       final trialDays = _premiumPrice(ref)?.trialDays;
       final canTry = trialAvailable && trialDays != null;
       return AppSheet(

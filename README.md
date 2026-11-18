@@ -503,13 +503,40 @@ mostra para os outros.
 (`private.plan_quota` e `plan_status()` já consideram). Hoje não há linhas
 nem quem grave nela: o Vip não tem limite nenhum.
 
-**Financeiro** (perfil do administrador): o plano, o valor mensal do
-Premium com os times ativos (times inativos não são cobrados) e os
-pagamentos da assinatura (`subscription_payments`, só leitura para o dono;
-quem grava é o backend de pagamentos).
+**Financeiro** (perfil do administrador, só fora do app das lojas): o
+plano, o valor mensal do Premium e os pagamentos da assinatura pelo site
+(`subscription_payments`, só leitura para o dono; quem grava é o backend
+de pagamentos).
 
-Ainda não há pagamento. Para trocar o plano de alguém à mão (no SQL Editor,
-tudo de uma vez):
+### Assinatura: Adapty no app, Asaas no site
+
+- **Site (sportleague-web):** Asaas (`asaas-checkout`, `asaas-webhook`,
+  tabela `subscriptions`).
+- **App Android/iOS:** compra pelas lojas via Adapty
+  (`lib/features/plans/data/store_billing.dart`). O app identifica a pessoa
+  no Adapty com o id dela no Supabase; o Adapty avisa a Edge Function
+  `adapty-webhook`, que chama `adapty_apply_event` e grava em
+  `store_subscriptions`. No app não há teste grátis sem cartão, Financeiro
+  nem link para o site (regra das lojas).
+- O plano é Premium enquanto houver uma das duas valendo
+  (`private.sync_paid_plan`); `asaas_expire` e `store_expire` (cron diário)
+  só devolvem ao Gratuito quem não tem nenhuma. `plan_status()` diz de onde
+  vem (`billing_source`: `store` ou `asaas`). Quem já assina pela loja não
+  assina de novo pelo site (`asaas-checkout` responde `subscribed_in_app`).
+
+Configuração:
+
+1. App Store Connect e Google Play Console: a assinatura mensal do Premium.
+2. Adapty: o app com as duas lojas, o access level `premium`, o produto, um
+   placement `premium` com o produto e, em Integrations > Webhook, a URL
+   `https://<projeto>.supabase.co/functions/v1/adapty-webhook` com o
+   "Authorization header value" igual ao segredo `ADAPTY_WEBHOOK_TOKEN`.
+3. `env.json`: `ADAPTY_PUBLIC_KEY` (e `ADAPTY_PLACEMENT_ID`, se não for
+   `premium`). Sem a chave, o app mostra "Assinatura em breve".
+4. `supabase secrets set ADAPTY_WEBHOOK_TOKEN=...` e
+   `supabase functions deploy adapty-webhook --no-verify-jwt`.
+
+Para trocar o plano de alguém à mão (no SQL Editor, tudo de uma vez):
 
 ```sql
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);

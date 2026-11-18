@@ -14,6 +14,16 @@ abstract final class Env {
     'GOOGLE_IOS_CLIENT_ID',
   );
 
+  /// Chave pública do SDK do Adapty (App settings > General > API keys).
+  /// Sem ela, o app não vende a assinatura (mostra "em breve").
+  static const adaptyPublicKey = String.fromEnvironment('ADAPTY_PUBLIC_KEY');
+
+  /// Placement do Adapty com o produto do Premium.
+  static const adaptyPlacementId = String.fromEnvironment(
+    'ADAPTY_PLACEMENT_ID',
+    defaultValue: 'premium',
+  );
+
   /// Endereço do site (sportleague-web), usado nos links compartilhados.
   static const webUrl = String.fromEnvironment('WEB_URL');
 
