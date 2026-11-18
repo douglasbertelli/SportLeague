@@ -36,12 +36,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   Future<void> _send() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Em "Enviar de novo" o formulário já saiu da tela (currentState nulo) e
+    // o e-mail é o mesmo já validado no primeiro envio.
+    final resend = _sentTo != null;
+    if (!resend && !_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final email = _email.text.trim();
+      final email = _sentTo ?? _email.text.trim();
       await ref.read(authRepositoryProvider).sendPasswordReset(email);
-      if (mounted) setState(() => _sentTo = email);
+      if (!mounted) return;
+      setState(() => _sentTo = email);
+      if (resend) showErrorSnackBar(context, 'Enviamos o link de novo.');
     } catch (error) {
       if (mounted) showErrorSnackBar(context, friendlyErrorMessage(error));
     } finally {
