@@ -40,6 +40,8 @@ void main() {
     expect(redirect(Routes.login, session: loggedOut), isNull);
     // Esqueci minha senha abre sem login.
     expect(redirect(Routes.forgotPassword, session: loggedOut), isNull);
+    // E o cadastro também.
+    expect(redirect(Routes.signUp, session: loggedOut), isNull);
   });
 
   test('sessão carregando mostra a splash', () {

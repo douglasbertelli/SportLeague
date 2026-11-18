@@ -41,7 +41,7 @@ class PlansPage extends ConsumerWidget {
                 _TrialBanner(ends: ends),
                 const SizedBox(height: 16),
               ],
-              // O Elite só aparece para quem está nele, e sozinho.
+              // O Vip só aparece para quem está nele, e sozinho.
               for (final plan
                   in status?.plan == SubscriptionPlan.elite
                       ? const [SubscriptionPlan.elite]
@@ -113,9 +113,9 @@ class _PlanCard extends ConsumerWidget {
   PlanFeatureRow? _row(PlanFeature feature) =>
       rows.where((row) => row.feature == feature).firstOrNull;
 
-  Quota _quota(PlanFeature feature) => plan == SubscriptionPlan.elite
-      ? status?.quota(feature)
-      : _row(feature)?.quota;
+  /// O Vip tem tudo liberado e sem limite.
+  Quota _quota(PlanFeature feature) =>
+      plan == SubscriptionPlan.elite ? null : _row(feature)?.quota;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -199,8 +199,9 @@ class _PlanCard extends ConsumerWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
-              // O que o administrador pagaria com os times que já tem.
-              if (premium && !price.isFree && teams > 1)
+              // O que o administrador pagaria com os times que já tem (só se
+              // houver cobrança por time a mais).
+              if (premium && price.extraTeamCents > 0 && teams > 1)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
@@ -222,8 +223,7 @@ class _PlanCard extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Todas as funcionalidades liberadas, com os limites '
-                'combinados com você.',
+                'Sem mensalidade e com todas as funcionalidades liberadas.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -231,8 +231,6 @@ class _PlanCard extends ConsumerWidget {
             ],
             const SizedBox(height: 8),
             // Só o que o plano inclui (o não incluso fica de fora).
-            // No Elite os limites são os do cliente (plan_status), não os
-            // da tabela de planos.
             for (final feature in PlanFeature.values)
               if (_quota(feature) != 0)
                 _FeatureLine(

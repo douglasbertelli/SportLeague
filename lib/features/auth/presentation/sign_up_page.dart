@@ -1,0 +1,198 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/utils/error_messages.dart';
+import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/form_page.dart';
+import '../../../core/widgets/loading_button.dart';
+import '../../legal/presentation/legal_page.dart';
+import '../data/auth_repository.dart';
+import '../domain/password_rules.dart';
+import 'password_strength.dart';
+import 'social_sign_in_buttons.dart';
+
+class SignUpPage extends ConsumerStatefulWidget {
+  const SignUpPage({super.key});
+
+  @override
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
+}
+
+class _SignUpPageState extends ConsumerState<SignUpPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _loading = false;
+  bool _obscurePassword = true;
+
+  /// Aceite dos Termos e da Política: vai junto no cadastro, para o app não
+  /// pedir de novo logo depois.
+  bool _acceptedTerms = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_loading || !_formKey.currentState!.validate()) return;
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aceite os Termos de Uso e a Política de Privacidade.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final needsConfirmation = await ref
+          .read(authRepositoryProvider)
+          .signUp(
+            fullName: _nameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
+      if (needsConfirmation) {
+        await _showConfirmEmailSheet();
+        if (mounted) context.pop();
+      }
+      // Com sessão ativa, o router leva à escolha do tipo de perfil.
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _showConfirmEmailSheet() => showAppSheet<void>(
+    context,
+    builder: (context) => AppSheet(
+      title: 'Confirme seu e-mail',
+      message:
+          'Enviamos um link de confirmação para '
+          '${_emailController.text.trim()}. Depois de confirmar, faça login '
+          'para continuar.',
+      body: Icon(
+        Icons.mark_email_read_outlined,
+        size: 64,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      actions: [
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.check),
+          label: const Text('Entendi'),
+        ),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return FormPage(
+      appBar: AppBar(title: const Text('Criar conta')),
+      children: [
+        Form(
+          key: _formKey,
+          child: AutofillGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Nome completo'),
+                  textCapitalization: TextCapitalization.words,
+                  autofillHints: const [AutofillHints.name],
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.fullName,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'E-mail'),
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.email,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Senha',
+                    suffixIcon: IconButton(
+                      tooltip: _obscurePassword
+                          ? 'Mostrar senha'
+                          : 'Ocultar senha',
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  obscureText: _obscurePassword,
+                  autofillHints: const [AutofillHints.newPassword],
+                  textInputAction: TextInputAction.next,
+                  validator: (value) =>
+                      passwordProblem(value ?? '', _emailController.text),
+                ),
+                const SizedBox(height: 10),
+                // Atualiza a cada letra da senha (e do e-mail, que não pode
+                // estar nela).
+                ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _passwordController,
+                    _emailController,
+                  ]),
+                  builder: (_, _) => PasswordStrength(
+                    password: _passwordController.text,
+                    email: _emailController.text,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar senha',
+                  ),
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (value) => value != _passwordController.text
+                      ? 'As senhas não conferem'
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        LegalAcceptance(
+          accepted: _acceptedTerms,
+          onChanged: (value) => setState(() => _acceptedTerms = value),
+        ),
+        const SizedBox(height: 24),
+        LoadingButton(
+          label: 'Cadastrar',
+          loading: _loading,
+          onPressed: _submit,
+        ),
+        const SizedBox(height: 24),
+        SocialSignInButtons(enabled: !_loading, compact: true),
+      ],
+    );
+  }
+}

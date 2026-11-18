@@ -76,7 +76,7 @@ void main() {
       );
       expect(find.text('Plano Gratuito'), findsOneWidget);
       expect(find.text('Sem assinatura'), findsOneWidget);
-      expect(find.text('Valor do Premium com seus times'), findsOneWidget);
+      expect(find.text('Valor do Premium'), findsOneWidget);
       // R$ 30 + 2 × R$ 15 = R$ 60.
       expect(find.text(formatMoney(6000)), findsOneWidget);
       expect(find.text('Nenhum pagamento ainda'), findsOneWidget);

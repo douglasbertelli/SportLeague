@@ -454,7 +454,7 @@ O plano não pode ser alterado pelo app; ele é alterado pelo backend de
 pagamentos (`service_role`). O papel também não, exceto uma única vez: toda
 conta nova começa sem papel até o usuário escolher.
 
-### Planos (Gratuito, Premium e Elite)
+### Planos (Gratuito, Premium e Vip)
 
 O plano é do administrador e vale para os times dele; jogadores e técnicos
 não têm plano. O que cada plano libera fica na tabela `plan_features`
@@ -492,18 +492,16 @@ Premium (`private.effective_plan`). O cron `trial-reminders` (9h de
 Brasília) avisa faltando até 3 dias e quando termina. Sem `trial_days`, o
 teste some do app.
 
-**Elite**: plano para clientes VIP, dado pelo painel do dono (ou à mão, como
+**Vip**: plano para clientes VIP, dado pelo painel do dono (ou à mão, como
 abaixo, com `plan = 'elite'`). Sem cobrança, sem teste e sem linhas em
 `plan_features` nem em `plans`: tudo liberado, inclusive funcionalidades
-novas. A tela Planos mostra só o cartão do Elite para quem está nele e não o
+novas. A tela Planos mostra só o cartão do Vip para quem está nele e não o
 mostra para os outros.
 
 **Limites por cliente** (`private.plan_overrides`: `profile_id`, `feature`,
 `quota`): uma linha vale no lugar do limite do plano para aquela pessoa
-(`private.plan_quota` e `plan_status()` já consideram). Hoje é do Elite: o
-painel dá o Elite com até 3 times e ajusta o número por cliente; sair do
-Elite apaga os limites dele. No limite, o app mostra o aviso do Elite (sem
-oferecer o Premium).
+(`private.plan_quota` e `plan_status()` já consideram). Hoje não há linhas
+nem quem grave nela: o Vip não tem limite nenhum.
 
 **Financeiro** (perfil do administrador): o plano, o valor mensal do
 Premium com os times ativos (times inativos não são cobrados) e os

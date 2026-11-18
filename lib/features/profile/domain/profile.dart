@@ -18,7 +18,7 @@ enum SubscriptionPlan {
 
   /// Clientes VIP, dado pelo painel: sem cobrança e com tudo liberado. Não
   /// aparece na comparação dos planos para quem não está nele.
-  elite('Elite');
+  elite('Vip');
 
   const SubscriptionPlan(this.label);
 

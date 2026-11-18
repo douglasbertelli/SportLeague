@@ -14,8 +14,7 @@ abstract final class Env {
     'GOOGLE_IOS_CLIENT_ID',
   );
 
-  /// Endereço do site (sportleague-web), onde a conta é criada. Vazio, o
-  /// app só avisa que o cadastro é pelo site.
+  /// Endereço do site (sportleague-web), usado nos links compartilhados.
   static const webUrl = String.fromEnvironment('WEB_URL');
 
   /// Endereço do site para links compartilhados (perfil público, convite):

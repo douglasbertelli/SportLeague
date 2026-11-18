@@ -11,6 +11,7 @@ import '../../features/athletes/presentation/athlete_profile_page.dart';
 import '../../features/auth/presentation/complete_profile_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/sign_up_page.dart';
 import '../../features/banners/domain/banner_design.dart';
 import '../../features/banners/presentation/banner_editor_page.dart';
 import '../../features/championships/domain/championship.dart';
@@ -53,7 +54,7 @@ import '../../features/venues/presentation/venues_page.dart';
 import '../supabase/supabase_providers.dart';
 import 'routes.dart';
 
-const _publicRoutes = {Routes.login, Routes.forgotPassword};
+const _publicRoutes = {Routes.login, Routes.forgotPassword, Routes.signUp};
 
 /// Abertos em qualquer situação (com ou sem login, antes do cadastro
 /// terminar).
@@ -102,6 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) =>
                 ForgotPasswordPage(email: state.extra as String?),
           ),
+          GoRoute(path: 'signup', builder: (_, _) => const SignUpPage()),
         ],
       ),
       GoRoute(

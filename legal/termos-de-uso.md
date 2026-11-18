@@ -59,7 +59,7 @@ Quem cria e administra um time é responsável por:
 
 4.2. **Teste grátis:** o administrador pode usar o Premium gratuitamente por **15 dias**, uma única vez por conta. Ao fim do teste, a conta volta automaticamente ao plano Gratuito, sem cobrança e sem perda de dados.
 
-4.3. **Valores:** o Premium é cobrado por mês, com um valor base que inclui um time e um valor adicional por time ativo a mais, conforme a tela Planos. Times inativos não são cobrados.
+4.3. **Valores:** o Premium é cobrado por mês, por um valor único informado na tela Planos. Todos os planos permitem times ilimitados, sem custo adicional por time.
 
 4.4. **Cobrança:** quando a assinatura estiver disponível, a cobrança será feita por Google Play (Android) ou App Store (iPhone), nas condições informadas no momento da contratação, incluindo renovação, cancelamento e reembolso. Os pagamentos ficam registrados na tela **Financeiro**.
 
