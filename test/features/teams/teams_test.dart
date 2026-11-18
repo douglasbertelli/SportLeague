@@ -45,6 +45,7 @@ import 'package:sport_league/features/games/presentation/game_card.dart';
 import 'package:sport_league/features/games/presentation/game_form_page.dart';
 import 'package:sport_league/features/games/presentation/opponent_picker_page.dart';
 import 'package:sport_league/features/games/presentation/games_tab.dart';
+import 'package:sport_league/features/games/presentation/new_friendly.dart';
 import 'package:sport_league/features/home/presentation/team_dashboard.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
 import 'package:sport_league/features/teams/domain/season.dart';
@@ -177,8 +178,7 @@ Future<void> _pumpPage(
       ),
       GoRoute(
         path: Routes.availability,
-        builder: (_, _) =>
-            const Scaffold(body: Text('Tela de disponibilidade')),
+        builder: (_, _) => const Scaffold(body: Text('Tela da agenda')),
       ),
       GoRoute(
         path: Routes.pickVenue,
@@ -213,7 +213,7 @@ Future<void> _pumpPage(
   await tester.pumpAndSettle();
 }
 
-/// Tela de celular em pé (360x780), para listas longas como a disponibilidade.
+/// Tela de celular em pé (360x780), para listas longas como a agenda.
 void _usePhoneScreen(WidgetTester tester) {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -990,8 +990,8 @@ void main() {
       );
       await _pumpTab(tester, container, GamesTab(now: now));
 
-      // O dono tem o atalho para a disponibilidade junto do Novo amistoso.
-      expect(find.byTooltip('Disponibilidade'), findsOneWidget);
+      // O dono tem o atalho para a agenda junto do Novo amistoso.
+      expect(find.byTooltip('Agenda'), findsOneWidget);
       expect(find.text('Novo amistoso'), findsOneWidget);
 
       // As abas rolam na horizontal quando não cabem.
@@ -2417,7 +2417,7 @@ void main() {
       // Jogos: sem "Novo amistoso"; no card, só a escalação.
       await _pumpTab(tester, container, GamesTab(now: DateTime(2026, 10, 22)));
       expect(find.text('Novo amistoso'), findsNothing);
-      expect(find.byTooltip('Disponibilidade'), findsNothing);
+      expect(find.byTooltip('Agenda'), findsNothing);
       await tester.tap(find.byTooltip('Ações do amistoso'));
       await tester.pumpAndSettle();
       expect(find.text('Escalação'), findsOneWidget);
@@ -3354,7 +3354,7 @@ void main() {
     expect(formatGameTime(DateTime(2026, 3, 12, 9, 5)), '09:05');
   });
 
-  group('disponibilidade', () {
+  group('agenda', () {
     // Os cards do dia escolhido (embaixo do calendário).
     Finder inDay(Finder finder) => find.descendant(
       of: find.byKey(const Key('day-slots')),
@@ -3723,6 +3723,56 @@ void main() {
       expect(find.text('Todo sábado às 15:00'), findsOneWidget);
     });
 
+    testWidgets('vindo do amistoso, usa o horário adicionado e volta', (
+      tester,
+    ) async {
+      final availability = FakeAvailabilityRepository();
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: availability,
+      );
+      // Sábado, 24/10/2026.
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24), forFriendly: true),
+      );
+
+      await tester.tap(find.text('Adicionar horário'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar'));
+      await tester.pumpAndSettle();
+      expect(availability.added, hasLength(1));
+      expect(find.text('Horário adicionado'), findsOneWidget);
+      expect(
+        find.text('Usar 24/10/2026 às 15:00 no amistoso?'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Usar no amistoso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    testWidgets('fora do amistoso, adicionar não oferece voltar', (
+      tester,
+    ) async {
+      final container = await _container(
+        teams: FakeTeamRepository([teamA]),
+        availability: FakeAvailabilityRepository(),
+      );
+      await _pumpPage(
+        tester,
+        container,
+        AvailabilityPage(today: DateTime(2026, 10, 24)),
+      );
+      await tester.tap(find.text('Adicionar horário'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Usar no amistoso'), findsNothing);
+    });
+
     testWidgets('a escolha do horário só oferece os horários livres', (
       tester,
     ) async {
@@ -3768,7 +3818,7 @@ void main() {
       expect(find.text('Início'), findsOneWidget);
     });
 
-    testWidgets('sem horários no próprio calendário, leva à disponibilidade', (
+    testWidgets('sem horários no próprio calendário, leva à agenda', (
       tester,
     ) async {
       final free = <String, List<DateTime>>{};
@@ -3793,13 +3843,155 @@ void main() {
 
       await tester.tap(find.text('Cadastrar horários'));
       await tester.pumpAndSettle();
-      expect(find.text('Tela de disponibilidade'), findsOneWidget);
+      expect(find.text('Tela da agenda'), findsOneWidget);
 
       // Cadastrou um horário e voltou: o calendário já mostra.
       free['team-a'] = [DateTime(2026, 10, 24, 15)];
       tester.state<NavigatorState>(find.byType(Navigator).last).pop();
       await tester.pumpAndSettle();
       expect(find.text('Horários em 24/10/2026'), findsOneWidget);
+
+      // Voltou com o horário escolhido para o amistoso: a escolha fecha junto.
+      free['team-a'] = [];
+      container.invalidate(freeSlotsProvider('team-a'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cadastrar horários'));
+      await tester.pumpAndSettle();
+      tester
+          .state<NavigatorState>(find.byType(Navigator).last)
+          .pop(DateTime(2026, 10, 24, 15));
+      await tester.pumpAndSettle();
+      expect(find.text('Início'), findsOneWidget);
+    });
+
+    group('novo amistoso', () {
+      /// Botão que abre o amistoso, com as telas de destino simplificadas.
+      Future<List<Object?>> pumpLauncher(
+        WidgetTester tester,
+        ProviderContainer container, {
+        DateTime? returnSlot,
+      }) async {
+        final opened = <Object?>[];
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () => openNewFriendly(context),
+                  child: const Text('Novo amistoso'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: Routes.newGame,
+              builder: (_, state) {
+                opened.add(state.extra);
+                return const Scaffold(body: Text('Tela do amistoso'));
+              },
+            ),
+            GoRoute(
+              path: Routes.availability,
+              builder: (context, state) => Scaffold(
+                body: Column(
+                  children: [
+                    Text('Agenda extra=${state.extra}'),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(returnSlot),
+                      child: const Text('Voltar'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return opened;
+      }
+
+      testWidgets('com horário livre, abre direto', (tester) async {
+        final container = await _container(
+          teams: FakeTeamRepository([teamA]),
+          availability: FakeAvailabilityRepository(
+            freeByTeam: {
+              'team-a': [DateTime(2026, 12, 5, 15)],
+            },
+          ),
+        );
+        final opened = await pumpLauncher(tester, container);
+        await tester.tap(find.text('Novo amistoso'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cadastre seus horários'), findsNothing);
+        expect(opened, [null]);
+      });
+
+      testWidgets('sem horário, exige a agenda antes', (tester) async {
+        final container = await _container(
+          teams: FakeTeamRepository([teamA]),
+          availability: FakeAvailabilityRepository(),
+        );
+        final slot = DateTime(2026, 12, 5, 15);
+        final opened = await pumpLauncher(tester, container, returnSlot: slot);
+
+        // Cancelar: não abre o amistoso.
+        await tester.tap(find.text('Novo amistoso'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cadastre seus horários'), findsOneWidget);
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+        expect(opened, isEmpty);
+
+        // Cadastra e usa o horário: o amistoso abre com ele.
+        await tester.tap(find.text('Novo amistoso'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cadastrar horários'));
+        await tester.pumpAndSettle();
+        expect(find.text('Agenda extra=true'), findsOneWidget);
+        await tester.tap(find.text('Voltar'));
+        await tester.pumpAndSettle();
+        expect(opened, [slot]);
+        expect(find.text('Tela do amistoso'), findsOneWidget);
+      });
+
+      testWidgets('voltar da agenda sem cadastrar não abre', (tester) async {
+        final container = await _container(
+          teams: FakeTeamRepository([teamA]),
+          availability: FakeAvailabilityRepository(),
+        );
+        final opened = await pumpLauncher(tester, container);
+        await tester.tap(find.text('Novo amistoso'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cadastrar horários'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Voltar'));
+        await tester.pumpAndSettle();
+        expect(opened, isEmpty);
+        expect(find.text('Novo amistoso'), findsOneWidget);
+      });
+    });
+
+    testWidgets('o formulário novo já vem com o horário escolhido', (
+      tester,
+    ) async {
+      final container = await _container(teams: FakeTeamRepository([teamA]));
+      await _pumpPage(
+        tester,
+        container,
+        GameFormPage(scheduledAt: DateTime(2026, 12, 5, 15)),
+      );
+      expect(find.textContaining('15:00'), findsOneWidget);
+      // Não pede a data ao tentar salvar.
+      await tester.ensureVisible(find.text('Marcar amistoso'));
+      await tester.tap(find.text('Marcar amistoso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escolha a data e a hora'), findsNothing);
     });
 
     testWidgets('sem horários do adversário, não oferece o cadastro', (

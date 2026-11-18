@@ -10,6 +10,7 @@ import '../data/game_repository.dart';
 import '../data/games_tab_request.dart';
 import '../domain/game.dart';
 import 'game_card.dart';
+import 'new_friendly.dart';
 
 /// Aba Jogos do administrador: amistosos do time ativo divididos em Marcados,
 /// Pendentes, Realizados e Cancelados.
@@ -56,11 +57,11 @@ class _GameList extends ConsumerWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Atalho para a disponibilidade do time (os horários que o
+                // Atalho para a agenda do time (os horários que o
                 // time oferece para amistosos).
                 FloatingActionButton.small(
                   heroTag: 'availability',
-                  tooltip: 'Disponibilidade',
+                  tooltip: 'Agenda',
                   onPressed: () => context.push(Routes.availability),
                   child: const Icon(Icons.calendar_month_outlined),
                 ),
@@ -77,7 +78,7 @@ class _GameList extends ConsumerWidget {
                   ),
                   child: FloatingActionButton.extended(
                     heroTag: 'new-game',
-                    onPressed: () => context.push(Routes.newGame),
+                    onPressed: () => openNewFriendly(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Novo amistoso'),
                   ),

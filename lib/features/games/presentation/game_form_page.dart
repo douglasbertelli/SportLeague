@@ -22,9 +22,13 @@ import 'opponent_picker_page.dart';
 /// adversário precisa jogar a mesma modalidade; o placar é lançado em outra
 /// tela.
 class GameFormPage extends ConsumerStatefulWidget {
-  const GameFormPage({super.key, this.game});
+  const GameFormPage({super.key, this.game, this.scheduledAt});
 
   final Game? game;
+
+  /// Num amistoso novo, a data e hora já escolhidas (horário recém-cadastrado
+  /// na Agenda, no calendário do próprio time).
+  final DateTime? scheduledAt;
 
   @override
   ConsumerState<GameFormPage> createState() => _GameFormPageState();
@@ -36,7 +40,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
 
   /// Se o local foi escolhido (ou o jogo já existia): aí não muda sozinho.
   late bool _venueChosen = widget.game != null;
-  late DateTime? _scheduledAt = widget.game?.scheduledAt;
+  late DateTime? _scheduledAt = widget.game?.scheduledAt ?? widget.scheduledAt;
   late Modality? _modality = widget.game?.modality;
 
   /// Mando do time que marca; mandante por padrão.

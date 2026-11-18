@@ -61,6 +61,9 @@ abstract final class Routes {
 
   /// Números do atleta. Recebe o `Athlete` em `extra`.
   static const athleteProfile = '/home/athletes/profile';
+
+  /// Amistoso novo; `extra` opcional com o `DateTime` já escolhido. Abrir por
+  /// `openNewFriendly`, que exige horário livre antes.
   static const newGame = '/home/games/new';
 
   /// Recebe o `Game` em `extra`.
@@ -69,7 +72,8 @@ abstract final class Routes {
   /// Recebe `(teamId:, modality:)` em `extra`; devolve o `Opponent` no `pop`.
   static const pickOpponent = '/home/games/opponent';
 
-  /// Calendário de disponibilidade do time ativo.
+  /// Agenda do time ativo. Com `extra: true` (vindo do
+  /// amistoso), devolve no `pop` o `DateTime` do horário adicionado.
   static const availability = '/home/availability';
 
   /// Locais das partidas (cadastro e pesquisa).
