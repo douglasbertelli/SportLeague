@@ -2,7 +2,10 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 
-/// Planos, teste grátis e Financeiro só aparecem no Web. No app da Apple e
-/// do Google a assinatura não pode ser vendida fora da compra das lojas,
-/// nem com botão ou link para o site: lá o app só mostra o plano que vale.
-final bool billingVisible = kIsWeb || !(Platform.isAndroid || Platform.isIOS);
+/// App instalado pelas lojas (Android/iOS). Aqui a assinatura só pode ser
+/// vendida pela compra das lojas (Adapty), sem botão ou link para o site.
+final bool isStoreApp = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+/// O que é da assinatura pelo site (Asaas): o teste grátis sem cartão e o
+/// Financeiro com as cobranças. Não aparece no app das lojas.
+final bool billingVisible = !isStoreApp;

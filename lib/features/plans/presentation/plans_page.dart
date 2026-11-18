@@ -1,10 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/router/routes.dart';
 import '../../fundraisers/domain/fundraiser.dart' show formatMoney;
 import '../../profile/domain/profile.dart';
 import '../data/plan_repository.dart';
+import '../data/store_billing.dart';
 import '../domain/plan_status.dart';
+import 'billing_visibility.dart';
 import 'plan_gate.dart';
 
 /// Comparação dos planos. Os limites (`plan_features`) e os preços (`plans`)
@@ -127,8 +133,16 @@ class _PlanCard extends ConsumerWidget {
     final price = this.price;
     final teams = status?.usage[PlanFeature.teams] ?? 0;
     final trialDays = price?.trialDays;
+    // O teste grátis sem cartão é do site; no app, a loja.
     final canTry =
-        premium && (status?.trialAvailable ?? false) && trialDays != null;
+        billingVisible &&
+        premium &&
+        (status?.trialAvailable ?? false) &&
+        trialDays != null;
+    // No app das lojas vale o preço da loja (pode ter centavos diferentes).
+    final storePrice = premium && StoreBilling.available
+        ? ref.watch(premiumStoreProductProvider).value?.price.localizedString
+        : null;
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -178,7 +192,7 @@ class _PlanCard extends ConsumerWidget {
                     TextSpan(
                       text: price.isFree
                           ? 'Grátis'
-                          : formatMoney(price.monthlyCents),
+                          : storePrice ?? formatMoney(price.monthlyCents),
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -239,7 +253,9 @@ class _PlanCard extends ConsumerWidget {
                   description: _row(feature)?.description,
                   extraTeamCents: price?.extraTeamCents ?? 0,
                 ),
-            if (premium && status?.paidPlan != SubscriptionPlan.premium) ...[
+            if (premium && status?.paidPlan == SubscriptionPlan.premium)
+              _ManageSubscription(source: status?.billingSource)
+            else if (premium && status?.paidPlan != SubscriptionPlan.elite) ...[
               const SizedBox(height: 16),
               if (canTry) ...[
                 FilledButton.icon(
@@ -249,18 +265,22 @@ class _PlanCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-              OutlinedButton(
-                onPressed: null,
-                child: const Text('Assinatura em breve'),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'A assinatura ainda não está disponível no app.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+              if (StoreBilling.available)
+                const _StoreSubscribe()
+              else ...[
+                OutlinedButton(
+                  onPressed: null,
+                  child: const Text('Assinatura em breve'),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  'A assinatura ainda não está disponível no app.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ],
           ],
         ),
@@ -327,5 +347,181 @@ class _FeatureLine extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Assinar o Premium pela loja (App Store / Google Play), no app.
+class _StoreSubscribe extends ConsumerStatefulWidget {
+  const _StoreSubscribe();
+
+  @override
+  ConsumerState<_StoreSubscribe> createState() => _StoreSubscribeState();
+}
+
+class _StoreSubscribeState extends ConsumerState<_StoreSubscribe> {
+  bool _busy = false;
+
+  /// O Premium é liberado pelo servidor quando o aviso da loja chega: lê o
+  /// plano de novo por alguns segundos.
+  Future<bool> _waitForPremium() async {
+    for (var i = 0; i < 10; i++) {
+      final status = await ref.refresh(planStatusProvider.future);
+      if (status.paidPlan == SubscriptionPlan.premium) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+    }
+    return false;
+  }
+
+  Future<void> _run(Future<bool> Function() action, String doneMessage) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      if (!await action()) return;
+      final released = await _waitForPremium();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            released
+                ? doneMessage
+                : 'Pagamento confirmado. O Premium é liberado em instantes.',
+          ),
+        ),
+      );
+    } on StorePurchasePending {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pagamento pendente na loja. O Premium é liberado quando for '
+            'aprovado.',
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível concluir. Tente novamente.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final product = ref.watch(premiumStoreProductProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        switch (product) {
+          AsyncData(value: final product?) => FilledButton.icon(
+            onPressed: _busy
+                ? null
+                : () => _run(
+                    () => StoreBilling.instance.buy(product),
+                    'Premium liberado!',
+                  ),
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.workspace_premium_outlined),
+            label: Text(
+              'Assinar por ${product.price.localizedString ?? ''}/mês',
+            ),
+          ),
+          AsyncLoading() => const FilledButton(
+            onPressed: null,
+            child: Text('Carregando a loja…'),
+          ),
+          _ => OutlinedButton.icon(
+            onPressed: () => ref.invalidate(premiumStoreProductProvider),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Loja indisponível. Tentar de novo'),
+          ),
+        },
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () => _run(
+                  StoreBilling.instance.restore,
+                  'Assinatura restaurada.',
+                ),
+          child: const Text('Restaurar compras'),
+        ),
+        Text(
+          'Cobrança mensal pela sua conta da loja, renovada automaticamente. '
+          'Cancele quando quiser nas assinaturas da loja.',
+          textAlign: TextAlign.center,
+          style: muted,
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () => context.push(Routes.terms),
+              child: const Text('Termos de uso'),
+            ),
+            TextButton(
+              onPressed: () => context.push(Routes.privacy),
+              child: const Text('Privacidade'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Quem já assina: onde gerenciar.
+class _ManageSubscription extends StatelessWidget {
+  const _ManageSubscription({required this.source});
+
+  final BillingSource? source;
+
+  static Uri get _storeSubscriptions => Uri.parse(
+    defaultTargetPlatform == TargetPlatform.iOS
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    Widget note(String text) => Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Text(text, textAlign: TextAlign.center, style: muted),
+    );
+    return switch (source) {
+      // Assinada pela loja: no app, abre as assinaturas da loja.
+      BillingSource.store when isStoreApp => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: OutlinedButton.icon(
+          onPressed: () => launchUrl(
+            _storeSubscriptions,
+            mode: LaunchMode.externalApplication,
+          ),
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Gerenciar assinatura'),
+        ),
+      ),
+      BillingSource.store => note(
+        'Assinatura feita pelo app. Gerencie nas assinaturas da loja do seu '
+        'celular.',
+      ),
+      // Assinada pelo site: no app, só o aviso (sem link).
+      BillingSource.asaas when isStoreApp => note(
+        'Assinatura feita pelo site.',
+      ),
+      _ => const SizedBox.shrink(),
+    };
   }
 }

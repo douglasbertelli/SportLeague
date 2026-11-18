@@ -131,8 +131,9 @@ class _StaffProfile extends ConsumerWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(Routes.publicProfile),
       ),
-      // Só o administrador tem plano; Planos e Financeiro só no Web.
-      if (profile.isAdmin && billingVisible)
+      // Só o administrador tem plano. O Financeiro (cobranças do site) não
+      // aparece no app das lojas.
+      if (profile.isAdmin)
         ListTile(
           leading: const Icon(Icons.workspace_premium_outlined),
           title: const Text('Planos'),

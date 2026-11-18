@@ -244,12 +244,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) =>
                 BannerEditorPage(args: state.extra as BannerArgs?),
           ),
-          // Só no Web (ver billingVisible); no app, volta para o início.
-          GoRoute(
-            path: 'plans',
-            redirect: (_, _) => billingVisible ? null : Routes.home,
-            builder: (_, _) => const PlansPage(),
-          ),
+          GoRoute(path: 'plans', builder: (_, _) => const PlansPage()),
+          // Cobranças do site (Asaas): no app das lojas, volta ao início.
           GoRoute(
             path: 'finance',
             redirect: (_, _) => billingVisible ? null : Routes.home,
