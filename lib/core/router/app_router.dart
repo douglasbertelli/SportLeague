@@ -158,7 +158,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) =>
                 AthleteProfilePage(athlete: state.extra as Athlete),
           ),
-          GoRoute(path: 'games/new', builder: (_, _) => const GameFormPage()),
+          GoRoute(
+            path: 'games/new',
+            builder: (_, state) =>
+                GameFormPage(scheduledAt: state.extra as DateTime?),
+          ),
           GoRoute(
             path: 'games/edit',
             builder: (_, state) => GameFormPage(game: state.extra as Game),
@@ -203,7 +207,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'availability',
-            builder: (_, _) => const AvailabilityPage(),
+            builder: (_, state) =>
+                AvailabilityPage(forFriendly: state.extra == true),
           ),
           GoRoute(
             path: 'invites',

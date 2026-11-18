@@ -14,13 +14,20 @@ import '../../teams/domain/team.dart';
 import '../data/availability_repository.dart';
 import '../domain/availability.dart';
 
-/// Calendário de disponibilidade do time ativo: os dias e horários em que ele
+/// Agenda do time ativo: os dias e horários em que ele
 /// aceita jogar. Amistosos só podem ser marcados nesses horários.
+///
+/// Aberta da escolha de horário de um amistoso ([forFriendly]), depois de
+/// adicionar um horário oferece usá-lo direto no amistoso: a tela fecha
+/// devolvendo a data e hora.
 class AvailabilityPage extends ConsumerStatefulWidget {
-  const AvailabilityPage({super.key, this.today});
+  const AvailabilityPage({super.key, this.today, this.forFriendly = false});
 
   /// Dia de hoje (testes).
   final DateTime? today;
+
+  /// Veio do cadastro de amistoso: oferece voltar com o horário adicionado.
+  final bool forFriendly;
 
   @override
   ConsumerState<AvailabilityPage> createState() => _AvailabilityPageState();
@@ -58,10 +65,45 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
               result.time.minute,
             ),
           );
-    await _run(
+    final added = await _run(
       team,
       () => ref.read(availabilityRepositoryProvider).add(availability),
     );
+    if (added && widget.forFriendly && mounted) {
+      await _offerUseInFriendly(result.time);
+    }
+  }
+
+  /// Depois de adicionar, vindo do amistoso: um toque volta com o horário.
+  Future<void> _offerUseInFriendly(TimeOfDay time) async {
+    final at = DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+      time.hour,
+      time.minute,
+    );
+    // Horário que já passou não serve para o amistoso.
+    final now = widget.today == null ? DateTime.now() : _today;
+    if (at.isBefore(now)) return;
+    final use = await showAppSheet<bool>(
+      context,
+      builder: (context) => AppSheet(
+        title: 'Horário adicionado',
+        message:
+            'Usar ${formatGameDay(at)} às ${formatGameTime(at)} no '
+            'amistoso?',
+        actions: [
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.sports_soccer),
+            label: const Text('Usar no amistoso'),
+          ),
+          const SheetBackButton(label: 'Continuar aqui'),
+        ],
+      ),
+    );
+    if (use == true && mounted) Navigator.of(context).pop(at);
   }
 
   Future<void> _delete(Team team, Availability availability) async {
@@ -217,13 +259,15 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
     }
   }
 
-  Future<void> _run(Team team, Future<void> Function() action) async {
+  /// Executa a mudança e atualiza os horários; devolve se deu certo.
+  Future<bool> _run(Team team, Future<void> Function() action) async {
     setState(() => _saving = true);
     try {
       await action();
       ref
         ..invalidate(teamAvailabilityProvider(team.id!))
         ..invalidate(freeSlotsProvider(team.id!));
+      return true;
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(
@@ -233,6 +277,7 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
               : friendlyErrorMessage(error),
         );
       }
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -243,14 +288,14 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
     final team = ref.watch(selectedTeamProvider).value;
     if (team == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Disponibilidade')),
+        appBar: AppBar(title: const Text('Agenda')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     final availability = ref.watch(teamAvailabilityProvider(team.id!));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Disponibilidade · ${team.name}')),
+      appBar: AppBar(title: Text('Agenda · ${team.name}')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _saving ? null : () => _add(team),
         icon: const Icon(Icons.add),
@@ -302,8 +347,8 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
       if (gamesOn(day).isEmpty) return null;
       return Center(
         child: Container(
-          width: 40,
-          height: 40,
+          width: 34,
+          height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: colors.error,
@@ -353,6 +398,9 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
           ),
         ),
         TableCalendar<Availability>(
+          // Linhas mais baixas que o padrão (52): o calendário ocupa menos tela.
+          rowHeight: 40,
+          daysOfWeekHeight: 20,
           locale: 'pt_BR',
           firstDay: _today,
           lastDay: _today.add(const Duration(days: 365)),
@@ -366,6 +414,7 @@ class _AvailabilityPageState extends ConsumerState<AvailabilityPage> {
             titleCentered: true,
           ),
           calendarStyle: CalendarStyle(
+            cellMargin: const EdgeInsets.all(3),
             markerDecoration: BoxDecoration(
               color: theme.colorScheme.primary,
               shape: BoxShape.circle,
@@ -609,7 +658,7 @@ class _SlotStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 180,
+    height: 128,
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -658,7 +707,7 @@ class _SlotCard extends StatelessWidget {
     final weekday = weekdayNames[at.weekday] ?? '';
 
     return SizedBox(
-      width: 144,
+      width: 116,
       child: Material(
         color: colors.surfaceContainer,
         clipBehavior: Clip.antiAlias,
@@ -675,7 +724,7 @@ class _SlotCard extends StatelessWidget {
                   children: [
                     Center(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 20, 8, 4),
+                        padding: const EdgeInsets.fromLTRB(6, 14, 6, 2),
                         // Encolhe em vez de estourar com letras maiores.
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -684,7 +733,7 @@ class _SlotCard extends StatelessWidget {
                             children: [
                               Text(
                                 day,
-                                style: theme.textTheme.headlineMedium?.copyWith(
+                                style: theme.textTheme.titleLarge?.copyWith(
                                   color: accent,
                                   fontWeight: FontWeight.w900,
                                   fontStyle: FontStyle.italic,
@@ -701,7 +750,7 @@ class _SlotCard extends StatelessWidget {
                                 // Largura fixa: o nome longo corta com "…" em
                                 // vez de encolher o card todo.
                                 SizedBox(
-                                  width: 112,
+                                  width: 96,
                                   child: Text(
                                     game.status == GameStatus.pending
                                         ? 'Aguardando: '
@@ -729,14 +778,15 @@ class _SlotCard extends StatelessWidget {
                     ),
                     if (game == null && onRemove != null)
                       Positioned(
-                        top: 0,
-                        right: 0,
+                        // Mais perto do canto; o toque segue com o tamanho padrão.
+                        top: -6,
+                        right: -6,
                         child: IconButton(
                           tooltip: dated
                               ? 'Remover horário de $day'
                               : 'Remover horário',
                           visualDensity: VisualDensity.compact,
-                          iconSize: 20,
+                          iconSize: 18,
                           color: colors.onSurfaceVariant,
                           onPressed: onRemove,
                           icon: const Icon(Icons.close),
@@ -748,7 +798,7 @@ class _SlotCard extends StatelessWidget {
               Container(
                 color: colors.surfaceContainerHighest,
                 padding: const EdgeInsets.only(left: 10, right: 2),
-                height: 48,
+                height: 40,
                 child: Row(
                   children: [
                     Icon(
@@ -778,10 +828,10 @@ class _SlotCard extends StatelessWidget {
                             : 'Editar horário',
                         style: IconButton.styleFrom(
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          minimumSize: const Size(40, 40),
+                          minimumSize: const Size(36, 36),
                           padding: EdgeInsets.zero,
                         ),
-                        iconSize: 20,
+                        iconSize: 18,
                         color: colors.primary,
                         onPressed: onEdit,
                         icon: const Icon(Icons.edit_outlined),

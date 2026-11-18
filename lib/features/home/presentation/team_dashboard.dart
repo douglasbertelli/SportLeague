@@ -16,6 +16,7 @@ import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../games/presentation/lineup_page.dart';
+import '../../games/presentation/new_friendly.dart';
 import '../../games/presentation/presence.dart';
 import '../../profile/presentation/my_numbers_section.dart';
 import '../../teams/data/team_repository.dart';
@@ -448,7 +449,7 @@ class _NextGameCardState extends State<_NextGameCard> {
                   if (widget.canManage) ...[
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: () => context.push(Routes.newGame),
+                      onPressed: () => openNewFriendly(context),
                       icon: const Icon(Icons.add),
                       label: const Text('Marcar amistoso'),
                     ),

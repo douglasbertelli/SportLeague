@@ -25,7 +25,7 @@ class SlotPickerPage extends ConsumerStatefulWidget {
   final String calendarOwner;
 
   /// O calendário é do time ativo (mandante): sem horários, oferece ir à
-  /// Disponibilidade.
+  /// Agenda.
   final bool ownCalendar;
 
   /// Dia de hoje (testes).
@@ -74,7 +74,16 @@ class _SlotPickerPageState extends ConsumerState<SlotPickerPage> {
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           onPressed: () async {
-                            await context.push(Routes.availability);
+                            final added = await context.push<DateTime>(
+                              Routes.availability,
+                              extra: true,
+                            );
+                            // Escolheu usar o horário adicionado: volta direto
+                            // para o amistoso com ele.
+                            if (added != null && context.mounted) {
+                              Navigator.of(context).pop(added);
+                              return;
+                            }
                             ref.invalidate(freeSlotsProvider(widget.teamId));
                           },
                           icon: const Icon(Icons.calendar_month_outlined),
@@ -112,6 +121,9 @@ class _SlotPickerPageState extends ConsumerState<SlotPickerPage> {
           ),
         ),
         TableCalendar<DateTime>(
+          // Linhas mais baixas que o padrão (52): o calendário ocupa menos tela.
+          rowHeight: 40,
+          daysOfWeekHeight: 20,
           locale: 'pt_BR',
           firstDay: _today,
           lastDay: _today.add(freeSlotsWindow),
@@ -125,6 +137,7 @@ class _SlotPickerPageState extends ConsumerState<SlotPickerPage> {
             titleCentered: true,
           ),
           calendarStyle: CalendarStyle(
+            cellMargin: const EdgeInsets.all(3),
             markerDecoration: BoxDecoration(
               color: theme.colorScheme.primary,
               shape: BoxShape.circle,

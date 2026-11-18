@@ -79,7 +79,7 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
             if (ref.watch(selectedTeamProvider).value case final team?)
               _ActionTile(
                 icon: Icons.event_available,
-                title: 'Disponibilidade',
+                title: 'Agenda',
                 subtitle: 'Dias e horários em que o ${team.name} joga',
                 onTap: () => context.push(Routes.availability),
               ),

@@ -21,7 +21,7 @@ import 'features/teams/data/team_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Nomes de meses e dias em português no calendário de disponibilidade.
+  // Nomes de meses e dias em português na agenda.
   await initializeDateFormatting('pt_BR');
 
   if (!Env.isConfigured) {
