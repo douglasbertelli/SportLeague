@@ -23,7 +23,7 @@ class BannerTemplateTab extends StatelessWidget {
     required this.onTemplate,
     required this.onFormat,
     this.teamLogoUrl,
-    this.opponentLogoUrl,
+    required this.opponentLogoOf,
     this.featuredPhoto,
     this.backgroundPhoto,
   });
@@ -35,7 +35,9 @@ class BannerTemplateTab extends StatelessWidget {
   final BannerTexts Function(BannerTemplate template) textsOf;
   final String teamName;
   final String? teamLogoUrl;
-  final String? opponentLogoUrl;
+
+  /// O escudo do adversário em cada modelo (nulo sem jogo ou sem escudo).
+  final String? Function(BannerTemplate template) opponentLogoOf;
   final ImageProvider? featuredPhoto;
   final ImageProvider? backgroundPhoto;
   final ValueChanged<BannerTemplate> onTemplate;
@@ -98,7 +100,7 @@ class BannerTemplateTab extends StatelessWidget {
                         texts: textsOf(option),
                         teamName: teamName,
                         teamLogoUrl: teamLogoUrl,
-                        opponentLogoUrl: opponentLogoUrl,
+                        opponentLogoUrl: opponentLogoOf(option),
                         featuredPhoto: featuredPhoto,
                         backgroundPhoto: backgroundPhoto,
                       ),
