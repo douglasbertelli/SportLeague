@@ -41,7 +41,13 @@ class PlansPage extends ConsumerWidget {
                 _TrialBanner(ends: ends),
                 const SizedBox(height: 16),
               ],
-              for (final plan in SubscriptionPlan.values) ...[
+              // O Vip só aparece para quem está nele, e sozinho.
+              for (final plan
+                  in status?.plan == SubscriptionPlan.elite
+                      ? const [SubscriptionPlan.elite]
+                      : SubscriptionPlan.values.where(
+                          (plan) => plan != SubscriptionPlan.elite,
+                        )) ...[
                 _PlanCard(
                   plan: plan,
                   rows: rows.where((row) => row.plan == plan).toList(),
@@ -107,11 +113,16 @@ class _PlanCard extends ConsumerWidget {
   PlanFeatureRow? _row(PlanFeature feature) =>
       rows.where((row) => row.feature == feature).firstOrNull;
 
+  /// O Vip tem tudo liberado e sem limite.
+  Quota _quota(PlanFeature feature) =>
+      plan == SubscriptionPlan.elite ? null : _row(feature)?.quota;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final premium = plan == SubscriptionPlan.premium;
+    final elite = plan == SubscriptionPlan.elite;
     final current = status?.plan == plan;
     final price = this.price;
     final teams = status?.usage[PlanFeature.teams] ?? 0;
@@ -134,10 +145,12 @@ class _PlanCard extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  premium
+                  elite
+                      ? Icons.diamond_outlined
+                      : premium
                       ? Icons.workspace_premium_outlined
                       : Icons.sports_soccer_outlined,
-                  color: premium ? scheme.tertiary : scheme.primary,
+                  color: premium || elite ? scheme.tertiary : scheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -201,13 +214,28 @@ class _PlanCard extends ConsumerWidget {
                   ),
                 ),
             ],
+            if (elite) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Sem cobrança',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Sem mensalidade e com todas as funcionalidades liberadas.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             // Só o que o plano inclui (o não incluso fica de fora).
             for (final feature in PlanFeature.values)
-              if (_row(feature)?.quota != 0)
+              if (_quota(feature) != 0)
                 _FeatureLine(
                   feature: feature,
-                  quota: _row(feature)?.quota,
+                  quota: _quota(feature),
                   description: _row(feature)?.description,
                   extraTeamCents: price?.extraTeamCents ?? 0,
                 ),
