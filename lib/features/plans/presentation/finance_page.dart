@@ -156,6 +156,7 @@ class _MonthlyCard extends StatelessWidget {
     final colors = theme.colorScheme;
     final teams = status.usage[PlanFeature.teams] ?? 0;
     final extra = teams > 1 ? teams - 1 : 0;
+    final perTeam = price.extraTeamCents > 0;
     final subscribed = status.paidPlan == SubscriptionPlan.premium;
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: colors.onSurfaceVariant,
@@ -190,18 +191,22 @@ class _MonthlyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              subscribed ? 'Valor mensal' : 'Valor do Premium com seus times',
+              subscribed ? 'Valor mensal' : 'Valor do Premium',
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            line('Mensalidade (com 1 time)', formatMoney(price.monthlyCents)),
-            line(
-              extra == 1
-                  ? '1 time a mais × ${formatMoney(price.extraTeamCents)}'
-                  : '$extra times a mais × ${formatMoney(price.extraTeamCents)}',
-              formatMoney(price.extraTeamCents * extra),
-            ),
-            const Divider(),
+            // Preço único (times ilimitados); as linhas por time só aparecem
+            // se voltar a existir cobrança por time a mais.
+            if (perTeam) ...[
+              line('Mensalidade (com 1 time)', formatMoney(price.monthlyCents)),
+              line(
+                extra == 1
+                    ? '1 time a mais × ${formatMoney(price.extraTeamCents)}'
+                    : '$extra times a mais × ${formatMoney(price.extraTeamCents)}',
+                formatMoney(price.extraTeamCents * extra),
+              ),
+              const Divider(),
+            ],
             line(
               'Total por mês',
               formatMoney(price.totalFor(teams)),
@@ -209,7 +214,9 @@ class _MonthlyCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              teams == 1
+              !perTeam
+                  ? 'Times ilimitados, sem custo a mais.'
+                  : teams == 1
                   ? 'Calculado com o seu time ativo.'
                   : 'Calculado com os seus $teams times ativos. Times '
                         'inativos não são cobrados.',
