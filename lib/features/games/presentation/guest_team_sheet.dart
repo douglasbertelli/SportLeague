@@ -5,11 +5,13 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
+import '../../teams/domain/team.dart';
 import '../data/opponent_repository.dart';
 import '../domain/opponent.dart';
 
-/// O que o administrador preencheu ao criar o time fictício.
-typedef GuestTeamDraft = ({String name, PickedImage? logo});
+/// O que o administrador preencheu ao criar o time fictício. A modalidade só
+/// vem quando o sheet pediu para escolher ([GuestTeamSheet.modalities]).
+typedef GuestTeamDraft = ({String name, PickedImage? logo, Modality? modality});
 
 /// Cria um time fictício: o símbolo (opcional, recortado em quadrado) e o
 /// nome. Fecha devolvendo o [GuestTeamDraft].
@@ -20,12 +22,20 @@ class GuestTeamSheet extends ConsumerStatefulWidget {
     required this.message,
     required this.submitLabel,
     this.submitIcon = Icons.add,
+    this.modalities,
+    this.initialModality,
   });
 
   final String initialName;
   final String message;
   final String submitLabel;
   final IconData submitIcon;
+
+  /// Se vier, o sheet mostra a escolha da modalidade entre estas.
+  final List<Modality>? modalities;
+
+  /// Modalidade já marcada na escolha (senão, a primeira de [modalities]).
+  final Modality? initialModality;
 
   @override
   ConsumerState<GuestTeamSheet> createState() => _GuestTeamSheetState();
@@ -35,6 +45,13 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.initialName);
   PickedImage? _logo;
+  late Modality? _modality = switch (widget.modalities) {
+    null || [] => null,
+    final modalities =>
+      modalities.contains(widget.initialModality)
+          ? widget.initialModality
+          : modalities.first,
+  };
 
   @override
   void dispose() {
@@ -62,7 +79,11 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       Navigator.of(context)
-          .pop<GuestTeamDraft>((name: _name.text.trim(), logo: _logo));
+          .pop<GuestTeamDraft>((
+            name: _name.text.trim(),
+            logo: _logo,
+            modality: _modality,
+          ));
     }
   }
 
@@ -142,6 +163,34 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
               validator: (value) =>
                   Validators.name(value, message: 'Informe o nome do time'),
             ),
+            if (widget.modalities case final modalities?
+                when modalities.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Modalidade',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final modality in modalities)
+                      ChoiceChip(
+                        label: Text(modality.label),
+                        selected: modality == _modality,
+                        onSelected: (_) =>
+                            setState(() => _modality = modality),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

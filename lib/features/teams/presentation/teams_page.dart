@@ -55,9 +55,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage>
           ],
         ),
       ),
-      // O "Novo time" só na aba dos times da plataforma.
+      // "Novo time" na aba dos times da plataforma; "Novo fictício" na outra.
       floatingActionButton: _tabs.index == 0
           ? FloatingActionButton.extended(
+              key: const ValueKey('new-team'),
               onPressed: () async {
                 final allowed = await ensurePlanAllows(
                   context,
@@ -70,7 +71,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage>
               icon: const Icon(Icons.add),
               label: const Text('Novo time'),
             )
-          : null,
+          : FloatingActionButton.extended(
+              key: const ValueKey('new-guest'),
+              onPressed: () => createGuestTeamFromTab(context, ref),
+              icon: const Icon(Icons.add),
+              label: const Text('Novo fictício'),
+            ),
       body: TabBarView(
         controller: _tabs,
         children: const [_MyTeamsList(coach: false), GuestTeamsTab()],
