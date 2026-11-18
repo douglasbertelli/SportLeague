@@ -199,8 +199,9 @@ class _PlanCard extends ConsumerWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
-              // O que o administrador pagaria com os times que já tem.
-              if (premium && !price.isFree && teams > 1)
+              // O que o administrador pagaria com os times que já tem (só se
+              // houver cobrança por time a mais).
+              if (premium && price.extraTeamCents > 0 && teams > 1)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(

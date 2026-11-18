@@ -128,7 +128,7 @@ Deno.serve(async (request) => {
     const today = todayBrt();
     const nextDueDate =
       current?.paid_until && current.paid_until > today ? current.paid_until : today;
-    const description = teams > 1 ? `Premium com ${teams} times` : "Premium com 1 time";
+    const description = "Premium";
 
     // Pix: assinatura mensal; cada mês o Asaas gera a cobrança e manda por
     // e-mail. Leva à fatura da primeira (o checkout recorrente só aceita

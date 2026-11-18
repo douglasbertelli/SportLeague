@@ -30,7 +30,7 @@ Deno.serve(async () => {
     try {
       await asaas("PUT", `/subscriptions/${c.asaas_subscription_id}`, {
         value: c.value_cents / 100,
-        description: c.teams > 1 ? `Premium com ${c.teams} times` : "Premium com 1 time",
+        description: "SportLeague Premium",
         updatePendingPayments: true,
       });
       await admin.rpc("asaas_set_value", {
