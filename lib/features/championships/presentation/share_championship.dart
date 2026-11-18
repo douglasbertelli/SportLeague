@@ -319,8 +319,13 @@ class ChampionshipShareCard extends StatelessWidget {
         championship.format == ChampionshipFormat.groups &&
         !matches.any((m) => m.stage == MatchStage.knockout);
 
+    final leagueRunning =
+        championship.format == ChampionshipFormat.league ||
+        (championship.format == ChampionshipFormat.leagueKnockout &&
+            finalMatch == null);
+
     final Widget body;
-    if (championship.format == ChampionshipFormat.league) {
+    if (leagueRunning) {
       final ids = [
         for (final t in teams)
           if (t.status == EntryStatus.accepted) t.id,

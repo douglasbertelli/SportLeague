@@ -64,6 +64,12 @@ String? cannotGenerate(Championship championship, int teams) {
   switch (championship.format) {
     case ChampionshipFormat.league:
       return teams < 3 ? 'Confirme pelo menos 3 times.' : null;
+    case ChampionshipFormat.leagueKnockout:
+      final qualifiers = championship.knockoutQualifiers ?? 0;
+      final least = max(3, qualifiers + 1);
+      if (teams >= least) return null;
+      return 'Confirme pelo menos $least times: os $qualifiers primeiros vão '
+          'para o mata-mata (agora são $teams).';
     case ChampionshipFormat.knockout:
       if (_isPowerOfTwo(teams) && teams >= 4) return null;
       return 'O mata-mata precisa de 4, 8, 16 ou 32 times confirmados '
@@ -195,6 +201,23 @@ class GroupsLayout {
         '${labels(groupLabels.skip(bigCount).take(groups - bigCount))} com '
         '${big - 1}';
   }
+}
+
+/// Liga + mata-mata: quantos primeiros colocados vão ao mata-mata
+/// ([qualifiers]) e como fica o chaveamento.
+class LeagueKnockoutLayout {
+  const LeagueKnockoutLayout(this.qualifiers);
+
+  static const minQualifiers = 2;
+  static const maxQualifiers = 32;
+
+  final int qualifiers;
+
+  /// Times no chaveamento (2, 4, 8, 16, 32).
+  int get bracket => bracketSize(qualifiers);
+
+  /// Os melhores colocados que folgam na primeira fase do mata-mata.
+  int get byes => bracket - qualifiers;
 }
 
 /// Todos contra todos (método do círculo): cada time joga uma vez com cada
@@ -334,7 +357,7 @@ List<PlannedMatch> planChampionship(
   Map<String, String> groups = const {},
   Random? random,
 }) => switch (championship.format) {
-  ChampionshipFormat.league => roundRobin(
+  ChampionshipFormat.league || ChampionshipFormat.leagueKnockout => roundRobin(
     [...ids]..shuffle(random),
     doubleRound: championship.doubleRound,
   ),
@@ -483,10 +506,7 @@ List<String?> knockoutFromGroups(
         row.teamId,
     ]);
   }
-  final bracket = <String?>[
-    for (final seed in seedOrder(size))
-      seed <= seeds.length ? seeds[seed - 1] : null,
-  ];
+  final bracket = seededBracket(seeds);
 
   // Evita confronto do mesmo grupo na primeira fase: troca o adversário com
   // o de outro jogo quando a troca resolve os dois.
@@ -507,6 +527,19 @@ List<String?> knockoutFromGroups(
   }
   return bracket;
 }
+
+/// Chaveamento com as cabeças de chave [seeds] (da melhor para a pior), na
+/// ordem de [knockoutBracket]: a 1ª pega a última, e as vagas que faltam
+/// para fechar 2, 4, 8… viram folgas (nulo) das melhores.
+List<String?> seededBracket(List<String> seeds) => [
+  for (final seed in seedOrder(bracketSize(seeds.length)))
+    seed <= seeds.length ? seeds[seed - 1] : null,
+];
+
+/// Liga + mata-mata: os [qualifiers] primeiros da classificação ([table])
+/// no chaveamento (1º x 8º, 4º x 5º…; nulo = folga).
+List<String?> knockoutFromLeague(List<StandingRow> table, int qualifiers) =>
+    seededBracket([for (final row in table.take(qualifiers)) row.teamId]);
 
 /// Onde o vencedor de [match] entra: o jogo da fase seguinte e se como
 /// mandante (posição par) ou visitante. Nulo na final.

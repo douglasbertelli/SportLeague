@@ -351,6 +351,71 @@ void main() {
     expect(find.text('Campeão: Time ${finalMatch.homeId}'), findsOneWidget);
   });
 
+  testWidgets('liga + mata-mata: os primeiros da liga vão ao mata-mata', (
+    tester,
+  ) async {
+    final repository = FakeChampionshipRepository(
+      const Championship(
+        id: 'c1',
+        ownerId: 'u1',
+        name: 'Copa do Bairro',
+        modality: Modality.society,
+        format: ChampionshipFormat.leagueKnockout,
+        knockoutQualifiers: 4,
+      ),
+      [
+        for (final id in ['a', 'b', 'c', 'd', 'e']) _entry(id),
+      ],
+    );
+    await _pump(tester, repository);
+    await tester.tap(find.text('Gerar tabela'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Gerar tabela').last);
+    await tester.pumpAndSettle();
+    expect(repository.matches, hasLength(10));
+
+    // Na liga, o time de letra menor sempre vence: a, b, c, d, e.
+    for (final m in [...repository.matches]) {
+      final homeWins = m.homeId!.compareTo(m.awayId!) < 0;
+      await repository.setScore(
+        m.id,
+        home: homeWins ? 1 : 0,
+        away: homeWins ? 0 : 1,
+      );
+    }
+    // Abre de novo, com os placares.
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, repository);
+    expect(find.text('Liga (passam 4)'), findsOneWidget);
+
+    await tester.tap(find.text('Jogos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gerar o mata-mata'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gerar mata-mata'));
+    await tester.pumpAndSettle();
+
+    final knockout = repository.matches
+        .where((m) => m.stage == MatchStage.knockout)
+        .toList();
+    expect(knockout, hasLength(3));
+    final semis = knockout.where((m) => m.round == 6).toList();
+    expect(semis.map((m) => (m.homeId, m.awayId)), [('a', 'd'), ('b', 'c')]);
+    expect(find.text('Gerar o mata-mata'), findsNothing);
+    // Depois das rodadas da liga.
+    await tester.scrollUntilVisible(
+      find.text('Semifinal'),
+      300,
+      scrollable: find
+          .ancestor(
+            of: find.text('Rodada 1'),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Semifinal'), findsOneWidget);
+  });
+
   testWidgets('o dono do time convidado aceita', (tester) async {
     final repository = FakeChampionshipRepository(
       _championship(ChampionshipFormat.league),

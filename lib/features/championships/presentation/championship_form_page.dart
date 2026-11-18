@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +36,8 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
   late var _maxPerGroup = widget.championship?.groupSize ?? 4;
   late var _qualifiers = widget.championship?.qualifiersPerGroup ?? 2;
   late var _fill = widget.championship?.knockoutFill ?? KnockoutFill.bestPlaced;
+  // Liga + mata-mata.
+  late var _leagueQualifiers = widget.championship?.knockoutQualifiers ?? 8;
   var _loading = false;
 
   @override
@@ -81,6 +85,7 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       teamCount: _teams,
       groupSize: _maxPerGroup,
       knockoutFill: _layout.effectiveFill,
+      knockoutQualifiers: _leagueQualifiers,
     );
     try {
       final repository = ref.read(championshipRepositoryProvider);
@@ -165,6 +170,20 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                 subtitle: const Text('Cada confronto acontece duas vezes'),
                 value: _doubleRound,
                 onChanged: (value) => setState(() => _doubleRound = value),
+              ),
+            ],
+            if (_format == ChampionshipFormat.leagueKnockout) ...[
+              _NumberField(
+                label: 'Classificados para o mata-mata',
+                hint: 'Os primeiros colocados da liga',
+                value: _leagueQualifiers,
+                min: LeagueKnockoutLayout.minQualifiers,
+                max: LeagueKnockoutLayout.maxQualifiers,
+                onChanged: (value) => setState(() => _leagueQualifiers = value),
+              ),
+              const SizedBox(height: 8),
+              _LeagueKnockoutSummary(
+                layout: LeagueKnockoutLayout(_leagueQualifiers),
               ),
             ],
             if (_format == ChampionshipFormat.groups) ...[
@@ -278,6 +297,62 @@ class _NumberField extends StatelessWidget {
             icon: const Icon(Icons.add),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Liga + mata-mata: como fica o chaveamento com os classificados e, quando
+/// não fecha, quem folga.
+class _LeagueKnockoutSummary extends StatelessWidget {
+  const _LeagueKnockoutSummary({required this.layout});
+
+  final LeagueKnockoutLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final q = layout.qualifiers;
+    final byes = layout.byes;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Os $q primeiros fazem o mata-mata',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(switch (layout.bracket) {
+              2 => 'A final é entre o 1º e o 2º colocados.',
+              final size when byes == 0 =>
+                'Começa ${inKnockoutRound(size ~/ 2)}: 1º x $sizeº, '
+                    '2º x ${size - 1}º e assim por diante.',
+              final size =>
+                'Começa ${inKnockoutRound(size ~/ 2)}: ${byes + 1}º x '
+                    '$qº e assim por diante; o melhor colocado pega o pior.',
+            }),
+            if (byes > 0)
+              Text(
+                byes == 1
+                    ? 'O 1º colocado folga e passa direto '
+                          '${inKnockoutRound(layout.bracket ~/ 4, to: true)}.'
+                    : 'Os $byes primeiros colocados folgam e passam direto '
+                          '${inKnockoutRound(layout.bracket ~/ 4, to: true)}.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            Text(
+              'Precisa de pelo menos ${max(3, q + 1)} times confirmados.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
