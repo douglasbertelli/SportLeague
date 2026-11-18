@@ -33,6 +33,7 @@ import '../../features/invites/presentation/invite_player_page.dart';
 import '../../features/invites/presentation/player_invites_page.dart';
 import '../../features/invites/presentation/team_invites_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/plans/presentation/billing_visibility.dart';
 import '../../features/plans/presentation/finance_page.dart';
 import '../../features/plans/presentation/plans_page.dart';
 import '../../features/profile/data/profile_repository.dart';
@@ -238,8 +239,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) =>
                 BannerEditorPage(args: state.extra as BannerArgs?),
           ),
-          GoRoute(path: 'plans', builder: (_, _) => const PlansPage()),
-          GoRoute(path: 'finance', builder: (_, _) => const FinancePage()),
+          // Só no Web (ver billingVisible); no app, volta para o início.
+          GoRoute(
+            path: 'plans',
+            redirect: (_, _) => billingVisible ? null : Routes.home,
+            builder: (_, _) => const PlansPage(),
+          ),
+          GoRoute(
+            path: 'finance',
+            redirect: (_, _) => billingVisible ? null : Routes.home,
+            builder: (_, _) => const FinancePage(),
+          ),
           GoRoute(
             path: 'championships',
             builder: (_, _) => const ChampionshipsPage(),

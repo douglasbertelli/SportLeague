@@ -7,6 +7,7 @@ import '../../../core/widgets/app_sheet.dart';
 import '../../profile/domain/profile.dart';
 import '../data/plan_repository.dart';
 import '../domain/plan_status.dart';
+import 'billing_visibility.dart';
 
 /// Explica que a funcionalidade é do Premium, com o atalho para os planos
 /// (e para o teste grátis, se ainda não usou).
@@ -18,6 +19,20 @@ Future<void> showPremiumSheet(
   context,
   builder: (sheetContext) => Consumer(
     builder: (sheetContext, ref, _) {
+      // No app das lojas: só o aviso, sem planos nem teste (ver
+      // billingVisible).
+      if (!billingVisible) {
+        return AppSheet(
+          title: 'Recurso do plano Premium',
+          message: planLimitMessage(feature, quota),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(sheetContext).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        );
+      }
       final trialAvailable =
           ref.watch(planStatusProvider).value?.trialAvailable ?? false;
       final trialDays = _premiumPrice(ref)?.trialDays;

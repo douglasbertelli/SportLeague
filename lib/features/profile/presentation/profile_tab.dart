@@ -15,6 +15,7 @@ import '../../address/data/address_repository.dart';
 import '../../auth/data/biometric_sign_in.dart';
 import '../../plans/data/plan_repository.dart';
 import '../../plans/domain/plan_status.dart';
+import '../../plans/presentation/billing_visibility.dart';
 import '../../plans/presentation/plan_gate.dart';
 import 'account_deletion.dart';
 import '../data/profile_repository.dart';
@@ -130,8 +131,8 @@ class _StaffProfile extends ConsumerWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(Routes.publicProfile),
       ),
-      // Só o administrador tem plano.
-      if (profile.isAdmin)
+      // Só o administrador tem plano; Planos e Financeiro só no Web.
+      if (profile.isAdmin && billingVisible)
         ListTile(
           leading: const Icon(Icons.workspace_premium_outlined),
           title: const Text('Planos'),
@@ -144,7 +145,7 @@ class _StaffProfile extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(Routes.plans),
         ),
-      if (profile.isAdmin)
+      if (profile.isAdmin && billingVisible)
         ListTile(
           leading: const Icon(Icons.account_balance_wallet_outlined),
           title: const Text('Financeiro'),
