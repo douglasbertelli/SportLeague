@@ -11,6 +11,7 @@ import 'package:sport_league/features/banners/presentation/banner_editor_page.da
 import 'package:sport_league/features/banners/presentation/banner_style_tab.dart';
 import 'package:sport_league/features/banners/presentation/banner_template_tab.dart';
 import 'package:sport_league/features/banners/presentation/banner_texts_tab.dart';
+import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/plans/domain/plan_status.dart';
 import 'package:sport_league/features/teams/data/team_repository.dart';
@@ -212,6 +213,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
           selectedTeamProvider.overrideWith((ref) async => _team),
+          teamGamesProvider.overrideWith((ref, teamId) async => const []),
           shareBannerProvider.overrideWithValue((png, text) async {
             shared = png;
             sharedText = text;
@@ -455,6 +457,7 @@ void main() {
             style: _offlineStyle,
             textsOf: (template) => defaultTexts(template, teamName: 'Time'),
             teamName: 'Time',
+            opponentLogoOf: (_) => null,
             onTemplate: (_) {},
             onFormat: (_) {},
           ),
@@ -474,6 +477,118 @@ void main() {
     final ratio = find.text('9:16');
     expect(tester.getSize(ratio).height, lessThan(20));
     expect(tester.takeException(), isNull);
+  });
+
+  test('jogos do banner: próximos em ordem, realizados do mais recente', () {
+    final now = DateTime(2026, 11, 17, 12);
+    Game game(String opponent, DateTime at, {GameStatus? status}) => Game(
+      teamId: 'team-1',
+      opponent: opponent,
+      scheduledAt: at,
+      status: status ?? GameStatus.scheduled,
+    );
+    final games = [
+      game('Longe', DateTime(2026, 11, 30, 20)),
+      game('Perto', DateTime(2026, 11, 21, 20)),
+      game('Antigo', DateTime(2026, 10, 1, 20)),
+      game('Recente', DateTime(2026, 11, 10, 20)),
+      game('Pendente', DateTime(2026, 11, 18, 20), status: GameStatus.pending),
+      game(
+        'Cancelado',
+        DateTime(2026, 11, 19, 20),
+        status: GameStatus.canceled,
+      ),
+    ];
+    final (:upcoming, :played) = bannerGames(games, now);
+    expect(upcoming.map((g) => g.opponent), ['Perto', 'Longe']);
+    expect(played.map((g) => g.opponent), ['Recente', 'Antigo']);
+    expect(nextBannerGame(games, now)?.opponent, 'Perto');
+    expect(
+      nextBannerGame(games, now, template: BannerTemplate.result)?.opponent,
+      'Recente',
+    );
+    expect(nextBannerGame(const [], now), isNull);
+  });
+
+  testWidgets('sem jogo, o banner vem com o próximo e dá para trocar', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      bannerStyleKey('team-1'): _offlineStyle.toJson(),
+    });
+    final preferences = await SharedPreferences.getInstance();
+    tester.view
+      ..physicalSize = const Size(1080, 2340)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final day = DateTime(now.year, now.month, now.day, 20);
+    final next = Game(
+      id: 'next',
+      teamId: 'team-1',
+      opponent: 'Real Bairro',
+      opponentLogoUrl: 'https://storage.test/real',
+      scheduledAt: day.add(const Duration(days: 3)),
+      location: 'Arena Central',
+    );
+    final later = Game(
+      id: 'later',
+      teamId: 'team-1',
+      opponent: 'Atlético Vila',
+      opponentLogoUrl: 'https://storage.test/atletico',
+      scheduledAt: day.add(const Duration(days: 10)),
+      location: 'Campo do Vale',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          selectedTeamProvider.overrideWith((ref) async => _team),
+          teamGamesProvider.overrideWith((ref, teamId) async => [later, next]),
+        ],
+        child: const MaterialApp(home: BannerEditorPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    BannerCanvas preview() =>
+        tester.widget<BannerCanvas>(find.byType(BannerCanvas).first);
+    expect(preview().texts[BannerField.opponent], 'Real Bairro');
+    expect(preview().texts[BannerField.place], 'Arena Central');
+    expect(preview().opponentLogoUrl, 'https://storage.test/real');
+
+    // Escolher outro jogo troca o adversário, o escudo e o local.
+    await tester.tap(find.text('Textos'));
+    await tester.pumpAndSettle();
+    final pickGame = find.byTooltip('Escolher jogo');
+    await tester.scrollUntilVisible(
+      pickGame,
+      80,
+      scrollable: find
+          .descendant(
+            of: find.byType(BannerTextsTab),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(pickGame);
+    await tester.pumpAndSettle();
+    expect(find.text('Próximos jogos'), findsOneWidget);
+    await tester.tap(find.text('Atlético Vila'));
+    await tester.pumpAndSettle();
+    expect(preview().texts[BannerField.opponent], 'Atlético Vila');
+    expect(preview().texts[BannerField.place], 'Campo do Vale');
+    expect(preview().opponentLogoUrl, 'https://storage.test/atletico');
+
+    // Um adversário digitado à mão fica sem o escudo do jogo.
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Adversário'),
+      'Outro Time',
+    );
+    await tester.pump();
+    expect(preview().texts[BannerField.opponent], 'Outro Time');
+    expect(preview().opponentLogoUrl, isNull);
   });
 
   testWidgets('sem time, o editor pede para criar um', (tester) async {

@@ -12,13 +12,17 @@ import '../../../core/router/routes.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/theme/app_color_provider.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../games/data/game_repository.dart';
 import '../../games/data/player_stats_repository.dart';
 import '../../games/presentation/share_result.dart' show capturePng;
 import '../../plans/domain/plan_status.dart';
+import '../../games/domain/game.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
+import '../../teams/presentation/team_logo.dart';
 import '../domain/banner_design.dart';
 import 'banner_canvas.dart';
 import 'banner_style_tab.dart';
@@ -141,12 +145,19 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
   ImageProvider? _backgroundPhoto;
   bool _busy = false;
 
+  /// O jogo que preenche os textos: o que abriu o editor, o próximo jogo do
+  /// time (preenchido sozinho) ou o escolhido no campo Adversário.
+  Game? _game;
+
+  /// Os jogos do time, para escolher; nulo enquanto carrega.
+  List<Game>? _games;
+
   Team get _team => widget.team;
 
   @override
   void initState() {
     super.initState();
-    final game = widget.args?.game;
+    final game = _game = widget.args?.game;
     _template =
         widget.args?.template ??
         (game != null && game.hasScore
@@ -158,6 +169,17 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
       _teamStyle,
     );
     _fillHighlight();
+    // Mantém os jogos carregados enquanto o editor está aberto. Sem jogo, o
+    // banner já vem com o próximo.
+    ref.listenManual(teamGamesProvider(_team.id!), (_, next) {
+      final games = next.value;
+      if (games == null || !mounted) return;
+      setState(() => _games = games);
+      if (_game == null) {
+        final next = nextBannerGame(games, DateTime.now(), template: _template);
+        if (next != null) _applyGame(next, onlyUntouched: true);
+      }
+    }, fireImmediately: true);
   }
 
   @override
@@ -189,7 +211,7 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
     teamName: _team.name,
     teamId: _team.id,
     instagram: _team.instagram,
-    game: widget.args?.game,
+    game: _game,
   );
 
   /// Os textos do [template]: os editados ou, se ainda não foi aberto, os
@@ -210,9 +232,108 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
     }
   }
 
+  /// Troca o jogo do banner e reescreve os campos que vêm dele em todos os
+  /// modelos já abertos. Com [onlyUntouched], só os que ainda estão com o
+  /// texto inicial (o que o administrador escreveu fica).
+  void _applyGame(Game game, {bool onlyUntouched = false}) {
+    final before = {
+      for (final template in _controllers.keys) template: _defaultsOf(template),
+    };
+    setState(() => _game = game);
+    for (final MapEntry(key: template, value: fields) in _controllers.entries) {
+      final defaults = _defaultsOf(template);
+      for (final field in bannerGameFields) {
+        final controller = fields[field];
+        if (controller == null) continue;
+        if (onlyUntouched && controller.text != before[template]![field]) {
+          continue;
+        }
+        controller.text = defaults[field] ?? '';
+      }
+    }
+    _fillHighlight();
+  }
+
+  /// O jogo escolhido na lista dos jogos do time.
+  Future<void> _pickGame() async {
+    final games = _games;
+    if (games == null) {
+      showErrorSnackBar(context, 'Os jogos do time ainda estão carregando.');
+      return;
+    }
+    final (:upcoming, :played) = bannerGames(games, DateTime.now());
+    final teamId = _team.id!;
+    final empty = upcoming.isEmpty && played.isEmpty;
+    final game = await showAppSheet<Game>(
+      context,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        Widget header(String text) => Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: Text(text, style: theme.textTheme.labelLarge),
+        );
+        Widget tile(Game game) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          selected: game.id != null && game.id == _game?.id,
+          leading: TeamLogo.url(logoUrl: game.opponentLogoFor(teamId)),
+          title: Text(game.opponentNameFor(teamId)),
+          subtitle: Text(
+            [
+              bannerDate(game.scheduledAt),
+              bannerTime(game.scheduledAt),
+              ?game.resultLabelFor(teamId),
+            ].join(' · '),
+          ),
+          onTap: () => Navigator.of(sheetContext).pop(game),
+        );
+        return AppSheet(
+          title: 'Escolher jogo',
+          message: empty
+              ? 'O time ainda não tem jogos marcados.'
+              : 'O adversário, o escudo, a data e o local vêm do jogo.',
+          body: empty
+              ? null
+              : ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.5,
+                  ),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      if (upcoming.isNotEmpty) ...[
+                        header('Próximos jogos'),
+                        for (final game in upcoming) tile(game),
+                      ],
+                      if (played.isNotEmpty) ...[
+                        header('Realizados'),
+                        for (final game in played.take(10)) tile(game),
+                      ],
+                    ],
+                  ),
+                ),
+          actions: const [SheetBackButton(label: 'Fechar')],
+        );
+      },
+    );
+    if (game == null || !mounted) return;
+    // O destaque é do jogo anterior; o da súmula do novo vem a seguir.
+    _controllers[BannerTemplate.result]?[BannerField.highlight]?.text = '';
+    _applyGame(game);
+  }
+
+  /// O escudo do adversário: o do jogo escolhido, enquanto o nome no campo
+  /// for o dele (um adversário digitado à mão não tem escudo).
+  String? _opponentLogoOf(BannerTemplate template) {
+    final game = _game;
+    if (game == null) return null;
+    final typed = _textsOf(template)[BannerField.opponent]?.trim();
+    if (typed != null && typed != game.opponentNameFor(_team.id!)) return null;
+    return game.opponentLogoFor(_team.id!);
+  }
+
   /// No resultado, os gols e o craque da súmula (se já foi lançada).
   Future<void> _fillHighlight() async {
-    final game = widget.args?.game;
+    final game = _game;
     if (game?.id == null || !game!.hasScore) return;
     try {
       final stats = await ref.read(gameStatsProvider(game.id!).future);
@@ -231,7 +352,9 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
       final controller = _fieldsOf(
         BannerTemplate.result,
       )[BannerField.highlight]!;
-      if (mounted && controller.text.isEmpty) controller.text = text;
+      if (mounted && _game == game && controller.text.isEmpty) {
+        controller.text = text;
+      }
     } catch (_) {
       // Sem a súmula, o destaque fica para o administrador escrever.
     }
@@ -318,14 +441,14 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final game = widget.args?.game;
+    final game = _game;
     final canvas = BannerCanvas(
       template: _template,
       style: _style,
       texts: _texts,
       teamName: _team.name,
       teamLogoUrl: _team.logoUrl,
-      opponentLogoUrl: game?.opponentLogoFor(_team.id!),
+      opponentLogoUrl: _opponentLogoOf(_template),
       featuredPhoto: _featuredPhoto,
       backgroundPhoto: _backgroundPhoto,
     );
@@ -378,7 +501,7 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
                     textsOf: _textsOf,
                     teamName: _team.name,
                     teamLogoUrl: _team.logoUrl,
-                    opponentLogoUrl: game?.opponentLogoFor(_team.id!),
+                    opponentLogoOf: _opponentLogoOf,
                     featuredPhoto: _featuredPhoto,
                     backgroundPhoto: _backgroundPhoto,
                     onTemplate: (template) =>
@@ -391,6 +514,8 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
                     controllers: _fieldsOf(_template),
                     team: _team,
                     gameId: game?.id,
+                    opponentLogoUrl: _opponentLogoOf(_template),
+                    onPickGame: _pickGame,
                     featuredPhoto: _featuredPhoto,
                     onPickFeaturedPhoto: () => _pickPhoto(featured: true),
                     onReset: _resetTexts,

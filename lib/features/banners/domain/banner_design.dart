@@ -225,6 +225,49 @@ BannerTexts defaultTexts(
   };
 }
 
+/// Campos que vêm do jogo: trocar o jogo do banner reescreve só estes.
+const bannerGameFields = {
+  BannerField.subtitle,
+  BannerField.opponent,
+  BannerField.date,
+  BannerField.time,
+  BannerField.place,
+  BannerField.teamScore,
+  BannerField.opponentScore,
+  BannerField.highlight,
+};
+
+/// Jogos que podem ir no banner, em [now]: os marcados (o em andamento e os
+/// próximos, do mais perto para o mais longe) e depois os realizados (do mais
+/// recente para o mais antigo). Pendentes e cancelados ficam de fora.
+({List<Game> upcoming, List<Game> played}) bannerGames(
+  List<Game> games,
+  DateTime now,
+) => (
+  upcoming: [
+    for (final game in games)
+      if (game.stageAt(now) == GameStage.scheduled) game,
+  ]..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt)),
+  played: [
+    for (final game in games)
+      if (game.stageAt(now) == GameStage.played) game,
+  ]..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt)),
+);
+
+/// O jogo que o banner preenche sozinho: o próximo marcado (ou o em
+/// andamento); sem nenhum, o último realizado no modelo de resultado.
+Game? nextBannerGame(
+  List<Game> games,
+  DateTime now, {
+  BannerTemplate template = BannerTemplate.gameDay,
+}) {
+  final (:upcoming, :played) = bannerGames(games, now);
+  if (template == BannerTemplate.result) {
+    return played.firstOrNull ?? upcoming.firstOrNull;
+  }
+  return upcoming.firstOrNull;
+}
+
 const _weekdays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
 /// "SÁB · 20/11".

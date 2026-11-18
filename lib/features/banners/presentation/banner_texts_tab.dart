@@ -8,6 +8,7 @@ import '../../athletes/data/athlete_repository.dart';
 import '../../athletes/domain/athlete.dart';
 import '../../games/data/lineup_repository.dart';
 import '../../teams/domain/team.dart';
+import '../../teams/presentation/team_logo.dart';
 import '../domain/banner_design.dart';
 import 'banner_photo_tile.dart';
 
@@ -67,6 +68,8 @@ class BannerTextsTab extends ConsumerWidget {
     required this.controllers,
     required this.team,
     required this.gameId,
+    this.opponentLogoUrl,
+    required this.onPickGame,
     required this.featuredPhoto,
     required this.onPickFeaturedPhoto,
     required this.onAthletePhoto,
@@ -77,6 +80,12 @@ class BannerTextsTab extends ConsumerWidget {
   final Map<BannerField, TextEditingController> controllers;
   final Team team;
   final String? gameId;
+
+  /// Escudo do adversário do jogo escolhido, mostrado no campo.
+  final String? opponentLogoUrl;
+
+  /// Escolhe o jogo (o adversário, a data, o local) entre os do time.
+  final VoidCallback onPickGame;
   final ImageProvider? featuredPhoto;
   final VoidCallback onPickFeaturedPhoto;
   final ValueChanged<String?> onAthletePhoto;
@@ -373,7 +382,24 @@ class BannerTextsTab extends ConsumerWidget {
             onPressed: () => _pickAthlete(context, ref),
           ),
         );
-      case BannerField.team || BannerField.opponent:
+      case BannerField.opponent:
+        return _Field(
+          controller: controller,
+          field: field,
+          icon: Icons.shield_outlined,
+          prefix: opponentLogoUrl == null
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: TeamLogo.url(logoUrl: opponentLogoUrl, radius: 14),
+                ),
+          action: IconButton(
+            tooltip: 'Escolher jogo',
+            icon: const Icon(Icons.event_note_outlined),
+            onPressed: onPickGame,
+          ),
+        );
+      case BannerField.team:
         return _Field(
           controller: controller,
           field: field,
@@ -392,6 +418,7 @@ class _Field extends StatelessWidget {
     required this.controller,
     required this.field,
     this.icon,
+    this.prefix,
     this.action,
     this.above,
     this.below,
@@ -402,6 +429,9 @@ class _Field extends StatelessWidget {
   final TextEditingController controller;
   final BannerField field;
   final IconData? icon;
+
+  /// No lugar do [icon] (o escudo do adversário).
+  final Widget? prefix;
   final Widget? action;
   final Widget? above;
   final Widget? below;
@@ -428,7 +458,7 @@ class _Field extends StatelessWidget {
             decoration: InputDecoration(
               labelText: field.label,
               border: const OutlineInputBorder(),
-              prefixIcon: icon == null ? null : Icon(icon),
+              prefixIcon: prefix ?? (icon == null ? null : Icon(icon)),
               suffixIcon: action,
               helperText: counter?.call(controller.text),
             ),
