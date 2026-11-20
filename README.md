@@ -482,8 +482,8 @@ param. Uma funcionalidade nova que dependa do plano precisa do bloqueio no
 código uma vez; depois, é só a tabela.
 
 **Preço** (tabela `plans`): o Premium custa `monthly_cents` (R$ 30,00) por
-mês com 1 time, mais `extra_team_cents` (R$ 15,00) por time a mais. A tela
-Planos mostra o total com os times que o administrador já tem.
+mês, com times ilimitados. `extra_team_cents` ficou em 0 (não há cobrança
+por time a mais).
 
 **Teste grátis**: `trial_days` (15) dias de Premium, uma vez por conta, para
 o administrador no Gratuito; ele começa pelo app (`start_premium_trial()`,
@@ -511,7 +511,7 @@ de pagamentos).
 ### Assinatura: Adapty no app, Asaas no site
 
 - **Site (sportleague-web):** Asaas (`asaas-checkout`, `asaas-webhook`,
-  tabela `subscriptions`).
+  `asaas-cancel`, `asaas-sync`, tabela `subscriptions`).
 - **App Android/iOS:** compra pelas lojas via Adapty
   (`lib/features/plans/data/store_billing.dart`). O app identifica a pessoa
   no Adapty com o id dela no Supabase; o Adapty avisa a Edge Function
@@ -535,6 +535,55 @@ Configuração:
    `premium`). Sem a chave, o app mostra "Assinatura em breve".
 4. `supabase secrets set ADAPTY_WEBHOOK_TOKEN=...` e
    `supabase functions deploy adapty-webhook --no-verify-jwt`.
+
+### Asaas: do Sandbox para produção
+
+O ambiente sai do prefixo da chave (`$aact_hmlg_…` é Sandbox,
+`$aact_prod_…` é produção); o código não muda. Todo dia o `asaas-sync`
+acerta valores, apaga no Asaas as assinaturas nunca pagas (Pix não pago há
+mais de 7 dias) e as de contas apagadas.
+
+Na conta de produção do Asaas:
+
+1. Conta aprovada, com cartão de crédito liberado e uma chave Pix
+   cadastrada (sem ela não há cobrança por Pix).
+2. Integrações > Webhooks: URL
+   `https://<projeto>.supabase.co/functions/v1/asaas-webhook`, API v3, um
+   token novo e os eventos de cobrança e de assinatura. A configuração do
+   Sandbox não vem junto.
+3. Integrações > Segurança > Validação de saque via webhook:
+   `https://<projeto>.supabase.co/functions/v1/asaas-withdrawal-guard`, com
+   "Validar também saques via interface" desmarcado.
+4. O site da empresa nos dados da conta com o mesmo domínio de `WEB_URL`
+   (a volta do checkout do cartão).
+5. Notificações aos clientes: revisar quais ficam ligadas (SMS e WhatsApp
+   podem ser cobrados por envio).
+
+No Supabase:
+
+1. `supabase secrets set ASAAS_API_KEY='$aact_prod_...' ASAAS_WEBHOOK_TOKEN=... WEB_URL=https://...`
+2. Apagar os dados do Sandbox (os clientes e assinaturas de lá não existem
+   em produção). No SQL Editor, tudo de uma vez:
+
+   ```sql
+   begin;
+   select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+   -- Quem era Premium só pelo Asaas do Sandbox volta ao Gratuito.
+   update public.profiles p set plan = 'free'
+   from public.subscriptions s
+   where s.profile_id = p.id and p.plan = 'premium'
+     and not private.store_active(p.id);
+   delete from public.subscription_payments where asaas_payment_id is not null;
+   delete from public.subscriptions;
+   -- O gatilho guarda as assinaturas apagadas para cancelar no Asaas; as do
+   -- Sandbox não existem em produção.
+   delete from private.asaas_orphans;
+   delete from private.asaas_events;
+   commit;
+   ```
+
+3. Uma assinatura de verdade com o próprio cartão: confere o Premium, o
+   pagamento no Financeiro, cancela e estorna pelo Asaas.
 
 Para trocar o plano de alguém à mão (no SQL Editor, tudo de uma vez):
 
