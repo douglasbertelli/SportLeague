@@ -6,7 +6,8 @@
 // `{ "cpfCnpj": "...", "phone": "...", "method": "card" | "pix" }`.
 // O Asaas exige telefone e endereço do cliente: o endereço vem do cadastro
 // (tabela addresses) e o celular informado fica salvo no perfil.
-// O valor sai do banco (Premium + times ativos), nunca do pedido.
+// O valor sai do banco (Premium + times ativos), nunca do pedido. As
+// notificações do Asaas para o cliente ficam sem SMS e sem WhatsApp.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -22,6 +23,53 @@ import {
   webUrl,
 } from "../_shared/asaas.ts";
 import { checkoutImage } from "../_shared/checkout-image.ts";
+
+type Notification = {
+  id: string;
+  enabled: boolean;
+  emailEnabledForProvider: boolean;
+  smsEnabledForProvider: boolean;
+  emailEnabledForCustomer: boolean;
+  smsEnabledForCustomer: boolean;
+  phoneCallEnabledForCustomer: boolean;
+  whatsappEnabledForCustomer: boolean;
+};
+
+/**
+ * O Asaas cria cada cliente com as notificações padrão, que podem incluir SMS
+ * e WhatsApp (pagos por envio). Deixa só os outros canais (e-mail). Manda
+ * cada notificação inteira, só com SMS e WhatsApp desligados. Se falhar, não
+ * impede a assinatura: fica no log.
+ */
+async function disablePaidChannels(customerId: string) {
+  try {
+    const { data } = await asaas<{ data: Notification[] }>(
+      "GET",
+      `/customers/${customerId}/notifications?limit=100`,
+    );
+    const paid = data.filter((n) => n.smsEnabledForCustomer || n.whatsappEnabledForCustomer);
+    if (!paid.length) return;
+    await asaas("PUT", "/notifications/batch", {
+      customer: customerId,
+      notifications: paid.map((n) => ({
+        id: n.id,
+        enabled: n.enabled,
+        emailEnabledForProvider: n.emailEnabledForProvider,
+        smsEnabledForProvider: n.smsEnabledForProvider,
+        emailEnabledForCustomer: n.emailEnabledForCustomer,
+        smsEnabledForCustomer: false,
+        phoneCallEnabledForCustomer: n.phoneCallEnabledForCustomer,
+        whatsappEnabledForCustomer: false,
+      })),
+    });
+  } catch (e) {
+    console.warn(
+      "asaas-checkout notifications",
+      customerId,
+      e instanceof AsaasError ? JSON.stringify(e.body) : e,
+    );
+  }
+}
 
 function validCpf(d: string) {
   if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
@@ -136,6 +184,8 @@ Deno.serve(async (request) => {
       const created = await asaas<{ id: string }>("POST", "/customers", customer);
       customerId = created.id;
     }
+    // Também para clientes antigos: cada checkout confere.
+    await disablePaidChannels(customerId);
 
     await admin.from("subscriptions").upsert({
       profile_id: user.id,
