@@ -7,7 +7,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { admin, asaas, AsaasError } from "../_shared/asaas.ts";
+import { admin, asaas, AsaasError, premiumDescription } from "../_shared/asaas.ts";
 
 type Change = {
   profile_id: string;
@@ -30,7 +30,7 @@ Deno.serve(async () => {
     try {
       await asaas("PUT", `/subscriptions/${c.asaas_subscription_id}`, {
         value: c.value_cents / 100,
-        description: "SportLeague Premium",
+        description: premiumDescription,
         updatePendingPayments: true,
       });
       await admin.rpc("asaas_set_value", {

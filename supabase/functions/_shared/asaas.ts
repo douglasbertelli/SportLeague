@@ -57,6 +57,10 @@ export async function asaas<T = Record<string, unknown>>(
   return data as T;
 }
 
+/** Descrição da assinatura e das cobranças no Asaas (preço único). */
+export const premiumDescription =
+  "SportLeague Premium · assinatura mensal com times ilimitados";
+
 /** Hoje em Brasília (AAAA-MM-DD). */
 export const todayBrt = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(
