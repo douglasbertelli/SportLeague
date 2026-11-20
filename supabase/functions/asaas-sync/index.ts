@@ -3,6 +3,8 @@
 // ainda não pagas, apaga as assinaturas que nunca foram pagas, cancela as
 // que estão há 30 dias sem pagar e as de contas apagadas.
 //
+// Também consulta o saldo, para a chave da API não ficar parada.
+//
 // Não exige login: só deixa o Asaas igual ao banco, então chamar de novo
 // não faz mal. Uma etapa que falha no banco fica no log e na resposta
 // (`errors`), e as outras continuam.
@@ -37,6 +39,16 @@ Deno.serve(async () => {
       return null;
     }
     return data as T;
+  }
+
+  // Uma consulta simples todo dia: mantém a chave da API em uso (o Asaas
+  // desabilita chaves paradas há 3 meses) e avisa logo se ela parou de
+  // funcionar.
+  try {
+    await asaas("GET", "/finance/balance");
+  } catch (e) {
+    console.error("asaas-sync key", describe(e));
+    errors.push(`asaas: ${describe(e)}`);
   }
 
   const changes = await rpc<Change[]>("asaas_value_changes");
