@@ -101,7 +101,9 @@ Deno.serve(async (request) => {
   const { teams, value_cents } = desired as { teams: number; value_cents: number };
 
   try {
-    // Cliente: um por conta. Se o documento mudou, atualiza.
+    // Cliente: um por conta. Se o documento mudou, atualiza. Se ele não
+    // existe mais no Asaas (apagado lá, ou criado no Sandbox antes de ir
+    // para produção), cria outro.
     let customerId = current?.asaas_customer_id as string | undefined;
     const customer = {
       name: profile.full_name,
@@ -118,8 +120,19 @@ Deno.serve(async (request) => {
       notificationDisabled: false,
     };
     if (customerId) {
-      await asaas("PUT", `/customers/${customerId}`, customer);
-    } else {
+      try {
+        const updated = await asaas<{ deleted?: boolean }>(
+          "PUT",
+          `/customers/${customerId}`,
+          customer,
+        );
+        if (updated.deleted) customerId = undefined;
+      } catch (e) {
+        if (!(e instanceof AsaasError && e.status === 404)) throw e;
+        customerId = undefined;
+      }
+    }
+    if (!customerId) {
       const created = await asaas<{ id: string }>("POST", "/customers", customer);
       customerId = created.id;
     }
