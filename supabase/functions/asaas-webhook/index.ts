@@ -1,5 +1,6 @@
 // Recebe os eventos do Asaas (cobranças e assinaturas) e passa para
-// `asaas_apply_event`, que atualiza assinatura, plano e pagamentos.
+// `asaas_apply_event`, que atualiza assinatura, plano e pagamentos. Em
+// estorno ou chargeback, também cancela a assinatura no Asaas.
 //
 // Sem login do Supabase (verify_jwt desligado): o Asaas manda o token do
 // webhook no cabeçalho `asaas-access-token`, que precisa ser igual ao
@@ -8,7 +9,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { admin } from "../_shared/asaas.ts";
+import { admin, asaas, AsaasError } from "../_shared/asaas.ts";
 
 function sameToken(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -32,6 +33,21 @@ Deno.serve(async (request) => {
     // Erro nosso: responde 500 para o Asaas tentar de novo.
     console.error("asaas-webhook", event.event, event.id, error.message);
     return new Response("error", { status: 500 });
+  }
+
+  // Estorno: o Premium já saiu no banco; cancela a assinatura no Asaas para
+  // não cobrar de novo. Se o Asaas falhar agora, o asaas-sync tenta de novo
+  // (fila de órfãs). Responde 200 de qualquer jeito: o evento já foi aplicado.
+  const subscriptionId = event.payment?.subscription;
+  if (data === "revoked" && subscriptionId) {
+    try {
+      await asaas("DELETE", `/subscriptions/${subscriptionId}`);
+    } catch (e) {
+      if (!(e instanceof AsaasError && e.status === 404)) {
+        console.error("asaas-webhook revoke", subscriptionId, e instanceof AsaasError ? JSON.stringify(e.body) : e);
+        await admin.rpc("asaas_put_orphan", { p_id: subscriptionId });
+      }
+    }
   }
   return Response.json({ received: true, result: data });
 });
