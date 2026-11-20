@@ -4,7 +4,8 @@
 // que estão há 30 dias sem pagar e as de contas apagadas.
 //
 // Não exige login: só deixa o Asaas igual ao banco, então chamar de novo
-// não faz mal.
+// não faz mal. Uma etapa que falha no banco fica no log e na resposta
+// (`errors`), e as outras continuam.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -17,24 +18,36 @@ type Change = {
   value_cents: number;
 };
 
+type Row = { profile_id: string; asaas_subscription_id: string };
+
 const describe = (error: unknown) =>
   error instanceof AsaasError ? JSON.stringify(error.body) : String(error);
 
 Deno.serve(async () => {
   let updated = 0;
   let canceled = 0;
+  const errors: string[] = [];
 
-  const { data: changes, error } = await admin.rpc("asaas_value_changes");
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  /** Chama uma função do banco; se falhar, registra e devolve null. */
+  async function rpc<T>(name: string, args?: Record<string, unknown>) {
+    const { data, error } = await admin.rpc(name, args);
+    if (error) {
+      console.error("asaas-sync rpc", name, error.message);
+      errors.push(`${name}: ${error.message}`);
+      return null;
+    }
+    return data as T;
+  }
 
-  for (const c of (changes ?? []) as Change[]) {
+  const changes = await rpc<Change[]>("asaas_value_changes");
+  for (const c of changes ?? []) {
     try {
       await asaas("PUT", `/subscriptions/${c.asaas_subscription_id}`, {
         value: c.value_cents / 100,
         description: premiumDescription,
         updatePendingPayments: true,
       });
-      await admin.rpc("asaas_set_value", {
+      await rpc("asaas_set_value", {
         p_profile: c.profile_id,
         p_teams: c.teams,
         p_value_cents: c.value_cents,
@@ -47,8 +60,7 @@ Deno.serve(async () => {
 
   // Nunca pagas: apaga no Asaas para não gerar cobrança todo mês.
   let stale = 0;
-  const { data: unpaid } = await admin.rpc("asaas_stale_subscriptions");
-  for (const s of (unpaid ?? []) as { profile_id: string; asaas_subscription_id: string }[]) {
+  for (const s of (await rpc<Row[]>("asaas_stale_subscriptions")) ?? []) {
     try {
       await asaas("DELETE", `/subscriptions/${s.asaas_subscription_id}`);
     } catch (e) {
@@ -57,7 +69,7 @@ Deno.serve(async () => {
         continue;
       }
     }
-    await admin.rpc("asaas_clear_subscription", {
+    await rpc("asaas_clear_subscription", {
       p_profile: s.profile_id,
       p_id: s.asaas_subscription_id,
     });
@@ -66,8 +78,7 @@ Deno.serve(async () => {
 
   // 30 dias sem pagar: cancela no Asaas (a conta já voltou ao Gratuito).
   let overdue = 0;
-  const { data: late } = await admin.rpc("asaas_overdue_subscriptions");
-  for (const s of (late ?? []) as { profile_id: string; asaas_subscription_id: string }[]) {
+  for (const s of (await rpc<Row[]>("asaas_overdue_subscriptions")) ?? []) {
     try {
       await asaas("DELETE", `/subscriptions/${s.asaas_subscription_id}`);
     } catch (e) {
@@ -76,24 +87,27 @@ Deno.serve(async () => {
         continue;
       }
     }
-    await admin.rpc("asaas_cancel_overdue", {
+    await rpc("asaas_cancel_overdue", {
       p_profile: s.profile_id,
       p_id: s.asaas_subscription_id,
     });
     overdue++;
   }
 
-  const { data: orphans } = await admin.rpc("asaas_take_orphans");
-  for (const id of (orphans ?? []) as string[]) {
+  // Contas apagadas e cancelamentos que falharam no webhook.
+  for (const id of (await rpc<string[]>("asaas_take_orphans")) ?? []) {
     try {
       await asaas("DELETE", `/subscriptions/${id}`);
       canceled++;
     } catch (e) {
       if (e instanceof AsaasError && e.status === 404) continue;
       console.error("asaas-sync orphan", id, describe(e));
-      await admin.rpc("asaas_put_orphan", { p_id: id });
+      await rpc("asaas_put_orphan", { p_id: id });
     }
   }
 
-  return Response.json({ updated, stale, overdue, canceled });
+  return Response.json(
+    { updated, stale, overdue, canceled, errors },
+    { status: errors.length ? 500 : 200 },
+  );
 });
