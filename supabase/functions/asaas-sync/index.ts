@@ -1,7 +1,7 @@
 // Todo dia (pg_cron `asaas-sync`): acerta no Asaas o valor das assinaturas
 // cujo número de times ativos mudou, inclusive as cobranças já geradas e
-// ainda não pagas, apaga as assinaturas que nunca foram pagas e cancela as
-// assinaturas de contas apagadas.
+// ainda não pagas, apaga as assinaturas que nunca foram pagas, cancela as
+// que estão há 30 dias sem pagar e as de contas apagadas.
 //
 // Não exige login: só deixa o Asaas igual ao banco, então chamar de novo
 // não faz mal.
@@ -64,6 +64,25 @@ Deno.serve(async () => {
     stale++;
   }
 
+  // 30 dias sem pagar: cancela no Asaas (a conta já voltou ao Gratuito).
+  let overdue = 0;
+  const { data: late } = await admin.rpc("asaas_overdue_subscriptions");
+  for (const s of (late ?? []) as { profile_id: string; asaas_subscription_id: string }[]) {
+    try {
+      await asaas("DELETE", `/subscriptions/${s.asaas_subscription_id}`);
+    } catch (e) {
+      if (!(e instanceof AsaasError && e.status === 404)) {
+        console.error("asaas-sync overdue", s.asaas_subscription_id, describe(e));
+        continue;
+      }
+    }
+    await admin.rpc("asaas_cancel_overdue", {
+      p_profile: s.profile_id,
+      p_id: s.asaas_subscription_id,
+    });
+    overdue++;
+  }
+
   const { data: orphans } = await admin.rpc("asaas_take_orphans");
   for (const id of (orphans ?? []) as string[]) {
     try {
@@ -76,5 +95,5 @@ Deno.serve(async () => {
     }
   }
 
-  return Response.json({ updated, stale, canceled });
+  return Response.json({ updated, stale, overdue, canceled });
 });
