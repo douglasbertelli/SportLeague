@@ -10,7 +10,17 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { admin, asaas, AsaasError, caller, cors, json, todayBrt, webUrl } from "../_shared/asaas.ts";
+import {
+  admin,
+  asaas,
+  AsaasError,
+  caller,
+  cors,
+  json,
+  premiumDescription,
+  todayBrt,
+  webUrl,
+} from "../_shared/asaas.ts";
 import { checkoutImage } from "../_shared/checkout-image.ts";
 
 function validCpf(d: string) {
@@ -138,7 +148,6 @@ Deno.serve(async (request) => {
     const today = todayBrt();
     const nextDueDate =
       current?.paid_until && current.paid_until > today ? current.paid_until : today;
-    const description = "Premium";
 
     // Pix: assinatura mensal; cada mês o Asaas gera a cobrança e manda por
     // e-mail. Leva à fatura da primeira (o checkout recorrente só aceita
@@ -150,7 +159,7 @@ Deno.serve(async (request) => {
         value: value_cents / 100,
         nextDueDate,
         cycle: "MONTHLY",
-        description: `SportLeague ${description}`,
+        description: premiumDescription,
         externalReference: user.id,
       });
       await admin
@@ -180,7 +189,7 @@ Deno.serve(async (request) => {
       items: [
         {
           name: "SportLeague Premium",
-          description,
+          description: "Assinatura mensal com times ilimitados",
           quantity: 1,
           value: value_cents / 100,
           imageBase64: await checkoutImage(),
