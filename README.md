@@ -543,7 +543,10 @@ O ambiente sai do prefixo da chave (`$aact_hmlg_…` é Sandbox,
 acerta valores, apaga no Asaas as assinaturas nunca pagas (Pix não pago há
 mais de 7 dias) e as de contas apagadas, e cancela as que estão há 30 dias
 sem pagar (a conta já voltou ao Gratuito 5 dias depois do vencimento; a
-pessoa recebe um aviso e, para voltar, assina de novo).
+pessoa recebe um aviso e, para voltar, assina de novo). Estorno ou
+chargeback de um pagamento tira o Premium na hora: o `asaas-webhook` marca a
+assinatura como cancelada, cancela no Asaas e avisa a pessoa (estorno
+parcial não tira).
 
 Na conta de produção do Asaas:
 
