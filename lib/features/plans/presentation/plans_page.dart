@@ -372,11 +372,22 @@ class _StoreSubscribeState extends ConsumerState<_StoreSubscribe> {
     return false;
   }
 
-  Future<void> _run(Future<bool> Function() action, String doneMessage) async {
+  /// Compra ou restaura. `false` da ação é desistência (compra, sem aviso) ou
+  /// nada encontrado (restaurar, com [nothingMessage]).
+  Future<void> _run(
+    Future<bool> Function() action,
+    String doneMessage, {
+    String? nothingMessage,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      if (!await action()) return;
+      if (!await action()) {
+        if (nothingMessage != null) {
+          messenger.showSnackBar(SnackBar(content: Text(nothingMessage)));
+        }
+        return;
+      }
       final released = await _waitForPremium();
       messenger.showSnackBar(
         SnackBar(
@@ -451,6 +462,9 @@ class _StoreSubscribeState extends ConsumerState<_StoreSubscribe> {
               : () => _run(
                   StoreBilling.instance.restore,
                   'Assinatura restaurada.',
+                  nothingMessage:
+                      'Nenhuma assinatura ativa nesta conta da loja. '
+                      'Confira se é a mesma conta usada na compra.',
                 ),
           child: const Text('Restaurar compras'),
         ),
