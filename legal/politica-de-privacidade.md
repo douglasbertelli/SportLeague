@@ -1,6 +1,6 @@
 # Política de Privacidade do SportLeague
 
-**Última atualização:** 9 de novembro de 2026
+**Última atualização:** 21 de novembro de 2026
 
 Esta Política de Privacidade explica como o aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós") coleta, usa, compartilha e protege os dados pessoais de quem o utiliza ("você", "usuário"). Ela segue a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018, "LGPD").
 
@@ -31,20 +31,21 @@ O encarregado é o canal de comunicação entre você, o SportLeague e a Autorid
 | Nome completo e apelido | No cadastro e no perfil |
 | E-mail e senha | No cadastro (a senha é guardada de forma criptografada; não temos acesso a ela) |
 | Tipo de perfil (administrador, técnico ou jogador) | Logo após o cadastro |
-| Telefone | No perfil e nos contatos do time (opcional) |
+| Telefone | No perfil e nos contatos do time (opcional). O celular é obrigatório para assinar o Premium pelo site |
 | Data de nascimento | Nos dados de atleta (opcional para jogadores; usada para faixas etárias dos times) |
 | Endereço (CEP, rua, número, bairro, cidade, estado) | No cadastro |
 | Foto de perfil e foto de capa | Quando você envia (opcional) |
 | Dados de atleta: posição, pé preferido, altura, número da camisa | No perfil de jogador ou no cadastro do atleta pelo administrador |
 | Dados do time: nome, logo, capa, uniformes, cidade, redes sociais, local de jogo | Quando o administrador cria ou edita o time |
 | Locais de jogo (nome, endereço e fotos) | Quando o administrador cadastra um local |
+| CPF ou CNPJ | Ao assinar o Premium pelo site. É enviado ao Asaas para emitir a cobrança e não fica guardado no SportLeague |
 
 ### 2.2. Dados gerados pelo uso do aplicativo
 
 - **Atividade esportiva:** jogos, placares, escalações, formações, súmulas, gols, assistências, cartões, presença confirmada, estatísticas e campeonatos.
 - **Organização do time:** disponibilidade de horários, convites, vínculos entre jogadores, técnicos e times, mensalidades (valores e quem pagou) e vaquinhas.
 - **Notificações:** o histórico de avisos enviados a você dentro do aplicativo.
-- **Plano e assinatura:** plano contratado (Gratuito ou Premium), período de teste e histórico de pagamentos da assinatura.
+- **Plano e assinatura:** plano contratado (Gratuito ou Premium), período de teste, por onde a assinatura foi feita (loja do aplicativo ou site), situação, data de vencimento e histórico de pagamentos da assinatura.
 - **Dados técnicos:** um identificador do seu aparelho fornecido pelo Firebase, usado apenas para enviar notificações push; tipo de sistema (Android ou iOS); e registros técnicos necessários para segurança e funcionamento do serviço.
 
 ### 2.3. Dados de login social
@@ -55,7 +56,7 @@ Se você entrar com **Google** ou **Apple**, recebemos desses serviços o seu no
 
 - **Biometria:** a entrada com digital ou reconhecimento facial é feita inteiramente pelo seu aparelho. Nós **não** recebemos nem armazenamos dados biométricos.
 - **Localização em tempo real:** o aplicativo não rastreia sua localização. Os botões para abrir um local no Google Maps ou no Waze apenas enviam o endereço do local para esses aplicativos.
-- **Dados de cartão:** quando a cobrança da assinatura estiver disponível, os dados de pagamento serão tratados diretamente pelo provedor de pagamento, e não pelo SportLeague.
+- **Dados de cartão e de pagamento:** na assinatura pelo aplicativo, o pagamento é feito na conta da Google Play ou da App Store; na assinatura pelo site, os dados do cartão são digitados na página de pagamento do Asaas. Nos dois casos, o SportLeague **não** recebe nem armazena número de cartão ou outros dados de pagamento.
 
 ---
 
@@ -98,7 +99,9 @@ Compartilhamos dados apenas com os serviços necessários para o aplicativo func
 | **Google** e **Apple** | Login social, quando você escolhe essa opção |
 | **ViaCEP** | Consulta do endereço a partir do CEP (apenas o CEP é enviado) |
 | **Google Maps** e **Waze** | Abertura do endereço do local de jogo, quando você toca no botão |
-| **Google Play** e **App Store** | Cobrança da assinatura Premium, quando estiver disponível |
+| **Google Play** e **App Store** | Cobrança da assinatura Premium feita no aplicativo, pela conta da loja do usuário |
+| **Adapty** | Validação das compras feitas no aplicativo e aviso de renovações e cancelamentos. Recebe o identificador da sua conta no SportLeague e os dados da compra informados pela loja |
+| **Asaas** | Cobrança da assinatura Premium feita no site (cartão de crédito ou Pix). Recebe nome, e-mail, CPF ou CNPJ, celular e endereço, exigidos para emitir a cobrança |
 
 Também podemos compartilhar dados quando exigido por lei, por ordem judicial ou para proteger direitos do SportLeague e dos usuários.
 
@@ -124,7 +127,7 @@ O SportLeague permite cadastrar times de categorias de base, que podem incluir a
 - **Enquanto a conta estiver ativa**, mantemos os dados necessários para o funcionamento do aplicativo.
 - **Exclusão da conta:** quando você pede a exclusão no aplicativo (Perfil > Excluir conta), a conta fica **inativa por 7 dias** e deixa de aparecer para os outros usuários. Nesse prazo, você pode reativá-la entrando de novo. Depois dos 7 dias, a conta e os dados ligados a ela são **excluídos definitivamente**, incluindo, para administradores, os times criados e tudo o que pertence a eles. As imagens são removidas do armazenamento na limpeza automática diária.
 - **Atletas e times inativos:** permanecem guardados, com o histórico, até serem reativados ou excluídos pelo administrador.
-- **Registros e pagamentos:** podemos manter alguns dados pelo prazo exigido por lei (por exemplo, registros de acesso por 6 meses, conforme o Marco Civil da Internet, e dados fiscais e de pagamento pelo prazo legal aplicável), mesmo após a exclusão da conta.
+- **Registros e pagamentos:** podemos manter alguns dados pelo prazo exigido por lei (por exemplo, registros de acesso por 6 meses, conforme o Marco Civil da Internet, e dados fiscais e de pagamento pelo prazo legal aplicável), mesmo após a exclusão da conta. A Google Play, a App Store e o Asaas também mantêm os próprios registros dos pagamentos, conforme as políticas de cada um.
 
 ---
 
