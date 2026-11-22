@@ -25,6 +25,24 @@ bool get _isApple =>
     (defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS);
 
+/// Se a pessoa fechou a janela do Google (sem mensagem de erro).
+///
+/// No Android, o Credential Manager também devolve "cancelado" para falhas
+/// que não são da pessoa, como "[16] Account reauth failed" (app sem o
+/// cliente OAuth certo no Google Cloud, ou sem internet). Nesses casos o
+/// login falhava sem aviso; agora só conta como desistência quando a
+/// descrição diz que foi a pessoa que cancelou.
+bool isGoogleUserCancel(GoogleSignInException error) {
+  if (error.code != GoogleSignInExceptionCode.canceled) return false;
+  final description = error.description;
+  if (description == null || description.trim().isEmpty) return true;
+  if (description.contains('[16]')) return false;
+  return RegExp(
+    r'cancel+ed by (the )?user|user cancel+ed|canceled the sign-in',
+    caseSensitive: false,
+  ).hasMatch(description);
+}
+
 class AuthRepository {
   AuthRepository(this._auth, {this.beforeSignOut});
 
@@ -91,7 +109,8 @@ class AuthRepository {
     try {
       account = await google.authenticate();
     } on GoogleSignInException catch (error) {
-      if (error.code == GoogleSignInExceptionCode.canceled) return false;
+      if (isGoogleUserCancel(error)) return false;
+      debugPrint('Google sign-in: ${error.code} ${error.description}');
       rethrow;
     }
 

@@ -70,6 +70,52 @@ void main() {
     expect(friendlyErrorMessage(error), contains('entrar com o Google'));
   });
 
+  group('isGoogleUserCancel', () {
+    GoogleSignInException canceled(String? description) =>
+        GoogleSignInException(
+          code: GoogleSignInExceptionCode.canceled,
+          description: description,
+        );
+
+    test('a pessoa fechou a janela', () {
+      expect(isGoogleUserCancel(canceled(null)), isTrue);
+      expect(
+        isGoogleUserCancel(canceled('activity is cancelled by the user.')),
+        isTrue,
+      );
+      expect(
+        isGoogleUserCancel(canceled('The user canceled the sign-in flow.')),
+        isTrue,
+      );
+    });
+
+    test('"cancelado" do Android que é falha mostra erro', () {
+      expect(
+        isGoogleUserCancel(canceled('[16] Account reauth failed.')),
+        isFalse,
+      );
+      expect(isGoogleUserCancel(canceled('Network error')), isFalse);
+    });
+
+    test('outros códigos não são desistência', () {
+      expect(
+        isGoogleUserCancel(
+          const GoogleSignInException(
+            code: GoogleSignInExceptionCode.providerConfigurationError,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('falha marcada como cancelada pede para conferir a internet', () {
+      expect(
+        friendlyErrorMessage(canceled('[16] Account reauth failed.')),
+        contains('Confira a internet'),
+      );
+    });
+  });
+
   testWidgets('botões chamam o login do provedor escolhido', (tester) async {
     final fake = _FakeAuthRepository();
     await tester.pumpWidget(
