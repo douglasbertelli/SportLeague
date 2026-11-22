@@ -1,6 +1,6 @@
 # Termos de Uso do SportLeague
 
-**Última atualização:** 9 de novembro de 2026
+**Última atualização:** 21 de novembro de 2026
 
 Estes Termos de Uso ("Termos") regulam o uso do aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós"), oferecido por **Douglas Bertelli de Oliveira**, com endereço em **Rua Professor Cardoso de Mello Neto, 1127 — São Paulo/SP**.
 
@@ -61,11 +61,19 @@ Quem cria e administra um time é responsável por:
 
 4.3. **Valores:** o Premium é cobrado por mês, por um valor único informado na tela Planos. Todos os planos permitem times ilimitados, sem custo adicional por time.
 
-4.4. **Cobrança:** quando a assinatura estiver disponível, a cobrança será feita por Google Play (Android) ou App Store (iPhone), nas condições informadas no momento da contratação, incluindo renovação, cancelamento e reembolso. Os pagamentos ficam registrados na tela **Financeiro**.
+4.4. **Cobrança:** o Premium pode ser assinado de duas formas, e cada assinatura é gerenciada por onde foi contratada:
 
-4.5. **Cancelamento:** você pode cancelar o Premium quando quiser. O acesso continua até o fim do período já pago. Depois disso, o que foi criado continua salvo e visível, mas criar e editar o que é exclusivo do Premium fica bloqueado.
+- **No aplicativo (Android ou iPhone):** a cobrança é feita pela Google Play ou pela App Store, na conta da loja do usuário, e a assinatura é renovada automaticamente todo mês até ser cancelada. A renovação, o cancelamento e o reembolso seguem as regras da loja e são feitos nas configurações de assinaturas da própria loja.
+- **No site do SportLeague:** a cobrança é feita pelo Asaas, intermediador de pagamentos, no cartão de crédito (cobrado automaticamente todo mês) ou no Pix (uma cobrança enviada por e-mail todo mês). O cancelamento é feito na página **Conta** do site, e os pagamentos ficam registrados na tela **Financeiro**.
 
-4.6. **Direito de arrependimento:** nas contratações feitas pela internet, você pode desistir em até 7 dias da contratação, com reembolso integral, conforme o art. 49 do Código de Defesa do Consumidor.
+Uma assinatura feita no aplicativo não pode ser cancelada pelo site, nem a feita no site pelo aplicativo. Quem já assina por uma das formas não precisa assinar pela outra.
+
+4.5. **Cancelamento:** você pode cancelar o Premium quando quiser, sem multa, por onde assinou: a assinatura feita no aplicativo é cancelada nas configurações de assinaturas da Google Play ou da App Store, e a feita no site, na página **Conta** do site. Desinstalar o aplicativo ou apagar a conta não cancela a assinatura da loja. O acesso continua até o fim do período já pago. Depois disso, o que foi criado continua salvo e visível, mas criar e editar o que é exclusivo do Premium fica bloqueado.
+
+4.6. **Direito de arrependimento:** nas contratações feitas pela internet, você pode desistir em até 7 dias da contratação, com reembolso integral, conforme o art. 49 do Código de Defesa do Consumidor:
+
+- **Assinatura feita no site:** peça o reembolso pelo e-mail informado na seção 12. O valor é devolvido pelo mesmo meio de pagamento usado.
+- **Assinatura feita no aplicativo:** o reembolso pode ser pedido diretamente à Google Play ou à App Store, ou pelo e-mail informado na seção 12. Quando a loja não permitir que o SportLeague faça o reembolso, orientamos o pedido junto a ela.
 
 ---
 
