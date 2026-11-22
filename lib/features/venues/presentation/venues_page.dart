@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../reports/domain/content_report.dart';
+import '../../reports/presentation/report_sheet.dart';
 import '../data/venue_repository.dart';
 import '../domain/venue.dart';
 import 'venue_photo.dart';
@@ -138,9 +140,17 @@ class _VenuesPageState extends ConsumerState<VenuesPage> {
                       title: Text(venue.name),
                       subtitle: Text(venue.address),
                       isThreeLine: true,
-                      trailing: !widget.picking && venue.createdBy == userId
-                          ? const Icon(Icons.edit_outlined)
-                          : null,
+                      trailing: switch ((widget.picking, venue.id)) {
+                        (true, _) || (_, null) => null,
+                        _ when venue.createdBy == userId => const Icon(
+                          Icons.edit_outlined,
+                        ),
+                        // Local de outra pessoa: dá para denunciar.
+                        (_, final id?) => ReportMenuButton(
+                          target: ReportTarget.venue,
+                          targetId: id,
+                        ),
+                      },
                       onTap: switch ((widget.picking, venue.createdBy)) {
                         (true, _) => () => context.pop(venue),
                         (false, final createdBy) when createdBy == userId =>

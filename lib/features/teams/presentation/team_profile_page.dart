@@ -13,6 +13,8 @@ import '../../games/presentation/game_sheet_page.dart';
 import '../../invites/data/invite_repository.dart';
 import '../../invites/domain/team_invite.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../reports/domain/content_report.dart';
+import '../../reports/presentation/report_sheet.dart';
 import '../data/team_repository.dart';
 import '../domain/team.dart';
 import '../domain/team_stats.dart';
@@ -52,7 +54,10 @@ class TeamProfilePage extends ConsumerWidget {
                 // Volta com os dados que acabaram de ser salvos.
                 ref.invalidate(teamByIdProvider(teamId));
               },
-            ),
+            )
+          // Time de outra pessoa: dá para denunciar.
+          else if (loaded?.id case final id?)
+            ReportMenuButton(target: ReportTarget.team, targetId: id),
         ],
       ),
       body: team.when(

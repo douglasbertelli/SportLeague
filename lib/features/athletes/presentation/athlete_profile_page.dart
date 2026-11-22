@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/supabase/supabase_providers.dart';
+import '../../reports/domain/content_report.dart';
+import '../../reports/presentation/report_sheet.dart';
 import '../../games/data/player_stats_repository.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/season_button.dart';
@@ -36,7 +39,12 @@ class AthleteProfilePage extends ConsumerWidget {
               tooltip: 'Editar atleta',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push(Routes.editAthlete, extra: athlete),
-            ),
+            )
+          // Quem não administra o time e não é o próprio atleta pode
+          // denunciar (ex.: foto ou nome ofensivo).
+          else if (athlete.id case final id?
+              when athlete.profileId != ref.watch(currentUserIdProvider))
+            ReportMenuButton(target: ReportTarget.athlete, targetId: id),
         ],
       ),
       body: ListView(

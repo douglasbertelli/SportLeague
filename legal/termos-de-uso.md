@@ -1,6 +1,6 @@
 # Termos de Uso do SportLeague
 
-**Última atualização:** 21 de novembro de 2026
+**Última atualização:** 22 de novembro de 2026
 
 Estes Termos de Uso ("Termos") regulam o uso do aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós"), oferecido por **Douglas Bertelli de Oliveira**, com endereço em **Rua Professor Cardoso de Mello Neto, 1127 — São Paulo/SP**.
 
@@ -99,6 +99,8 @@ O descumprimento destas regras pode levar à remoção do conteúdo, à suspens�
 6.2. Ao enviar conteúdo, você autoriza o SportLeague a armazená-lo e exibi-lo dentro do aplicativo, apenas para as funcionalidades do serviço (por exemplo, mostrar o logo do time nos jogos e campeonatos).
 
 6.3. Você declara ter os direitos sobre o conteúdo enviado e é responsável por ele.
+
+6.4. **Denúncias:** o SportLeague não tolera conteúdo ofensivo, abusivo ou que viole estes Termos. Times, locais e atletas podem ser denunciados no próprio aplicativo, pela opção **Denunciar** no menu da tela (⋮), ou pelo e-mail informado na seção 12. A denúncia é anônima para quem criou o conteúdo. Analisamos as denúncias e removemos o conteúdo que viole estes Termos, podendo também suspender ou excluir a conta responsável.
 
 ---
 

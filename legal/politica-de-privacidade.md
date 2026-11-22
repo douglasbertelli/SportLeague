@@ -1,6 +1,6 @@
 # Política de Privacidade do SportLeague
 
-**Última atualização:** 21 de novembro de 2026
+**Última atualização:** 22 de novembro de 2026
 
 Esta Política de Privacidade explica como o aplicativo **SportLeague** ("SportLeague", "aplicativo", "nós") coleta, usa, compartilha e protege os dados pessoais de quem o utiliza ("você", "usuário"). Ela segue a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018, "LGPD").
 
@@ -45,6 +45,7 @@ O encarregado é o canal de comunicação entre você, o SportLeague e a Autorid
 - **Atividade esportiva:** jogos, placares, escalações, formações, súmulas, gols, assistências, cartões, presença confirmada, estatísticas e campeonatos.
 - **Organização do time:** disponibilidade de horários, convites, vínculos entre jogadores, técnicos e times, mensalidades (valores e quem pagou) e vaquinhas.
 - **Notificações:** o histórico de avisos enviados a você dentro do aplicativo.
+- **Denúncias:** quando você denuncia um time, um local ou um atleta, guardamos quem denunciou, o motivo, os detalhes escritos e uma cópia do conteúdo denunciado, para analisar o caso. Quem criou o conteúdo não fica sabendo quem denunciou.
 - **Plano e assinatura:** plano contratado (Gratuito ou Premium), período de teste, por onde a assinatura foi feita (loja do aplicativo ou site), situação, data de vencimento e histórico de pagamentos da assinatura.
 - **Dados técnicos:** um identificador do seu aparelho fornecido pelo Firebase, usado apenas para enviar notificações push; tipo de sistema (Android ou iOS); e registros técnicos necessários para segurança e funcionamento do serviço.
 
@@ -71,7 +72,7 @@ Se você entrar com **Google** ou **Apple**, recebemos desses serviços o seu no
 | Controlar mensalidades e vaquinhas do time | Execução de contrato (inciso V) |
 | Gerenciar o plano, o teste grátis e a assinatura Premium | Execução de contrato (inciso V) |
 | Preencher o endereço automaticamente pelo CEP | Execução de contrato (inciso V) |
-| Garantir a segurança, prevenir fraudes e abusos | Legítimo interesse (inciso IX) |
+| Garantir a segurança, prevenir fraudes e abusos, e analisar denúncias de conteúdo | Legítimo interesse (inciso IX) |
 | Cumprir obrigações legais e atender autoridades | Cumprimento de obrigação legal (inciso II) e exercício regular de direitos (inciso VI) |
 
 Não usamos seus dados para publicidade de terceiros e **não vendemos** dados pessoais.
