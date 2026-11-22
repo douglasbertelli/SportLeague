@@ -52,6 +52,13 @@ String friendlyErrorMessage(Object error) {
     if (error.message.contains('plan_limit:')) {
       return 'Esse recurso é do plano Premium.';
     }
+    // Denúncias (public.report_content).
+    if (error.message.contains('report_limit')) {
+      return 'Você já enviou muitas denúncias hoje. Tente de novo amanhã.';
+    }
+    if (error.message.contains('report_target_not_found')) {
+      return 'Esse conteúdo não existe mais.';
+    }
     // Número de camisa repetido no time (índice team_players_unique_number).
     if (error.code == '23505' &&
         error.message.contains('team_players_unique_number')) {
