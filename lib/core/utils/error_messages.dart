@@ -60,6 +60,12 @@ String friendlyErrorMessage(Object error) {
     return 'Não foi possível salvar os dados. Tente novamente.';
   }
   if (error is GoogleSignInException) {
+    // "Cancelado" que chega aqui não foi a pessoa (ver isGoogleUserCancel):
+    // no Android é o que aparece sem internet ou com o login mal configurado.
+    if (error.code == GoogleSignInExceptionCode.canceled) {
+      return 'Não foi possível entrar com o Google. '
+          'Confira a internet e tente novamente.';
+    }
     return 'Não foi possível entrar com o Google. Tente novamente.';
   }
   if (error is SignInWithAppleException) {
