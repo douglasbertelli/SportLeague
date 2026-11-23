@@ -5,6 +5,12 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+    <!-- A tela de assinatura do Adapty trava na vertical, e a Play Store
+         entende isso como "exige tela vertical", tirando o app de
+         Chromebooks, TVs e óculos de realidade virtual. Não é obrigatório. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
     <application
         android:label="SportLeague"
         android:name="${applicationName}"
