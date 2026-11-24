@@ -18,6 +18,18 @@ enum GameEventKind {
   final String label;
   final IconData icon;
 
+  /// Nome curto, para a grade de tipos do lançamento.
+  String get shortLabel => switch (this) {
+    GameEventKind.goal => 'Gol',
+    GameEventKind.ownGoal => 'Gol contra',
+    GameEventKind.penaltyMissed => 'Pên. perdido',
+    GameEventKind.penaltySaved => 'Pên. defendido',
+    GameEventKind.yellowCard => 'Amarelo',
+    GameEventKind.secondYellow => '2º amarelo',
+    GameEventKind.redCard => 'Vermelho',
+    GameEventKind.substitution => 'Substituição',
+  };
+
   /// Nome no banco (snake_case).
   String get dbName => switch (this) {
     GameEventKind.ownGoal => 'own_goal',

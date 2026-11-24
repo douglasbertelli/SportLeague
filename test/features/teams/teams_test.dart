@@ -3173,7 +3173,9 @@ void main() {
             .onPressed,
         isNull,
       );
-      await tester.tap(find.text('Cartão amarelo'));
+      await tester.ensureVisible(find.text('Amarelo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Amarelo'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(DropdownMenu<String?>, 'Atleta'));
       await tester.pumpAndSettle();

@@ -16,6 +16,7 @@ import '../data/game_repository.dart';
 import '../data/player_stats_repository.dart';
 import '../domain/game.dart';
 import '../domain/game_event.dart';
+import '../domain/match_clock.dart';
 
 /// Lado do jogo de quem vê: quem marcou ou o adversário.
 GameSide viewerSide(Game game, String viewerTeamId) =>
@@ -77,6 +78,10 @@ Future<void> addLiveEvent(
       mySide: mySide,
       athletes: athletes,
       initialSide: side ?? mySide,
+      myName:
+          ref.read(selectedTeamProvider).value?.name ??
+          (game.isHostedBy(viewerTeamId) ? game.hostTeamName : null) ??
+          'Meu time',
       initialKind: kind,
     ),
   );
@@ -388,6 +393,10 @@ class _EventTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
+      // Lances mais juntos: sem a altura mínima nem o respiro do ListTile.
+      visualDensity: const VisualDensity(vertical: -4),
+      minVerticalPadding: 4,
+      minTileHeight: 0,
       leading: SizedBox(
         width: 100,
         child: Row(
@@ -447,6 +456,7 @@ class _EventTile extends StatelessWidget {
           ? null
           : PopupMenuButton<String>(
               tooltip: 'Opções do lance',
+              padding: EdgeInsets.zero,
               onSelected: (value) => switch (value) {
                 'complete' => onComplete?.call(),
                 _ => onDelete?.call(),
@@ -499,12 +509,16 @@ class _LiveEventSheet extends StatefulWidget {
     required this.mySide,
     required this.athletes,
     required this.initialSide,
+    required this.myName,
     this.initialKind,
   });
 
   final Game game;
   final String viewerTeamId;
   final GameSide mySide;
+
+  /// Nome do time de quem lança (no seletor de lado).
+  final String myName;
 
   /// Atletas do time de quem lança (o adversário lança os dele).
   final List<Athlete> athletes;
@@ -540,8 +554,24 @@ class _LiveEventSheetState extends State<_LiveEventSheet> {
       _side == widget.mySide && widget.athletes.isNotEmpty;
 
   String _sideName(GameSide side) => side == widget.mySide
-      ? 'Meu time'
+      ? widget.myName
       : widget.game.opponentNameFor(widget.viewerTeamId);
+
+  /// Em que momento o lance entra: o tempo do cronômetro agora ou, sem
+  /// cronômetro, a hora do celular.
+  String get _when {
+    final clock = widget.game.clock;
+    final now = DateTime.now();
+    if (clock != null && clock.phase != MatchPhase.finished) {
+      final phase = clock.phase == MatchPhase.second ? '2ºT' : '1ºT';
+      final elapsed = clock.phase == MatchPhase.interval
+          ? Duration(minutes: clock.periodMinutes ?? 0)
+          : clock.elapsedAt(now);
+      return 'Entra no cronômetro: $phase ${formatClock(elapsed)}';
+    }
+    String two(int value) => value.toString().padLeft(2, '0');
+    return 'Entra com a hora do celular: ${two(now.hour)}:${two(now.minute)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -562,14 +592,17 @@ class _LiveEventSheetState extends State<_LiveEventSheet> {
 
     return AppSheet(
       title: kind == null ? 'Novo lance' : kind.label,
-      message: switch (kind) {
-        GameEventKind.ownGoal => 'O gol contra vale para o outro time.',
-        final kind? when kind.isScoring && !_pickAthletes =>
-          _side == widget.mySide
-              ? null
-              : 'O ${_sideName(_side)} escolhe o autor do gol no app dele.',
-        _ => 'O minuto vem do relógio da partida.',
-      },
+      message: [
+        _when,
+        if (kind == GameEventKind.ownGoal)
+          'O gol contra vale para o outro time.'
+        else if (kind != null &&
+            kind.isScoring &&
+            !_pickAthletes &&
+            _side != widget.mySide &&
+            widget.game.opponentTeamId != null)
+          'O ${_sideName(_side)} escolhe o autor do gol no app dele.',
+      ].join('\n'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -594,22 +627,30 @@ class _LiveEventSheetState extends State<_LiveEventSheet> {
             ),
             const SizedBox(height: 16),
           ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final option in kinds)
-                ChoiceChip(
-                  avatar: Icon(option.icon, size: 18, color: option.color),
-                  label: Text(option.label),
-                  selected: option == kind,
-                  onSelected: (_) => setState(() {
-                    _kind = option;
-                    _related = null;
-                    if (option != GameEventKind.goal) _penalty = false;
-                  }),
-                ),
-            ],
+          // Tipos em retângulos na vertical, numa fila com rolagem para o
+          // lado.
+          SizedBox(
+            height: 112,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: kinds.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final option = kinds[index];
+                return SizedBox(
+                  width: 84,
+                  child: _KindTile(
+                    kind: option,
+                    selected: option == kind,
+                    onTap: () => setState(() {
+                      _kind = option;
+                      _related = null;
+                      if (option != GameEventKind.goal) _penalty = false;
+                    }),
+                  ),
+                );
+              },
+            ),
           ),
           if (kind != null && _pickAthletes) ...[
             const SizedBox(height: 16),
@@ -786,6 +827,71 @@ class _PlayersSheetState extends State<_PlayersSheet> {
         ),
         const SheetBackButton(),
       ],
+    );
+  }
+}
+
+/// Um tipo de lance: retângulo em pé, com o ícone em cima e o nome embaixo.
+class _KindTile extends StatelessWidget {
+  const _KindTile({
+    required this.kind,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final GameEventKind kind;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: kind.label,
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? colors.primaryContainer : colors.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: selected ? colors.primary : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  kind.icon,
+                  size: 30,
+                  color:
+                      kind.color ??
+                      (selected ? colors.onPrimaryContainer : colors.primary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  kind.shortLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: selected ? colors.onPrimaryContainer : null,
+                    fontWeight: selected ? FontWeight.w700 : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
