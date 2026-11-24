@@ -300,3 +300,45 @@ class Game {
     };
   }
 }
+
+/// Sigla de 3 letras do time para o placar ("Unidos FC" → "UNI",
+/// "Juventude Oeste" → "JUV"): a primeira palavra com 3 letras ou mais, sem
+/// acento e em maiúsculas. Sem palavra assim, as iniciais.
+String teamAbbreviation(String name) {
+  const accents = {
+    'á': 'a',
+    'à': 'a',
+    'â': 'a',
+    'ã': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'ê': 'e',
+    'è': 'e',
+    'í': 'i',
+    'ì': 'i',
+    'î': 'i',
+    'ó': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ò': 'o',
+    'ú': 'u',
+    'ù': 'u',
+    'ü': 'u',
+    'ç': 'c',
+    'ñ': 'n',
+  };
+  final words = name
+      .toLowerCase()
+      .split('')
+      .map((char) => accents[char] ?? char)
+      .join()
+      .split(RegExp('[^a-z0-9]+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
+  if (words.isEmpty) return '?';
+  final long = words.where((word) => word.length >= 3).firstOrNull;
+  final abbreviation = long != null
+      ? long.substring(0, 3)
+      : words.map((word) => word[0]).take(3).join();
+  return abbreviation.toUpperCase();
+}

@@ -39,7 +39,7 @@ class AppNotification {
   /// game_score, dispute, dispute_answer, fundraiser, fundraiser_paid,
   /// presence, reminder, dues, dues_new, dues_changed, dues_paid,
   /// championship_invite, championship_answer, championship_started,
-  /// championship_match, championship_result.
+  /// championship_match, championship_result, live.
   final String kind;
   final String title;
   final String body;
@@ -60,6 +60,8 @@ class AppNotification {
     'game_declined' || 'game_canceled' => Icons.event_busy,
     'game_rescheduled' => Icons.event_repeat,
     'game_score' => Icons.scoreboard_outlined,
+    // Súmula ao vivo: gol, início, intervalo e fim de jogo.
+    'live' => Icons.sports_soccer,
     'dispute' || 'dispute_answer' => Icons.report_outlined,
     'fundraiser' || 'fundraiser_paid' => Icons.savings_outlined,
     'presence' => Icons.how_to_reg_outlined,

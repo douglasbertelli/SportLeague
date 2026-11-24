@@ -171,8 +171,8 @@ class NotificationsPage extends ConsumerWidget {
         Icons.savings_outlined,
         Routes.fundraisers,
       ),
-      // Lembrete automático do jogo (para quem tem a aba Jogos).
-      'reminder' when isAdmin => const NotificationAction.games(
+      // Jogo ao vivo e lembrete automático (para quem tem a aba Jogos).
+      'reminder' || 'live' when isAdmin => const NotificationAction.games(
         'Ver jogo',
         Icons.sports_soccer,
         GameStage.scheduled,

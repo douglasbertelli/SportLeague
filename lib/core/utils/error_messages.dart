@@ -59,6 +59,10 @@ String friendlyErrorMessage(Object error) {
     if (error.message.contains('report_target_not_found')) {
       return 'Esse conteúdo não existe mais.';
     }
+    // Gol lançado antes do horário marcado (games_check_score).
+    if (error.message.contains('score only after a scheduled game')) {
+      return 'O placar só conta a partir do horário marcado do jogo.';
+    }
     // Número de camisa repetido no time (índice team_players_unique_number).
     if (error.code == '23505' &&
         error.message.contains('team_players_unique_number')) {

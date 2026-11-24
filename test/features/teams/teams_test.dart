@@ -25,6 +25,7 @@ import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/availability/presentation/availability_page.dart';
 import 'package:sport_league/features/availability/presentation/slot_picker_page.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
+import 'package:sport_league/features/games/data/game_event_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/data/lineup_repository.dart';
 import 'package:sport_league/features/games/presentation/lineup_page.dart';
@@ -35,6 +36,9 @@ import 'package:sport_league/features/games/presentation/game_sheet_page.dart';
 import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/games_tab_request.dart';
 import 'package:sport_league/features/games/domain/game.dart';
+import 'package:sport_league/features/games/domain/game_event.dart';
+import 'package:sport_league/features/invites/data/invite_repository.dart'
+    show shareTextProvider;
 import 'package:sport_league/features/games/domain/match_clock.dart';
 import 'package:sport_league/features/games/domain/score_dispute.dart';
 import 'package:sport_league/core/router/routes.dart';
@@ -83,6 +87,7 @@ Future<ProviderContainer> _container({
   PickImage? pickImage,
   FakeDisputeRepository? disputes,
   FakePlayerStatsRepository? playerStats,
+  FakeGameEventRepository? events,
   FakeLineupRepository? lineups,
   bool coach = false,
   bool player = false,
@@ -111,6 +116,9 @@ Future<ProviderContainer> _container({
       isCoachProvider.overrideWithValue(coach),
       // Jogador: os times vêm de onde ele é atleta.
       isPlayerProvider.overrideWithValue(player),
+      gameEventRepositoryProvider.overrideWithValue(
+        events ?? FakeGameEventRepository(),
+      ),
       playerStatsRepositoryProvider.overrideWithValue(
         playerStats ?? FakePlayerStatsRepository(),
       ),
@@ -135,6 +143,8 @@ Future<ProviderContainer> _container({
         launchUrl ?? (_) async => true,
       ),
       // Nada sai do teste para o compartilhamento do sistema.
+      // Texto compartilhado (link ao vivo) fica no teste.
+      shareTextProvider.overrideWithValue((_) async {}),
       shareImageProvider.overrideWithValue(shareImage ?? (_, _) async {}),
     ],
   );
@@ -1186,7 +1196,12 @@ void main() {
         ],
       );
       GameStage? openedStage;
-      final container = await _container(teams: teams, games: games);
+      final events = FakeGameEventRepository();
+      final container = await _container(
+        teams: teams,
+        games: games,
+        events: events,
+      );
       await _pumpTab(
         tester,
         container,
@@ -1237,12 +1252,14 @@ void main() {
         ),
       );
       expect(find.text('Jogo em andamento'), findsOneWidget);
-      expect(find.text('x Real Bairro'), findsOneWidget);
-      expect(find.text('Começou'), findsOneWidget);
+      expect(find.text('REA'), findsOneWidget);
+      expect(find.text('Começou às 15:00'), findsOneWidget);
       expect(find.byType(ConfettiWidget), findsNothing);
 
-      // Placar ao vivo: começa 0 × 0 e quem marcou o jogo soma gol a gol.
+      // Placar ao vivo: começa 0 × 0 e quem marcou o jogo lança gol a gol
+      // (cada gol vira um lance; o banco soma no placar).
       expect(find.text('0'), findsWidgets);
+      expect(find.text('Nenhum lance ainda.'), findsOneWidget);
       final minus = find.widgetWithIcon(
         IconButton,
         Icons.remove_circle_outline,
@@ -1255,11 +1272,23 @@ void main() {
       await tester.ensureVisible(find.byTooltip('Gol do Amigos FC'));
       await tester.tap(find.byTooltip('Gol do Amigos FC'));
       await tester.pumpAndSettle();
-      expect(games.scores['g1'], (1, 0));
-      // O fake não devolve o placar salvo: o card segue em 0 × 0.
+      await tester.ensureVisible(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      expect(events.added.single.side, GameSide.host);
+      expect(events.added.single.kind, GameEventKind.goal);
+      // O lance aparece na linha do tempo do card.
+      expect(find.text('Gol'), findsWidgets);
+      await tester.ensureVisible(find.byTooltip('Gol do Real Bairro'));
       await tester.tap(find.byTooltip('Gol do Real Bairro'));
       await tester.pumpAndSettle();
-      expect(games.scores['g1'], (0, 1));
+      await tester.ensureVisible(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      expect(events.added.last.side, GameSide.opponent);
+      expect(events.added.last.kind, GameEventKind.goal);
 
       // Passado o tempo de jogo, volta a ser só o próximo marcado.
       await _pumpTab(
@@ -1305,7 +1334,9 @@ void main() {
         tester
             .widget<Text>(
               find.byWidgetPredicate(
-                (w) => w is Text && (w.semanticsLabel?.endsWith(team) ?? false),
+                (w) =>
+                    w is Text &&
+                    (w.semanticsLabel?.endsWith('gols do $team') ?? false),
               ),
             )
             .data!,
@@ -1313,22 +1344,27 @@ void main() {
 
       // Primeiro pelo Bola Murcha (visitante): só acompanha o placar.
       await pump();
-      expect(find.text('x Amigos FC'), findsOneWidget);
+      expect(find.text('AMI'), findsOneWidget);
       expect(find.byTooltip('Gol do Bola Murcha'), findsNothing);
 
       // Troca para o Amigos FC, que marcou o jogo, e faz 1 × 0.
       container.read(selectedTeamIdProvider.notifier).select('team-a');
       await tester.pumpAndSettle();
-      expect(find.text('x Bola Murcha'), findsOneWidget);
+      expect(find.text('BOL'), findsOneWidget);
       games.byTeam['team-a'] = [live(a: 1, b: 0)];
+      await tester.ensureVisible(find.byTooltip('Gol do Amigos FC'));
       await tester.tap(find.byTooltip('Gol do Amigos FC'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
       await tester.pumpAndSettle();
       expect(goals('Amigos FC'), 1);
 
       // De volta ao Bola Murcha: o card mostra o placar novo, não o antigo.
       container.read(selectedTeamIdProvider.notifier).select('team-b');
       await tester.pumpAndSettle();
-      expect(find.text('x Amigos FC'), findsOneWidget);
+      expect(find.text('AMI'), findsOneWidget);
       expect(goals('Bola Murcha'), 0);
       expect(goals('Amigos FC'), 1);
     });
@@ -1354,7 +1390,7 @@ void main() {
         scheduledAt: DateTime(2026, 11, 7, 15),
       );
       for (final (games, expected) in [
-        ([finished], 'x Real Bairro'),
+        ([finished], 'REA'),
         ([finished, upcoming], 'x Vila Nova'),
       ]) {
         final teams = FakeTeamRepository([teamA]);
@@ -1392,7 +1428,7 @@ void main() {
         clock: MatchClock(phase: phase, periodMinutes: 25),
       );
       for (final (phase, title) in [
-        (MatchPhase.interval, 'Jogo em andamento'),
+        (MatchPhase.interval, 'Intervalo'),
         (MatchPhase.finished, 'Fim de jogo'),
       ]) {
         final teams = FakeTeamRepository([teamA]);
@@ -1410,7 +1446,7 @@ void main() {
             child: TeamDashboard(now: DateTime(2026, 10, 31, 16)),
           ),
         );
-        expect(find.text(title), findsOneWidget);
+        expect(find.text(title), findsWidgets);
         expect(find.text('Começou'), findsNothing);
         expect(find.byIcon(Icons.timer_outlined), findsNothing);
         // Desmonta antes do próximo, para os providers saírem a tempo.
@@ -3047,13 +3083,13 @@ void main() {
     });
 
     testWidgets('gol no placar ao vivo pergunta quem fez', (tester) async {
-      final stats = FakePlayerStatsRepository();
+      final events = FakeGameEventRepository();
       final teams = FakeTeamRepository([teamA]);
       teams.statsByTeam['team-a'] = const TeamStats();
       final container = await _container(
         teams: teams,
         athletes: athletes,
-        playerStats: stats,
+        events: events,
         games: FakeGameRepository({
           'team-a': [
             Game(
@@ -3076,15 +3112,88 @@ void main() {
       await tester.ensureVisible(find.byTooltip('Gol do Amigos FC'));
       await tester.tap(find.byTooltip('Gol do Amigos FC'));
       await tester.pumpAndSettle();
-      expect(find.text('Quem fez o gol?'), findsOneWidget);
+      // O lance já vem como gol do próprio time.
+      expect(find.text('Gol'), findsWidgets);
+      expect(find.text('Gol de pênalti'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(DropdownMenu<String>, 'Gol de'));
+      await tester.tap(find.widgetWithText(DropdownMenu<String?>, 'Gol de'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('10 · Zé').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Salvar gol'));
+      await tester.ensureVisible(find.text('Gol de pênalti'));
+      await tester.tap(find.text('Gol de pênalti'));
       await tester.pumpAndSettle();
-      expect(stats.goals, [(scorer: 'a1', assist: null)]);
+      await tester.ensureVisible(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      expect(events.added.single.athlete, 'a1');
+      expect(events.added.single.related, isNull);
+      expect(events.added.single.penalty, isTrue);
+      expect(events.added.single.side, GameSide.host);
+    });
+
+    testWidgets('lance de cartão e substituição pelo botão Lance', (
+      tester,
+    ) async {
+      final events = FakeGameEventRepository();
+      final teams = FakeTeamRepository([teamA]);
+      teams.statsByTeam['team-a'] = const TeamStats();
+      final container = await _container(
+        teams: teams,
+        athletes: athletes,
+        events: events,
+        games: FakeGameRepository({
+          'team-a': [
+            Game(
+              id: 'g1',
+              teamId: 'team-a',
+              opponent: 'Real Bairro',
+              modality: Modality.society,
+              scheduledAt: DateTime(2026, 10, 31, 15),
+            ),
+          ],
+        }),
+      );
+      await _pumpTab(
+        tester,
+        container,
+        SingleChildScrollView(
+          child: TeamDashboard(now: DateTime(2026, 10, 31, 15, 30)),
+        ),
+      );
+      await tester.ensureVisible(find.text('Lance'));
+      await tester.tap(find.text('Lance'));
+      await tester.pumpAndSettle();
+      expect(find.text('Novo lance'), findsOneWidget);
+      // Sem tipo escolhido, não lança.
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Lançar'))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.text('Cartão amarelo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(DropdownMenu<String?>, 'Atleta'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('10 · Zé').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+      expect(events.added.single.kind, GameEventKind.yellowCard);
+      expect(events.added.single.athlete, 'a1');
+      expect(find.text('Cartão amarelo · Zé'), findsNothing);
+      // O fake não traz o nome; o lance aparece pelo tipo.
+      expect(find.text('Cartão amarelo'), findsOneWidget);
+
+      // Compartilhar ao vivo pede o link público do jogo.
+      await tester.ensureVisible(find.text('Ao vivo'));
+      await tester.tap(find.text('Ao vivo'));
+      await tester.pumpAndSettle();
+      expect(events.shared, ['g1']);
     });
 
     testWidgets('perfil do atleta e artilharia do time', (tester) async {
