@@ -78,12 +78,11 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      Navigator.of(context)
-          .pop<GuestTeamDraft>((
-            name: _name.text.trim(),
-            logo: _logo,
-            modality: _modality,
-          ));
+      Navigator.of(context).pop<GuestTeamDraft>((
+        name: _name.text.trim(),
+        logo: _logo,
+        modality: _modality,
+      ));
     }
   }
 
@@ -184,8 +183,7 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
                       ChoiceChip(
                         label: Text(modality.label),
                         selected: modality == _modality,
-                        onSelected: (_) =>
-                            setState(() => _modality = modality),
+                        onSelected: (_) => setState(() => _modality = modality),
                       ),
                   ],
                 ),

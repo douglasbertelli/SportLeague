@@ -11,11 +11,13 @@ import '../../games/data/game_repository.dart';
 import '../../games/data/player_stats_repository.dart';
 import '../../games/domain/player_stats.dart';
 import '../../games/domain/game.dart';
+import '../../games/domain/game_event.dart';
 import '../../games/domain/match_clock.dart';
 import '../../games/presentation/contest_score.dart';
 import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../games/presentation/lineup_page.dart';
+import '../../games/presentation/live_events.dart';
 import '../../games/presentation/new_friendly.dart';
 import '../../games/presentation/presence.dart';
 import '../../profile/presentation/my_numbers_section.dart';
@@ -456,6 +458,13 @@ class _NextGameCardState extends State<_NextGameCard> {
                   ],
                 ],
               )
+            : live
+            ? _LiveGameBody(
+                team: team,
+                game: game,
+                clock: clock,
+                canManage: widget.canManage,
+              )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -549,26 +558,238 @@ class _NextGameCardState extends State<_NextGameCard> {
                       ),
                     ),
                   ],
-                  if (live) ...[
-                    const Divider(height: 32),
-                    MatchClockPanel(
-                      game: game,
-                      viewerTeamId: team.id!,
-                      clock: clock,
-                    ),
-                    const SizedBox(height: 16),
-                    _LiveScore(team: team, game: game),
-                    if (widget.canManage &&
-                        game.clock?.phase == MatchPhase.finished &&
-                        !game.isHostedBy(team.id!) &&
-                        game.hasScore) ...[
-                      const SizedBox(height: 16),
-                      _ContestButton(team: team, game: game),
-                    ],
-                  ],
                 ],
               ),
       ),
+    );
+  }
+}
+
+/// Card do jogo em andamento: situação (ao vivo, intervalo, fim), o placar
+/// com os dois escudos, o relógio, as ações e os últimos lances.
+class _LiveGameBody extends StatelessWidget {
+  const _LiveGameBody({
+    required this.team,
+    required this.game,
+    required this.clock,
+    required this.canManage,
+  });
+
+  final Team team;
+  final Game game;
+  final DateTime Function()? clock;
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final phase = game.clock?.phase;
+    final finished = phase == MatchPhase.finished;
+    final place = switch (game.venue) {
+      final venue? => venue.name,
+      null => game.location,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Situação e, ao lado, quando e onde começou.
+        Row(
+          children: [
+            _LiveBadge(
+              label: switch (phase) {
+                MatchPhase.finished => 'Fim de jogo',
+                MatchPhase.interval => 'Intervalo',
+                _ => 'Jogo em andamento',
+              },
+              live: !finished && phase != MatchPhase.interval,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Começou às ${formatGameTime(game.scheduledAt)}',
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _LiveScore(team: team, game: game),
+        // O local, centralizado embaixo do placar.
+        if (place != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: colors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  place,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 16),
+        // Relógio e ações agrupados num cartão interno.
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MatchClockPanel(game: game, viewerTeamId: team.id!, clock: clock),
+              if (canManage &&
+                  finished &&
+                  !game.isHostedBy(team.id!) &&
+                  game.hasScore) ...[
+                const SizedBox(height: 12),
+                _ContestButton(team: team, game: game),
+              ],
+              const SizedBox(height: 8),
+              _LiveActions(team: team, game: game),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Últimos lances (todos veem, inclusive o jogador).
+        Text('Lances', style: theme.textTheme.titleSmall),
+        LiveTimeline(
+          game: game,
+          viewerTeamId: team.id!,
+          limit: 4,
+          onSeeAll: () =>
+              openGameSheet(context, game: game, viewerTeamId: team.id!),
+        ),
+      ],
+    );
+  }
+}
+
+/// "Jogo em andamento" com a bolinha vermelha; intervalo e fim, sem ela.
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge({required this.label, required this.live});
+
+  final String label;
+  final bool live;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: live ? colors.errorContainer : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (live) ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: colors.error,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: live ? colors.onErrorContainer : colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lance, ao vivo, súmula e escalação, numa barra de ícones.
+class _LiveActions extends ConsumerWidget {
+  const _LiveActions({required this.team, required this.game});
+
+  final Team team;
+  final Game game;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final staff = ref.watch(isTeamStaffProvider);
+    if (!staff) return const SizedBox.shrink();
+    Widget action(IconData icon, String label, VoidCallback onTap) => Flexible(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Column(
+            children: [
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // Do primeiro ao último encostados nas bordas, espaço igual entre eles
+    // (em tela estreita, os textos encolhem).
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Cartão, substituição e pênalti (e gol, para quem marcou): o dono
+        // de cada time.
+        if (ref.watch(canManageTeamProvider))
+          action(
+            Icons.add_circle_outline,
+            'Lance',
+            () =>
+                addLiveEvent(context, ref, game: game, viewerTeamId: team.id!),
+          ),
+        action(
+          Icons.share_outlined,
+          'Ao vivo',
+          () => shareLiveGame(context, ref, game: game, viewerTeamId: team.id!),
+        ),
+        action(
+          Icons.assignment_outlined,
+          'Súmula',
+          () => openGameSheet(context, game: game, viewerTeamId: team.id!),
+        ),
+        action(
+          Icons.format_list_numbered,
+          'Escalação',
+          () => openLineup(context, game: game, teamId: team.id!),
+        ),
+      ],
     );
   }
 }
@@ -608,15 +829,40 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
     }
   }
 
-  /// Gol do próprio time: depois do placar, pergunta quem fez.
-  Future<void> _ownGoals(int goals, int mine, int theirs) async {
-    if (!await _save(goals, theirs) || goals <= mine || !mounted) return;
-    await askGoalScorer(
+  /// Gol de um lado: vira um lance da súmula ao vivo (o banco soma no
+  /// placar). Tirar gol apaga o último lance de gol daquele lado; sem lance
+  /// (placar lançado antes), corrige o placar à mão.
+  Future<void> _goal(GameSide side, int goals, int mine, int theirs) async {
+    final current = side == GameSide.host ? mine : theirs;
+    if (goals > current) {
+      setState(() => _saving = true);
+      try {
+        await addLiveEvent(
+          context,
+          ref,
+          game: widget.game,
+          viewerTeamId: widget.team.id!,
+          side: side,
+          kind: GameEventKind.goal,
+        );
+      } finally {
+        if (mounted) setState(() => _saving = false);
+      }
+      return;
+    }
+    final removed = await removeLastGoal(
       context,
       ref,
       game: widget.game,
-      teamId: widget.team.id!,
+      viewerTeamId: widget.team.id!,
+      scoringSide: side,
     );
+    if (removed || !mounted) return;
+    if (side == GameSide.host) {
+      await _save(goals, theirs);
+    } else {
+      await _save(mine, goals);
+    }
   }
 
   @override
@@ -630,80 +876,107 @@ class _LiveScoreState extends ConsumerState<_LiveScore> {
     final (mine, theirs) = game.scoreFor(team.id!) ?? (0, 0);
     final enabled = canEdit && !_saving;
 
-    Widget side(String name, int goals, void Function(int) change) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (canEdit)
-                IconButton(
-                  tooltip: 'Tirar gol do $name',
-                  onPressed: enabled && goals > 0
-                      ? () => change(goals - 1)
-                      : null,
-                  icon: const Icon(Icons.remove_circle_outline),
-                ),
-              Text(
-                '$goals',
-                semanticsLabel: '$goals gols do $name',
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (canEdit)
-                IconButton(
-                  tooltip: 'Gol do $name',
-                  onPressed: enabled ? () => change(goals + 1) : null,
-                  icon: const Icon(Icons.add_circle_outline),
-                ),
-            ],
-          ),
-        ],
-      ),
+    final opponent = game.opponentNameFor(team.id!);
+    final scoreStyle = theme.textTheme.displayMedium?.copyWith(
+      fontWeight: FontWeight.w800,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
 
-    return Column(
-      children: [
-        Row(
+    // Escudo e sigla do time ("UNI", "JUV"), nas pontas do placar, como na
+    // TV: os dois lados ocupam o mesmo espaço. O nome inteiro fica para o
+    // leitor de tela (e aparece ao segurar o dedo).
+    Widget mark(String name, String? logoUrl) => SizedBox(
+      // Do tamanho do escudo: ele encosta nas bordas do card.
+      width: 52,
+      child: Tooltip(
+        message: name,
+        child: Column(
           children: [
-            side(team.name, mine, (goals) => _ownGoals(goals, mine, theirs)),
-            Text('×', style: theme.textTheme.headlineSmall),
-            side(
-              game.opponentNameFor(team.id!),
-              theirs,
-              (goals) => _save(mine, goals),
+            TeamLogo.url(logoUrl: logoUrl, radius: 26),
+            const SizedBox(height: 6),
+            Text(
+              teamAbbreviation(name),
+              semanticsLabel: name,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
             ),
           ],
         ),
-        // Os dois times lançam a súmula e a escalação dos seus atletas (o
-        // dono e o técnico; o jogador acompanha).
-        if (ref.watch(isTeamStaffProvider))
-          Wrap(
-            alignment: WrapAlignment.center,
+      ),
+    );
+    // Gols de um lado e, embaixo, os botões − e + (só para quem marcou o
+    // jogo).
+    Widget goals(String name, int value, void Function(int) change) => Column(
+      children: [
+        Text(
+          '$value',
+          semanticsLabel: '$value gols do $name',
+          style: scoreStyle,
+        ),
+        if (canEdit)
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton.icon(
-                onPressed: () =>
-                    openGameSheet(context, game: game, viewerTeamId: team.id!),
-                icon: const Icon(Icons.assignment_outlined),
-                label: const Text('Súmula do jogo'),
+              IconButton(
+                tooltip: 'Tirar gol do $name',
+                visualDensity: VisualDensity.compact,
+                onPressed: enabled && value > 0
+                    ? () => change(value - 1)
+                    : null,
+                icon: const Icon(Icons.remove_circle_outline),
               ),
-              TextButton.icon(
-                onPressed: () =>
-                    openLineup(context, game: game, teamId: team.id!),
-                icon: const Icon(Icons.format_list_numbered),
-                label: const Text('Escalação'),
+              IconButton.filledTonal(
+                tooltip: 'Gol do $name',
+                visualDensity: VisualDensity.compact,
+                onPressed: enabled ? () => change(value + 1) : null,
+                icon: const Icon(Icons.add),
               ),
             ],
           ),
+      ],
+    );
+
+    return Row(
+      children: [
+        mark(team.name, team.logoUrl),
+        // O placar no meio, com os botões embaixo de cada número; em tela
+        // estreita, encolhe em vez de estourar.
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                goals(
+                  team.name,
+                  mine,
+                  (value) => _goal(GameSide.host, value, mine, theirs),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 14, 8, 0),
+                  child: Text(
+                    '×',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                goals(
+                  opponent,
+                  theirs,
+                  (value) => _goal(GameSide.opponent, value, mine, theirs),
+                ),
+              ],
+            ),
+          ),
+        ),
+        mark(opponent, game.opponentLogoFor(team.id!)),
       ],
     );
   }

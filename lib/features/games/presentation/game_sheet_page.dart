@@ -11,6 +11,7 @@ import '../data/player_stats_repository.dart';
 import '../domain/game.dart';
 import '../domain/player_stats.dart';
 import 'game_card.dart';
+import 'live_events.dart';
 
 /// Abre a súmula do jogo, do ponto de vista do time [viewerTeamId].
 Future<void> openGameSheet(
@@ -95,6 +96,44 @@ class GameSheetPage extends ConsumerWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+            // Lances do jogo (súmula ao vivo), do mais novo para o mais
+            // antigo.
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Lances',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Compartilhar ao vivo',
+                    onPressed: () => shareLiveGame(
+                      context,
+                      ref,
+                      game: game,
+                      viewerTeamId: viewerTeamId,
+                    ),
+                    icon: const Icon(Icons.share_outlined),
+                  ),
+                  if (canEditGameSheet(game) &&
+                      ref.watch(canManageTeamProvider))
+                    TextButton.icon(
+                      onPressed: () => addLiveEvent(
+                        context,
+                        ref,
+                        game: game,
+                        viewerTeamId: viewerTeamId,
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Lance'),
+                    ),
+                ],
+              ),
+            ),
+            LiveTimeline(game: game, viewerTeamId: viewerTeamId),
             _TeamSection(
               title: myName,
               rows: [

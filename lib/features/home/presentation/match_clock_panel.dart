@@ -249,10 +249,8 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
           ),
         if (_isHost) ...[
           const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
+          // Um botão embaixo do outro, cada um com a largura toda.
+          _ButtonRow(
             children: [
               if (ticking)
                 clock.running
@@ -363,6 +361,27 @@ class _PeriodSheetState extends State<_PeriodSheet> {
           label: const Text('Iniciar 1º tempo'),
         ),
         const SheetBackButton(),
+      ],
+    );
+  }
+}
+
+/// Botões um embaixo do outro, cada um com a largura toda (o texto de
+/// "Encerrar 1º tempo" não cabe em meia largura).
+class _ButtonRow extends StatelessWidget {
+  const _ButtonRow({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (index, child) in children.indexed) ...[
+          if (index > 0) const SizedBox(height: 8),
+          child,
+        ],
       ],
     );
   }

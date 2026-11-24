@@ -4,11 +4,13 @@ import 'package:sport_league/features/athletes/domain/athlete.dart';
 import 'package:sport_league/features/availability/data/availability_repository.dart';
 import 'package:sport_league/features/availability/domain/availability.dart';
 import 'package:sport_league/features/games/data/dispute_repository.dart';
+import 'package:sport_league/features/games/data/game_event_repository.dart';
 import 'package:sport_league/features/games/data/game_repository.dart';
 import 'package:sport_league/features/games/data/lineup_repository.dart';
 import 'package:sport_league/features/games/data/player_stats_repository.dart';
 import 'package:sport_league/features/games/data/opponent_repository.dart';
 import 'package:sport_league/features/games/domain/game.dart';
+import 'package:sport_league/features/games/domain/game_event.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
 import 'package:sport_league/features/games/domain/player_stats.dart';
 import 'package:sport_league/features/games/domain/score_dispute.dart';
@@ -633,4 +635,82 @@ class FakeLineupRepository implements LineupRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Lances da súmula ao vivo em memória: guarda o que foi lançado.
+class FakeGameEventRepository implements GameEventRepository {
+  FakeGameEventRepository([Map<String, List<GameEvent>>? byGame])
+    : byGame = byGame ?? {};
+
+  final Map<String, List<GameEvent>> byGame;
+
+  /// Lances lançados, na ordem.
+  final added =
+      <
+        ({
+          GameSide side,
+          GameEventKind kind,
+          String? athlete,
+          String? related,
+          bool penalty,
+        })
+      >[];
+  final deleted = <String>[];
+  final shared = <String>[];
+
+  @override
+  Future<List<GameEvent>> fetch(String gameId) async =>
+      byGame[gameId] ?? const [];
+
+  @override
+  Future<void> add({
+    required String gameId,
+    required GameSide side,
+    required GameEventKind kind,
+    String? athleteId,
+    String? relatedAthleteId,
+    bool penalty = false,
+  }) async {
+    added.add((
+      side: side,
+      kind: kind,
+      athlete: athleteId,
+      related: relatedAthleteId,
+      penalty: penalty,
+    ));
+    (byGame[gameId] ??= []).add(
+      GameEvent(
+        id: 'e${added.length}',
+        gameId: gameId,
+        side: side,
+        kind: kind,
+        createdAt: DateTime(2026),
+        athleteId: athleteId,
+        relatedAthleteId: relatedAthleteId,
+        penalty: penalty,
+      ),
+    );
+  }
+
+  @override
+  Future<void> complete(
+    String eventId, {
+    String? athleteId,
+    String? relatedAthleteId,
+    bool? penalty,
+  }) async {}
+
+  @override
+  Future<void> delete(String eventId) async {
+    deleted.add(eventId);
+    for (final events in byGame.values) {
+      events.removeWhere((event) => event.id == eventId);
+    }
+  }
+
+  @override
+  Future<String> publicLink(String gameId) async {
+    shared.add(gameId);
+    return 'https://app.sportleague.com.br/j/abc123defg';
+  }
 }
