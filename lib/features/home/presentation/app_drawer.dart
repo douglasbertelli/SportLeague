@@ -81,6 +81,13 @@ class AppDrawer extends StatelessWidget {
         const Divider(indent: 28, endIndent: 28),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.campaign_outlined),
+          title: const Text('Mural'),
+          subtitle: const Text('Avisos e enquetes do time'),
+          onTap: () => _open(context, Routes.board),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.emoji_events_outlined),
           title: const Text('Campeonatos'),
           subtitle: const Text('Pontos corridos, mata-mata ou grupos'),

@@ -166,6 +166,12 @@ class NotificationsPage extends ConsumerWidget {
         Icons.payments_outlined,
         Routes.dues,
       ),
+      // Mural: abre os avisos e enquetes do time.
+      'board' => const NotificationAction.page(
+        'Ver mural',
+        Icons.campaign_outlined,
+        Routes.board,
+      ),
       'fundraiser' || 'fundraiser_paid' => const NotificationAction.page(
         'Ver vaquinha',
         Icons.savings_outlined,

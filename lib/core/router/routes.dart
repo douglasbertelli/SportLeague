@@ -101,6 +101,15 @@ abstract final class Routes {
   /// Uma vaquinha e quem pagou; recebe `FundraiserArgs` em `extra`.
   static const fundraiser = '/home/fundraisers/detail';
 
+  /// Mural do time: avisos e enquetes (menu lateral).
+  static const board = '/home/board';
+
+  /// Publica no mural; recebe `BoardFormArgs` em `extra`.
+  static const boardForm = '/home/board/new';
+
+  /// Um aviso com os comentários; recebe `BoardPostArgs` em `extra`.
+  static const boardPost = '/home/board/post';
+
   /// Mensalidade do time (menu lateral).
   static const dues = '/home/dues';
 
