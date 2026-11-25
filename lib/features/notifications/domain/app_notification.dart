@@ -39,7 +39,8 @@ class AppNotification {
   /// game_score, dispute, dispute_answer, fundraiser, fundraiser_paid,
   /// presence, reminder, dues, dues_new, dues_changed, dues_paid,
   /// championship_invite, championship_answer, championship_started,
-  /// championship_match, championship_result, live, board.
+  /// championship_match, championship_result, live, board, receipt,
+  /// receipt_answer.
   final String kind;
   final String title;
   final String body;
@@ -64,6 +65,8 @@ class AppNotification {
     'live' => Icons.sports_soccer,
     // Mural: aviso, enquete, comentário e lembrete de voto.
     'board' => Icons.campaign_outlined,
+    // Comprovante enviado (para o dono) e conferido (para quem pagou).
+    'receipt' || 'receipt_answer' => Icons.receipt_long_outlined,
     'dispute' || 'dispute_answer' => Icons.report_outlined,
     'fundraiser' || 'fundraiser_paid' => Icons.savings_outlined,
     'presence' => Icons.how_to_reg_outlined,

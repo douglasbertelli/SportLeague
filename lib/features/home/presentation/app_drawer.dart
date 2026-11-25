@@ -102,6 +102,13 @@ class AppDrawer extends StatelessWidget {
         ),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.account_balance_wallet_outlined),
+          title: const Text('Caixa'),
+          subtitle: const Text('Saldo, entradas e saídas do time'),
+          onTap: () => _open(context, Routes.cash),
+        ),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
           leading: const Icon(Icons.payments_outlined),
           title: const Text('Mensalidade'),
           subtitle: const Text('Quem pagou o mês e quem está devendo'),

@@ -348,7 +348,14 @@ void main() {
     expect(find.text('Douglas Admin'), findsOneWidget);
     // O administrador vê os banners mesmo sem time: o editor pede para
     // criar um.
+    await tester.scrollUntilVisible(
+      find.text('Banners'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Banners'), findsOneWidget);
+    await tester.ensureVisible(find.text('Vaquinha'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Vaquinha'));
     await tester.pumpAndSettle();
     expect(find.text('Tela da vaquinha'), findsOneWidget);

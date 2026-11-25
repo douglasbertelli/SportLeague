@@ -24,6 +24,7 @@ import '../../features/fundraisers/domain/fundraiser.dart';
 import '../../features/fundraisers/presentation/fundraiser_form_page.dart';
 import '../../features/fundraisers/presentation/fundraiser_page.dart';
 import '../../features/fundraisers/presentation/fundraisers_page.dart';
+import '../../features/cash/presentation/cash_page.dart';
 import '../../features/board/presentation/board_page.dart';
 import '../../features/board/presentation/post_form_page.dart';
 import '../../features/board/presentation/post_page.dart';
@@ -303,6 +304,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          GoRoute(path: 'cash', builder: (_, _) => const CashPage()),
           GoRoute(
             path: 'fundraisers',
             builder: (_, _) => const FundraisersPage(),

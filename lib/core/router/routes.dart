@@ -110,6 +110,9 @@ abstract final class Routes {
   /// Um aviso com os comentários; recebe `BoardPostArgs` em `extra`.
   static const boardPost = '/home/board/post';
 
+  /// Caixa do time: saldo, entradas e saídas (menu lateral).
+  static const cash = '/home/cash';
+
   /// Mensalidade do time (menu lateral).
   static const dues = '/home/dues';
 
