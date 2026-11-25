@@ -142,7 +142,8 @@ class NotificationsPage extends ConsumerWidget {
       'championship_answer' ||
       'championship_started' ||
       'championship_match' ||
-      'championship_result' when notification.championshipId != null =>
+      'championship_result' ||
+      'championship_request' when notification.championshipId != null =>
         NotificationAction.page(
           notification.kind == 'championship_invite'
               ? 'Responder convite'

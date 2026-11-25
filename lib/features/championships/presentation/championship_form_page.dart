@@ -38,6 +38,11 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
   late var _fill = widget.championship?.knockoutFill ?? KnockoutFill.bestPlaced;
   // Liga + mata-mata.
   late var _leagueQualifiers = widget.championship?.knockoutQualifiers ?? 8;
+
+  /// Suspensão automática: amarelos para 1 jogo (0 desliga) e jogos por
+  /// expulsão (0 desliga).
+  late var _yellowLimit = widget.championship?.yellowLimit ?? 3;
+  late var _redGames = widget.championship?.redGames ?? 1;
   var _loading = false;
 
   @override
@@ -86,6 +91,8 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       groupSize: _maxPerGroup,
       knockoutFill: _layout.effectiveFill,
       knockoutQualifiers: _leagueQualifiers,
+      yellowLimit: _yellowLimit,
+      redGames: _redGames,
     );
     try {
       final repository = ref.read(championshipRepositoryProvider);
@@ -218,6 +225,40 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                 onFillChanged: (fill) => setState(() => _fill = fill),
               ),
             ],
+            // Suspensão automática (a escalação e a súmula avisam).
+            const SizedBox(height: 24),
+            Text(
+              'Suspensão automática',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Vale para o próximo jogo do time. A escalação e a súmula '
+              'avisam quem está suspenso. Zero desliga.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            _NumberField(
+              label: 'Amarelos para 1 jogo',
+              hint: _yellowLimit == 0
+                  ? 'Amarelos não suspendem'
+                  : 'A cada $_yellowLimit amarelos, 1 jogo fora',
+              value: _yellowLimit,
+              min: 0,
+              max: 10,
+              onChanged: (value) => setState(() => _yellowLimit = value),
+            ),
+            _NumberField(
+              label: 'Jogos por expulsão',
+              hint: _redGames == 0
+                  ? 'Expulsão não suspende'
+                  : 'Vermelho ou 2º amarelo',
+              value: _redGames,
+              min: 0,
+              max: 5,
+              onChanged: (value) => setState(() => _redGames = value),
+            ),
             const SizedBox(height: 32),
             FilledButton.icon(
               onPressed: _loading ? null : _save,

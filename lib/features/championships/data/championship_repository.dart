@@ -5,6 +5,7 @@ import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../games/data/opponent_repository.dart';
 import '../domain/championship.dart';
+import '../domain/championship_stats.dart';
 import '../domain/championship_rules.dart';
 
 class ChampionshipRepository {
@@ -183,6 +184,57 @@ class ChampionshipRepository {
     ];
   }
 
+  /// Liga ou desliga a inscrição por link (só o organizador); com
+  /// [newCode], troca o código. Devolve o código atual.
+  Future<String> setSignup(
+    String id, {
+    required bool enabled,
+    bool newCode = false,
+  }) => _client.rpc<String>(
+    'set_championship_signup',
+    params: {'p_championship': id, 'p_enabled': enabled, 'p_new_code': newCode},
+  );
+
+  /// Pedidos de inscrição pelo link (o organizador).
+  Future<List<ChampionshipRequest>> fetchRequests(String championshipId) async {
+    final rows = await _client.rpc<List<dynamic>>(
+      'championship_requests_list',
+      params: {'p_championship': championshipId},
+    );
+    return [
+      for (final row in rows)
+        ChampionshipRequest.fromMap(row as Map<String, dynamic>),
+    ];
+  }
+
+  Future<void> answerRequest(String requestId, {required bool accept}) =>
+      _client.rpc(
+        'answer_championship_request',
+        params: {'p_request': requestId, 'p_accept': accept},
+      );
+
+  /// Artilharia, assistências, cartões, times, suspensos e seleção da
+  /// rodada.
+  Future<ChampionshipStats> fetchStats(String championshipId) async {
+    final data = await _client.rpc<Map<String, dynamic>>(
+      'championship_stats',
+      params: {'p_championship': championshipId},
+    );
+    return ChampionshipStats.fromMap(data);
+  }
+
+  /// Atletas suspensos no jogo [gameId] (id do atleta → motivo).
+  Future<Map<String, String>> gameSuspensions(String gameId) async {
+    final rows = await _client.rpc<List<dynamic>>(
+      'game_suspensions',
+      params: {'p_game': gameId},
+    );
+    return {
+      for (final row in rows.cast<Map<String, dynamic>>())
+        row['athlete_id'] as String: row['reason'] as String? ?? 'Suspenso',
+    };
+  }
+
   Future<void> setStatus(String championshipId, ChampionshipStatus status) =>
       _client
           .from('championships')
@@ -211,6 +263,25 @@ final championshipTeamsProvider = FutureProvider.autoDispose
 final championshipMatchesProvider = FutureProvider.autoDispose
     .family<List<ChampionshipMatch>, String>(
       (ref, id) => ref.watch(championshipRepositoryProvider).fetchMatches(id),
+    );
+
+/// Estatísticas do campeonato.
+final championshipStatsProvider = FutureProvider.autoDispose
+    .family<ChampionshipStats, String>(
+      (ref, id) => ref.watch(championshipRepositoryProvider).fetchStats(id),
+    );
+
+/// Pedidos de inscrição pelo link (o organizador).
+final championshipRequestsProvider = FutureProvider.autoDispose
+    .family<List<ChampionshipRequest>, String>(
+      (ref, id) => ref.watch(championshipRepositoryProvider).fetchRequests(id),
+    );
+
+/// Atletas suspensos num jogo de campeonato (id do atleta → motivo).
+final gameSuspensionsProvider = FutureProvider.autoDispose
+    .family<Map<String, String>, String>(
+      (ref, gameId) =>
+          ref.watch(championshipRepositoryProvider).gameSuspensions(gameId),
     );
 
 /// Artilharia e garçons do campeonato.

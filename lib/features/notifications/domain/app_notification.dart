@@ -75,7 +75,8 @@ class AppNotification {
     'championship_answer' ||
     'championship_started' ||
     'championship_match' ||
-    'championship_result' => Icons.emoji_events_outlined,
+    'championship_result' ||
+    'championship_request' => Icons.emoji_events_outlined,
     _ => Icons.notifications_none,
   };
 }

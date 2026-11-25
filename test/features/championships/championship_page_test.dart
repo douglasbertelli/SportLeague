@@ -11,6 +11,7 @@ import 'package:sport_league/core/media/square_crop_page.dart';
 import 'package:sport_league/core/supabase/supabase_providers.dart';
 import 'package:sport_league/features/championships/data/championship_repository.dart';
 import 'package:sport_league/features/championships/domain/championship.dart';
+import 'package:sport_league/features/championships/domain/championship_stats.dart';
 import 'package:sport_league/features/championships/domain/championship_rules.dart';
 import 'package:sport_league/features/championships/presentation/championship_page.dart';
 import 'package:sport_league/features/championships/presentation/share_championship.dart';
@@ -69,6 +70,38 @@ class FakeChampionshipRepository implements ChampionshipRepository {
   @override
   Future<List<ChampionshipPlayerTotal>> fetchPlayerTotals(String id) async =>
       totals;
+
+  var stats = const ChampionshipStats();
+  var requests = <ChampionshipRequest>[];
+  final answers = <(String, bool)>[];
+
+  @override
+  Future<ChampionshipStats> fetchStats(String id) async => stats;
+
+  @override
+  Future<List<ChampionshipRequest>> fetchRequests(String id) async => requests;
+
+  @override
+  Future<void> answerRequest(String requestId, {required bool accept}) async {
+    answers.add((requestId, accept));
+    requests = [
+      for (final request in requests)
+        if (request.id != requestId) request,
+    ];
+  }
+
+  @override
+  Future<String> setSignup(
+    String id, {
+    required bool enabled,
+    bool newCode = false,
+  }) async {
+    championship = championship.copyWith(
+      signupEnabled: enabled,
+      signupCode: championship.signupCode ?? 'abcd1234',
+    );
+    return championship.signupCode!;
+  }
 
   @override
   Future<Championship> fetch(String id) async => championship;
@@ -442,47 +475,134 @@ void main() {
                 .copyWith(status: ChampionshipStatus.running),
             [_entry('a'), _entry('b'), _entry('c')],
           )
-          ..totals = const [
-            ChampionshipPlayerTotal(
-              athleteId: 'p1',
-              name: 'Bruno',
-              teamName: 'Time a',
-              goals: 3,
-              assists: 1,
-              games: 2,
-            ),
-            ChampionshipPlayerTotal(
-              athleteId: 'p2',
-              name: 'Caio',
-              teamName: 'Time b',
-              goals: 1,
-              games: 1,
-            ),
-            ChampionshipPlayerTotal(
-              athleteId: 'p3',
-              name: 'Davi',
-              teamName: 'Time c',
-              assists: 2,
-              games: 2,
-            ),
-          ];
+          ..stats = const ChampionshipStats(
+            players: [
+              StatsPlayer(
+                name: 'Bruno',
+                teamName: 'Time a',
+                goals: 3,
+                assists: 1,
+                yellowCards: 2,
+              ),
+              StatsPlayer(name: 'Caio', teamName: 'Time b', goals: 1),
+              StatsPlayer(
+                name: 'Davi',
+                teamName: 'Time c',
+                assists: 2,
+                redCards: 1,
+              ),
+            ],
+            teams: [
+              StatsTeam(
+                name: 'Time a',
+                played: 2,
+                goalsFor: 5,
+                goalsAgainst: 1,
+                yellowCards: 2,
+              ),
+              StatsTeam(
+                name: 'Time c',
+                played: 2,
+                goalsFor: 1,
+                goalsAgainst: 4,
+                redCards: 1,
+              ),
+            ],
+            suspended: [
+              SuspendedPlayer(
+                name: 'Davi',
+                teamName: 'Time c',
+                reason: 'Expulso',
+              ),
+            ],
+          );
     await _pump(tester, repository);
-    await tester.tap(find.text('Artilharia'));
+    await tester.ensureVisible(find.text('Estatísticas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Estatísticas'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Artilheiros'), findsOneWidget);
+    // Artilharia: só quem fez gol, do maior para o menor.
     expect(find.text('3 gols'), findsOneWidget);
     expect(find.text('1 gol'), findsOneWidget);
-    expect(find.text('Garçons'), findsOneWidget);
-    expect(find.text('2 assistências'), findsOneWidget);
-    expect(find.text('1 assistência'), findsOneWidget);
-    // Quem só deu assistência não entra nos artilheiros (e vice-versa).
-    expect(find.text('Davi'), findsOneWidget);
-    expect(find.text('Caio'), findsOneWidget);
+    expect(find.text('Davi'), findsNothing);
     expect(
-      tester.getTopLeft(find.text('Bruno').first).dy,
+      tester.getTopLeft(find.text('Bruno')).dy,
       lessThan(tester.getTopLeft(find.text('Caio')).dy),
     );
+
+    await tester.ensureVisible(find.text('Assistências'));
+    await tester.tap(find.text('Assistências'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 assistências'), findsOneWidget);
+    expect(find.text('1 assistência'), findsOneWidget);
+    expect(find.text('Caio'), findsNothing);
+
+    // Cartões: o suspenso em cima, com o motivo.
+    await tester.ensureVisible(find.text('Cartões'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cartões'));
+    await tester.pumpAndSettle();
+    expect(find.text('Suspensos no próximo jogo'), findsOneWidget);
+    expect(find.text('Expulso'), findsOneWidget);
+    expect(
+      find.text('3 amarelos = 1 jogo · vermelho = 1 jogo'),
+      findsOneWidget,
+    );
+
+    // Fair play: menos pontos primeiro.
+    await tester.ensureVisible(find.text('Fair play'));
+    await tester.tap(find.text('Fair play'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 pontos'), findsOneWidget);
+    expect(find.text('3 pontos'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Time a')).dy,
+      lessThan(tester.getTopLeft(find.text('Time c')).dy),
+    );
+  });
+
+  testWidgets('organizador liga a inscrição por link e aceita um pedido', (
+    tester,
+  ) async {
+    final texts = <String>[];
+    final repository =
+        FakeChampionshipRepository(_championship(ChampionshipFormat.league), [
+            _entry('a'),
+          ])
+          ..requests = [
+            ChampionshipRequest(
+              id: 'r1',
+              name: 'Várzea FC',
+              createdAt: DateTime(2026, 11, 26),
+              contactName: 'Zé',
+              players: const ['10 · Tico', 'Teco'],
+            ),
+          ];
+    await _pump(
+      tester,
+      repository,
+      overrides: [
+        shareTextProvider.overrideWithValue((text) async => texts.add(text)),
+      ],
+    );
+    await tester.tap(find.text('Times (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inscrição por link'), findsOneWidget);
+    expect(find.text('1 pedido para responder'), findsOneWidget);
+    expect(find.text('Sem conta · Zé · 2 atletas'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Inscrição por link'));
+    await tester.pumpAndSettle();
+    expect(repository.championship.signupEnabled, isTrue);
+    await tester.tap(find.text('Compartilhar'));
+    await tester.pumpAndSettle();
+    expect(texts.single, contains('/inscricao/abcd1234'));
+
+    await tester.tap(find.byTooltip('Aceitar Várzea FC'));
+    await tester.pumpAndSettle();
+    expect(repository.answers.single, ('r1', true));
   });
 
   testWidgets('o organizador envia o símbolo do time fictício', (tester) async {
@@ -632,7 +752,7 @@ void main() {
     expect(find.text('Compartilhar imagem'), findsNothing);
     expect(find.text('Compartilhar link'), findsNothing);
 
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.byType(Switch).last);
     await tester.pumpAndSettle();
     expect(repository.championship.publicEnabled, isTrue);
     final url = publicChampionshipUrl(repository.championship.publicSlug!);
