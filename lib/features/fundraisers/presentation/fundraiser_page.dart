@@ -9,6 +9,9 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../teams/domain/team.dart';
+import '../../cash/presentation/pix_pay_sheet.dart';
+import '../../cash/presentation/receipts_section.dart';
+import '../../dues/data/dues_repository.dart' show teamDuesProvider;
 import '../data/fundraiser_repository.dart';
 import '../domain/fundraiser.dart';
 import 'fundraisers_page.dart';
@@ -145,6 +148,16 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
             fundraiser: fundraiser,
             isOwner: isOwner,
             payments: payments,
+            // Quem está vendo, se participa: atleta do time ou o dono.
+            myKey:
+                athletes
+                    .where(
+                      (a) => a.profileId == ref.watch(currentUserIdProvider),
+                    )
+                    .firstOrNull
+                    ?.id ??
+                (isOwner ? 'profile:${widget.team.ownerId}' : null),
+            pixKey: ref.watch(teamDuesProvider(widget.team.id!)).value?.pixKey,
             participants: [
               // O administrador primeiro; se ele também é atleta, aparece
               // uma vez só, como atleta.
@@ -192,6 +205,8 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
     required bool isOwner,
     required FundraiserPayments payments,
     required List<FundraiserParticipant> participants,
+    String? myKey,
+    String? pixKey,
   }) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
@@ -275,6 +290,35 @@ class _FundraiserPageState extends ConsumerState<FundraiserPage> {
               ],
             ),
           ),
+        ),
+        // A minha parte pelo Pix (com a chave do time, da mensalidade).
+        if (myKey != null &&
+            pixKey != null &&
+            !fundraiser.closed &&
+            !payments.contains(myKey)) ...[
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () => showPixPay(
+              context,
+              teamId: widget.team.id!,
+              teamName: widget.team.name,
+              pixKey: pixKey,
+              amountCents: share,
+              title: 'Vaquinha · ${fundraiser.title}',
+              fundraiserId: fundraiser.id,
+            ),
+            icon: const Icon(Icons.pix),
+            label: Text('Pagar minha parte (${formatMoney(share)}) com Pix'),
+          ),
+        ],
+        // Comprovantes da vaquinha: o dono confere; quem pagou vê o seu.
+        const SizedBox(height: 8),
+        ReceiptsSection(
+          teamId: widget.team.id!,
+          isOwner: isOwner,
+          fundraiserId: fundraiser.id,
+          onAnswered: () =>
+              ref.invalidate(fundraiserPaymentsProvider(fundraiser.id!)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 24, 0, 8),

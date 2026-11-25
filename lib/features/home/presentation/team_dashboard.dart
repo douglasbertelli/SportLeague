@@ -6,7 +6,6 @@ import '../../../core/router/routes.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confetti_burst.dart';
 import '../../../core/widgets/confirm_dialog.dart';
-import '../../board/presentation/board_teaser.dart';
 import '../../games/data/dispute_repository.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/data/player_stats_repository.dart';
@@ -130,9 +129,6 @@ class TeamDashboard extends ConsumerWidget {
           isStaff: isStaff,
           isPlayer: player,
         ),
-        // Mural: avisos novos e o último publicado.
-        const SizedBox(height: 8),
-        BoardTeaser(teamId: team.id!),
         if (canManage && disputed > 0) ...[
           const SizedBox(height: 8),
           Card(

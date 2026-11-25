@@ -348,7 +348,12 @@ class _Poll extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: enabled ? () => onVote(option) : null,
               child: Container(
+                // O fundo recorta a barra nos cantos; a borda vai por cima
+                // dela (senão a barra cheia cobre a borda e parece cortada).
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundDecoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: option.mine ? colors.primary : colors.outlineVariant,

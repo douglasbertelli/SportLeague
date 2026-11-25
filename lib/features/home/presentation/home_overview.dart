@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../board/presentation/board_teaser.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../../banners/presentation/banner_editor_page.dart';
 import '../../games/data/dispute_repository.dart';
@@ -154,6 +155,11 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
             ),
           ],
           ...actions,
+          // Mural do time ativo: o último dos atalhos (depois de Banners),
+          // com os avisos novos.
+          if ((profile.hasTeamHome || profile.isPlayer) &&
+              ref.watch(selectedTeamProvider).value?.id != null)
+            BoardTeaser(teamId: ref.watch(selectedTeamProvider).value!.id!),
         ],
       ),
     );

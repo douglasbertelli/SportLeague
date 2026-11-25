@@ -22,6 +22,8 @@ import '../../plans/presentation/plan_gate.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_logo.dart';
+import '../../cash/presentation/pix_pay_sheet.dart';
+import '../../cash/presentation/receipts_section.dart';
 import '../data/dues_repository.dart';
 import '../domain/team_dues.dart';
 
@@ -366,7 +368,35 @@ class _TeamDuesState extends ConsumerState<_TeamDues> {
                   : colors.onErrorContainer,
             ),
           ),
+          // Pagar pelo Pix: o mês mais antigo em atraso ou, em dia, o mês
+          // atual se ainda não pagou.
+          if (dues.pixKey case final pix?)
+            if ([...myOpen, if (!paid(me, months.last)) months.last].firstOrNull
+                case final payMonth?)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: FilledButton.icon(
+                  onPressed: () => showPixPay(
+                    context,
+                    teamId: _teamId,
+                    teamName: widget.team.name,
+                    pixKey: pix,
+                    amountCents: dues.amountCents,
+                    title: 'Mensalidade de ${monthName(payMonth)}',
+                    month: payMonth,
+                  ),
+                  icon: const Icon(Icons.pix),
+                  label: Text('Pagar ${monthName(payMonth)} com Pix'),
+                ),
+              ),
         ],
+        // Comprovantes: o dono confere; o atleta vê o seu.
+        const SizedBox(height: 8),
+        ReceiptsSection(
+          teamId: _teamId,
+          isOwner: isOwner,
+          onAnswered: () => ref.invalidate(duePaymentsProvider(_teamId)),
+        ),
         const SizedBox(height: 16),
         // Mês na tela, com as setas para os anteriores.
         Row(

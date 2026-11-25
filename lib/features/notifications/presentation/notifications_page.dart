@@ -173,6 +173,18 @@ class NotificationsPage extends ConsumerWidget {
         Icons.campaign_outlined,
         Routes.board,
       ),
+      // Comprovantes: o caixa mostra os que esperam conferência.
+      'receipt' => const NotificationAction.page(
+        'Conferir comprovante',
+        Icons.receipt_long_outlined,
+        Routes.cash,
+        needsAction: true,
+      ),
+      'receipt_answer' => const NotificationAction.page(
+        'Ver caixa',
+        Icons.receipt_long_outlined,
+        Routes.cash,
+      ),
       'fundraiser' || 'fundraiser_paid' => const NotificationAction.page(
         'Ver vaquinha',
         Icons.savings_outlined,
