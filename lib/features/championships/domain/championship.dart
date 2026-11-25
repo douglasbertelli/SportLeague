@@ -84,6 +84,10 @@ class Championship {
     this.status = ChampionshipStatus.draft,
     this.publicEnabled = false,
     this.publicSlug,
+    this.yellowLimit = 3,
+    this.redGames = 1,
+    this.signupEnabled = false,
+    this.signupCode,
   });
 
   factory Championship.fromMap(Map<String, dynamic> map) => Championship(
@@ -102,6 +106,10 @@ class Championship {
     status: ChampionshipStatus.fromName(map['status'] as String),
     publicEnabled: map['public_enabled'] as bool? ?? false,
     publicSlug: map['public_slug'] as String?,
+    yellowLimit: map['yellow_limit'] as int? ?? 3,
+    redGames: map['red_games'] as int? ?? 1,
+    signupEnabled: map['signup_enabled'] as bool? ?? false,
+    signupCode: map['signup_code'] as String?,
   );
 
   final String? id;
@@ -129,6 +137,26 @@ class Championship {
   /// primeira vez. Muda só pelo `setPublic` do repositório.
   final bool publicEnabled;
   final String? publicSlug;
+
+  /// Suspensão automática: a cada [yellowLimit] amarelos, 1 jogo (0
+  /// desliga); expulsão, [redGames] jogos (0 desliga).
+  final int yellowLimit;
+  final int redGames;
+
+  /// Inscrição por link (site, `/inscricao/<código>`): ligada e o código.
+  /// Muda só pelo `setSignup` do repositório.
+  final bool signupEnabled;
+  final String? signupCode;
+
+  /// "3 amarelos = 1 jogo · vermelho = 1 jogo" (ou "sem suspensão").
+  String get suspensionRule {
+    final parts = [
+      if (yellowLimit > 0) '$yellowLimit amarelos = 1 jogo',
+      if (redGames > 0)
+        'vermelho = $redGames ${redGames == 1 ? 'jogo' : 'jogos'}',
+    ];
+    return parts.isEmpty ? 'Sem suspensão automática' : parts.join(' · ');
+  }
 
   /// "Pontos corridos · turno e returno", "Grupos + mata-mata · 2 grupos".
   String get summary => switch (format) {
@@ -169,12 +197,16 @@ class Championship {
         ? knockoutQualifiers
         : null,
     'status': status.name,
+    'yellow_limit': yellowLimit,
+    'red_games': redGames,
   };
 
   Championship copyWith({
     ChampionshipStatus? status,
     bool? publicEnabled,
     String? publicSlug,
+    bool? signupEnabled,
+    String? signupCode,
   }) => Championship(
     id: id,
     ownerId: ownerId,
@@ -191,6 +223,10 @@ class Championship {
     status: status ?? this.status,
     publicEnabled: publicEnabled ?? this.publicEnabled,
     publicSlug: publicSlug ?? this.publicSlug,
+    yellowLimit: yellowLimit,
+    redGames: redGames,
+    signupEnabled: signupEnabled ?? this.signupEnabled,
+    signupCode: signupCode ?? this.signupCode,
   );
 }
 

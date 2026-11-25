@@ -7,6 +7,8 @@ import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../../athletes/domain/athlete.dart';
+import '../../championships/data/championship_repository.dart'
+    show gameSuspensionsProvider;
 import '../data/lineup_repository.dart';
 import '../../plans/domain/plan_status.dart';
 import '../../plans/presentation/plan_gate.dart';
@@ -432,6 +434,12 @@ class _LineupPageState extends ConsumerState<LineupPage> {
     );
   }
 
+  /// Suspensos neste jogo (campeonato): id do atleta → motivo. A escalação
+  /// avisa, mas deixa escalar.
+  Map<String, String> get _suspended => widget.game.isChampionship
+      ? ref.watch(gameSuspensionsProvider(widget.game.id!)).value ?? const {}
+      : const {};
+
   Widget _athleteCard(ThemeData theme, Athlete athlete, _Spot spot) => Card(
     // A chave mantém o card certo quando o atleta muda de seção.
     key: ValueKey(athlete.id),
@@ -456,6 +464,14 @@ class _LineupPageState extends ConsumerState<LineupPage> {
                     position,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                if (_suspended[athlete.id] case final reason?)
+                  Text(
+                    'Suspenso · $reason',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
               ],

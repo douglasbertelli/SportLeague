@@ -108,16 +108,25 @@ class _ChampionshipCard extends StatelessWidget {
           ),
         ),
         title: Text(championship.name),
-        subtitle: Text(
-          [
-            championship.modality.label,
-            championship.format.label,
-            if (organizer) 'Você organiza',
-          ].join(' · '),
-        ),
-        trailing: Chip(
-          label: Text(championship.status.label),
-          visualDensity: VisualDensity.compact,
+        // A situação embaixo do texto: o nome e os detalhes ficam com a
+        // largura toda.
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                championship.modality.label,
+                championship.format.label,
+                if (organizer) 'Você organiza',
+              ].join(' · '),
+            ),
+            const SizedBox(height: 6),
+            Chip(
+              label: Text(championship.status.label),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ],
         ),
         onTap: () => context.push(Routes.championship, extra: championship.id),
       ),
