@@ -24,6 +24,9 @@ import '../../features/fundraisers/domain/fundraiser.dart';
 import '../../features/fundraisers/presentation/fundraiser_form_page.dart';
 import '../../features/fundraisers/presentation/fundraiser_page.dart';
 import '../../features/fundraisers/presentation/fundraisers_page.dart';
+import '../../features/board/presentation/board_page.dart';
+import '../../features/board/presentation/post_form_page.dart';
+import '../../features/board/presentation/post_page.dart';
 import '../../features/games/domain/game.dart';
 import '../../features/games/presentation/game_form_page.dart';
 import '../../features/games/presentation/opponent_picker_page.dart';
@@ -276,6 +279,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                     teamIds: teamIds,
                     guestIds: guestIds,
                   );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'board',
+            builder: (_, _) => const BoardPage(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (_, state) {
+                  final (:team, :kind) = state.extra as BoardFormArgs;
+                  return PostFormPage(team: team, kind: kind);
+                },
+              ),
+              GoRoute(
+                path: 'post',
+                builder: (_, state) {
+                  final (:team, :postId) = state.extra as BoardPostArgs;
+                  return PostPage(team: team, postId: postId);
                 },
               ),
             ],

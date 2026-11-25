@@ -59,6 +59,13 @@ String friendlyErrorMessage(Object error) {
     if (error.message.contains('report_target_not_found')) {
       return 'Esse conteúdo não existe mais.';
     }
+    // Mensagem já escrita para quem usa (raise do banco em português, com
+    // maiúscula e ponto final, ex.: "Só o dono e os técnicos publicam no
+    // mural."). As de controle interno são em inglês, minúsculas.
+    if (error.code == 'P0001' &&
+        RegExp(r'^[A-ZÁÉÍÓÚÂÊÔÃÕÇ].*\.$').hasMatch(error.message)) {
+      return error.message;
+    }
     // Gol lançado antes do horário marcado (games_check_score).
     if (error.message.contains('score only after a scheduled game')) {
       return 'O placar só conta a partir do horário marcado do jogo.';
