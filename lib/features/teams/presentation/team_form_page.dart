@@ -15,6 +15,7 @@ import '../../../core/widgets/loading_button.dart';
 import '../../../core/router/routes.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../data/team_repository.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../domain/team.dart';
 import '../../venues/domain/venue.dart';
 
@@ -75,6 +76,10 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
   /// Um time joga uma modalidade só. Times antigos com várias ficam com a
   /// primeira ao salvar.
   late Modality? _modality = widget.team?.modalities.firstOrNull;
+
+  /// Esporte do time: escolhido só ao criar (o banco não deixa mudar) e só
+  /// quando há mais de um esporte liberado; por enquanto, o futebol.
+  late Sport _sport = widget.team?.sport ?? supportedSports.first;
   late TeamGender? _gender = widget.team?.gender;
   late AgeGroup _ageGroup = widget.team?.ageGroup ?? AgeGroup.open;
   late final _minAgeController = TextEditingController(
@@ -240,7 +245,7 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
       id: _saved?.id,
       ownerId: ownerId,
       name: _nameController.text,
-      sport: _saved?.sport ?? Sport.football,
+      sport: _saved?.sport ?? _sport,
       modalities: {?_modality},
       gender: _gender,
       ageGroup: _ageGroup,
@@ -518,13 +523,32 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
             Validators.name(value, message: 'Informe o nome do time'),
       ),
       const SizedBox(height: 8),
+      if (widget.team == null &&
+          _saved == null &&
+          supportedSports.length > 1) ...[
+        Text('Esporte', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SegmentedButton<Sport>(
+          segments: [
+            for (final sport in supportedSports)
+              ButtonSegment(value: sport, label: Text(sport.label)),
+          ],
+          selected: {_sport},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) => setState(() {
+            _sport = selection.first;
+            if (_modality?.sport != _sport) _modality = null;
+          }),
+        ),
+        const SizedBox(height: 16),
+      ],
       Text('Modalidade', style: theme.textTheme.titleSmall),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          for (final modality in Modality.values)
+          for (final modality in Modality.of(_sport))
             ChoiceChip(
               label: Text(modality.label),
               selected: _modality == modality,

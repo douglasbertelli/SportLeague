@@ -14,7 +14,7 @@ import '../../games/data/opponent_repository.dart';
 import '../../games/domain/opponent.dart';
 import '../../games/presentation/guest_team_sheet.dart';
 import '../data/team_repository.dart';
-import '../domain/team.dart';
+import '../../sports/domain/sport_rules.dart';
 import 'team_logo.dart';
 
 /// Cria um time fictício pela aba Fictícios: nome, símbolo e a modalidade
@@ -29,7 +29,7 @@ Future<void> createGuestTeamFromTab(BuildContext context, WidgetRef ref) async {
           'Para adversários que não estão no SportLeague. Ele fica salvo '
           'para os amistosos e campeonatos da modalidade, e só você vê.',
       submitLabel: 'Criar',
-      modalities: Modality.values,
+      modalities: availableModalities,
       initialModality: selected?.modalities.firstOrNull,
     ),
   );
@@ -40,7 +40,7 @@ Future<void> createGuestTeamFromTab(BuildContext context, WidgetRef ref) async {
       GuestTeam(
         ownerId: ref.read(currentUserIdProvider)!,
         name: draft.name,
-        modality: draft.modality ?? Modality.values.first,
+        modality: draft.modality ?? availableModalities.first,
       ),
       draft.logo,
       onLogoError: () {

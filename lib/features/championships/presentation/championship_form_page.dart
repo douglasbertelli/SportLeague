@@ -8,6 +8,7 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../plans/presentation/plan_gate.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
@@ -138,7 +139,8 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
               initialValue: _modality,
               decoration: const InputDecoration(labelText: 'Modalidade'),
               items: [
-                for (final modality in Modality.values)
+                // As dos esportes liberados (e a do campeonato, se for outra).
+                for (final modality in {...availableModalities, _modality})
                   DropdownMenuItem(
                     value: modality,
                     child: Text(modality.label),
