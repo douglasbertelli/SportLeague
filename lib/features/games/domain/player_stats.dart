@@ -17,6 +17,16 @@ class PlayerGameStats {
   factory PlayerGameStats.fromMap(Map<String, dynamic> map) {
     // Atleta carregado junto (select com athlete).
     final athlete = map['athlete'] as Map<String, dynamic>?;
+    // A súmula genérica (`stats`, chave = estatística do esporte) vale; sem
+    // ela (banco antes da migration sport_stats), as colunas do futebol.
+    final stats = map['stats'] as Map<String, dynamic>?;
+    int read(String key) =>
+        (stats?[key] as num?)?.toInt() ??
+        switch (map[key]) {
+          final bool flag => flag ? 1 : 0,
+          final num value => value.toInt(),
+          _ => 0,
+        };
     return PlayerGameStats(
       gameId: map['game_id'] as String,
       teamId: map['team_id'] as String,
@@ -29,10 +39,10 @@ class PlayerGameStats {
         _ => athlete?['name'] as String?,
       },
       jerseyNumber: athlete?['jersey_number'] as int?,
-      goals: map['goals'] as int? ?? 0,
-      assists: map['assists'] as int? ?? 0,
-      yellowCards: map['yellow_cards'] as int? ?? 0,
-      redCard: map['red_card'] as bool? ?? false,
+      goals: read('goals'),
+      assists: read('assists'),
+      yellowCards: read('yellow_cards'),
+      redCard: read('red_card') > 0,
       bestPlayer: map['best_player'] as bool? ?? false,
     );
   }
@@ -92,16 +102,18 @@ class PlayerGameStats {
     _ => this,
   };
 
+  /// Linha para gravar: as estatísticas vão em `stats` (o banco mantém as
+  /// colunas do futebol iguais a ela).
   Map<String, dynamic> toMap() => {
     'game_id': gameId,
     'team_id': teamId,
     'athlete_id': athleteId,
-    'goals': goals,
-    'assists': assists,
-    'yellow_cards': yellowCards,
-    'red_card': redCard,
+    'stats': {for (final key in _keys) key: value(key)},
     'best_player': bestPlayer,
   };
+
+  /// Chaves de `stats` que esta linha conhece (as do futebol, por enquanto).
+  static const _keys = ['goals', 'assists', 'yellow_cards', 'red_card'];
 }
 
 /// "Fulano (2)", "Ciclano": quem tem a estatística [key] (gols, no futebol),

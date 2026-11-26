@@ -176,6 +176,21 @@ Migration `…_sport_stats.sql`:
 
 Depois, o app (Etapa 2) e o web (Etapa 3) passam a ler e gravar `stats`.
 
+> **Como ficou** (`20261127010000_sport_stats.sql`): os itens 1 a 4 e o 6
+> (`add_player_stat`, com `add_player_goal` sem mudança). Entrou também a
+> tabela `sport_modalities` (modalidade → esporte), que a validação precisa
+> para saber o esporte do jogo. O item 5 (as funções de totais devolverem
+> `stats`) ficou para a Fase 2: como as colunas do futebol continuam iguais a
+> `stats` nos dois sentidos, as funções seguem certas, e só precisam mudar
+> quando houver estatísticas que não são colunas (vôlei). Testada no banco de
+> produção dentro de um bloco desfeito no fim (não há Supabase local e o
+> histórico de migrations do projeto só começa em 04/11, então um branch não
+> teria o esquema todo).
+>
+> **Ordem de publicação:** primeiro a migration; depois o site e o app, que
+> passam a gravar `stats` (antes da migration, a coluna não existe). O app e
+> o site antigos continuam funcionando depois da migration.
+
 Escolhi `jsonb` em vez de uma tabela com uma linha por estatística porque a
 súmula continua sendo **uma linha por atleta**. A chave primária
 `(game_id, athlete_id)`, o índice do craque, a RLS e o upsert de hoje não
