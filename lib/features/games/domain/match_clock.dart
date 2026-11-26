@@ -1,3 +1,4 @@
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/domain/team.dart';
 
 /// Em que parte da partida o relógio está.
@@ -73,14 +74,9 @@ class MatchClock {
         elapsedAt(now) >= Duration(minutes: minutes);
   }
 
-  /// Duração sugerida de cada tempo pela modalidade.
-  static int defaultPeriodMinutes(Modality? modality) => switch (modality) {
-    Modality.futsal => 20,
-    Modality.society => 25,
-    Modality.field => 45,
-    Modality.beach => 15,
-    Modality.challenge || null => 10,
-  };
+  /// Duração sugerida de cada tempo pela modalidade (regras do esporte).
+  static int defaultPeriodMinutes(Modality? modality) =>
+      rulesForModality(modality).periodMinutesFor(modality);
 }
 
 /// "12:34" (minutos podem passar de 60: "75:02").

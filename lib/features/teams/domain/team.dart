@@ -13,17 +13,26 @@ enum Sport {
       Sport.values.firstWhere((sport) => sport.name == value);
 }
 
-/// Modalidades do futebol; um time pode jogar mais de uma.
+/// Modalidades; cada uma é de um esporte ([sport]). Por enquanto só há as do
+/// futebol. Como os jogos só acontecem entre times da mesma modalidade, o
+/// esporte de um jogo ou campeonato sai da modalidade.
 enum Modality {
-  futsal('Futsal'),
-  society('Society'),
-  field('Campo'),
-  beach('Areia'),
-  challenge('Desafio');
+  futsal('Futsal', Sport.football),
+  society('Society', Sport.football),
+  field('Campo', Sport.football),
+  beach('Areia', Sport.football),
+  challenge('Desafio', Sport.football);
 
-  const Modality(this.label);
+  const Modality(this.label, this.sport);
 
   final String label;
+  final Sport sport;
+
+  /// Modalidades do [sport], na ordem do enum.
+  static List<Modality> of(Sport sport) => [
+    for (final modality in values)
+      if (modality.sport == sport) modality,
+  ];
 
   static Modality fromName(String value) =>
       Modality.values.firstWhere((modality) => modality.name == value);
