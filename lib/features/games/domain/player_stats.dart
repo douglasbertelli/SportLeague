@@ -74,6 +74,24 @@ class PlayerGameStats {
     bestPlayer: bestPlayer ?? this.bestPlayer,
   );
 
+  /// Valor da estatística [key] das regras do esporte (flag: 0 ou 1).
+  int value(String key) => switch (key) {
+    'goals' => goals,
+    'assists' => assists,
+    'yellow_cards' => yellowCards,
+    'red_card' => redCard ? 1 : 0,
+    _ => 0,
+  };
+
+  /// Cópia com a estatística [key] valendo [value].
+  PlayerGameStats withValue(String key, int value) => switch (key) {
+    'goals' => copyWith(goals: value),
+    'assists' => copyWith(assists: value),
+    'yellow_cards' => copyWith(yellowCards: value),
+    'red_card' => copyWith(redCard: value > 0),
+    _ => this,
+  };
+
   Map<String, dynamic> toMap() => {
     'game_id': gameId,
     'team_id': teamId,
@@ -84,6 +102,18 @@ class PlayerGameStats {
     'red_card': redCard,
     'best_player': bestPlayer,
   };
+}
+
+/// "Fulano (2)", "Ciclano": quem tem a estatística [key] (gols, no futebol),
+/// de quem fez mais para quem fez menos.
+List<String> scorerNames(Iterable<PlayerGameStats> stats, String key) {
+  final scorers = stats.where((s) => s.value(key) > 0).toList()
+    ..sort((a, b) => b.value(key).compareTo(a.value(key)));
+  return [
+    for (final s in scorers)
+      '${s.athleteName ?? 'Atleta'}'
+          '${s.value(key) > 1 ? ' (${s.value(key)})' : ''}',
+  ];
 }
 
 /// Totais de um atleta em todos os jogos (perfil do atleta e artilharia).
@@ -126,6 +156,15 @@ class AthleteTotals {
 
   /// Vezes em que foi o craque do jogo.
   final int bestPlayer;
+
+  /// Total da estatística [key] das regras do esporte (a flag soma os jogos).
+  int value(String key) => switch (key) {
+    'goals' => goals,
+    'assists' => assists,
+    'yellow_cards' => yellowCards,
+    'red_card' => redCards,
+    _ => 0,
+  };
 }
 
 /// Totais do jogador logado num dos times em que é atleta (Meus números).

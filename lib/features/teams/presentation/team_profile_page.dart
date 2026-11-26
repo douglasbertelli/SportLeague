@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/error_messages.dart';
@@ -179,7 +180,7 @@ class _Profile extends StatelessWidget {
               _showImage(context, coach.avatarUrl!, coach.name),
         ),
         _StatsSection(team: team),
-        _RankingsSection(teamId: team.id!),
+        _RankingsSection(teamId: team.id!, rules: team.rules),
       ],
     );
 
@@ -529,7 +530,7 @@ class _StatsSection extends ConsumerWidget {
                 const _SectionTitle('Estatísticas', trailing: SeasonButton()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: StatsGrid(stats: stats),
+                  child: StatsGrid(stats: stats, rules: team.rules),
                 ),
                 const _SectionTitle('Últimos resultados'),
                 if (stats.recent.isEmpty)
@@ -788,11 +789,13 @@ class _CoachesSection extends ConsumerWidget {
   }
 }
 
-/// Artilharia e garçons do time, pelas súmulas dos jogos.
+/// Rankings do esporte (no futebol, artilharia e garçons), pelas súmulas dos
+/// jogos.
 class _RankingsSection extends ConsumerWidget {
-  const _RankingsSection({required this.teamId});
+  const _RankingsSection({required this.teamId, required this.rules});
 
   final String teamId;
+  final SportRules rules;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -804,9 +807,6 @@ class _RankingsSection extends ConsumerWidget {
       for (final row in totals)
         if (value(row) > 0) row,
     ]..sort((a, b) => value(b).compareTo(value(a)))).take(5).toList();
-
-    final scorers = top((row) => row.goals);
-    final assists = top((row) => row.assists);
 
     Widget list(
       List<AthleteTotals> rows,
@@ -835,23 +835,23 @@ class _RankingsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('Artilharia'),
-        if (scorers.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Nenhum gol lançado nas súmulas ainda.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          )
-        else
-          list(scorers, (row) => row.goals, 'gols'),
-        if (assists.isNotEmpty) ...[
-          const _SectionTitle('Garçons'),
-          list(assists, (row) => row.assists, 'assist.'),
-        ],
+        for (final ranking in rules.rankings)
+          if (top((row) => row.value(ranking.statKey)) case final rows
+              when rows.isNotEmpty || ranking.emptyMessage != null) ...[
+            _SectionTitle(ranking.title),
+            if (rows.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  ranking.emptyMessage!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              list(rows, (row) => row.value(ranking.statKey), ranking.unit),
+          ],
       ],
     );
   }

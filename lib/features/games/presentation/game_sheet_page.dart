@@ -6,6 +6,7 @@ import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../../athletes/domain/athlete.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/data/team_repository.dart';
 import '../data/player_stats_repository.dart';
 import '../domain/game.dart';
@@ -135,6 +136,7 @@ class GameSheetPage extends ConsumerWidget {
             ),
             LiveTimeline(game: game, viewerTeamId: viewerTeamId),
             _TeamSection(
+              rules: game.rules,
               title: myName,
               rows: [
                 for (final row in stats)
@@ -148,6 +150,7 @@ class GameSheetPage extends ConsumerWidget {
             // Adversário da plataforma: a parte que ele lançou.
             if (opponentId != null)
               _TeamSection(
+                rules: game.rules,
                 title: game.opponentNameFor(viewerTeamId),
                 rows: [
                   for (final row in stats)
@@ -165,12 +168,14 @@ class GameSheetPage extends ConsumerWidget {
 
 class _TeamSection extends StatelessWidget {
   const _TeamSection({
+    required this.rules,
     required this.title,
     required this.rows,
     required this.emptyMessage,
     required this.photos,
   });
 
+  final SportRules rules;
   final String title;
   final List<PlayerGameStats> rows;
 
@@ -181,14 +186,15 @@ class _TeamSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scoring = rules.scoringStatKey;
     final sorted = [...rows]
       ..sort((a, b) {
-        final byGoals = b.goals.compareTo(a.goals);
-        return byGoals != 0
-            ? byGoals
+        final byScore = b.value(scoring).compareTo(a.value(scoring));
+        return byScore != 0
+            ? byScore
             : (a.athleteName ?? '').compareTo(b.athleteName ?? '');
       });
-    final goals = rows.fold(0, (sum, row) => sum + row.goals);
+    final score = rows.fold(0, (sum, row) => sum + row.value(scoring));
 
     return Padding(
       padding: const EdgeInsets.only(top: 24),
@@ -201,7 +207,7 @@ class _TeamSection extends StatelessWidget {
               if (rows.isNotEmpty)
                 Text(
                   '${rows.length} ${rows.length == 1 ? 'jogador' : 'jogadores'}'
-                  ' · $goals ${goals == 1 ? 'gol' : 'gols'}',
+                  ' · ${rules.scoreUnit.count(score)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -233,7 +239,7 @@ class _TeamSection extends StatelessWidget {
                           row.athleteName ?? 'Atleta',
                         ].join(' · '),
                       ),
-                      subtitle: switch (statsLine(row)) {
+                      subtitle: switch (statsLine(row, rules)) {
                         '' => null,
                         final line => Text(line),
                       },
@@ -258,13 +264,10 @@ class _TeamSection extends StatelessWidget {
 }
 
 /// "2 gols · 1 assistência · 1 amarelo · vermelho"; vazio se só jogou.
-String statsLine(PlayerGameStats row) => [
-  if (row.goals > 0) '${row.goals} ${row.goals == 1 ? 'gol' : 'gols'}',
-  if (row.assists > 0)
-    '${row.assists} ${row.assists == 1 ? 'assistência' : 'assistências'}',
-  if (row.yellowCards > 0)
-    '${row.yellowCards} ${row.yellowCards == 1 ? 'amarelo' : 'amarelos'}',
-  if (row.redCard) 'vermelho',
+String statsLine(PlayerGameStats row, [SportRules rules = footballRules]) => [
+  for (final stat in rules.stats)
+    if (stat.describe(row.value(stat.key)) case final text when text.isNotEmpty)
+      text,
 ].join(' · ');
 
 /// Lançar a súmula do time: marca quem jogou e, para cada um, gols,
@@ -414,6 +417,7 @@ class _TeamSheetEditorPageState extends ConsumerState<TeamSheetEditorPage> {
         const SizedBox(height: 8),
         for (final athlete in athletes)
           _AthleteRow(
+            rules: widget.game.rules,
             athlete: athlete,
             row: rows[athlete.id],
             onPlayed: (played) => setState(() {
@@ -433,6 +437,7 @@ class _TeamSheetEditorPageState extends ConsumerState<TeamSheetEditorPage> {
 
 class _AthleteRow extends StatelessWidget {
   const _AthleteRow({
+    required this.rules,
     required this.athlete,
     required this.row,
     required this.onPlayed,
@@ -440,6 +445,7 @@ class _AthleteRow extends StatelessWidget {
     required this.onBest,
   });
 
+  final SportRules rules;
   final Athlete athlete;
 
   /// Nulo quando não jogou.
@@ -500,31 +506,22 @@ class _AthleteRow extends StatelessWidget {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _Counter(
-                      label: 'Gols',
-                      value: row.goals,
-                      onChanged: (value) =>
-                          onChanged(row.copyWith(goals: value)),
-                    ),
-                    _Counter(
-                      label: 'Assist.',
-                      value: row.assists,
-                      onChanged: (value) =>
-                          onChanged(row.copyWith(assists: value)),
-                    ),
-                    _Counter(
-                      label: 'Amarelos',
-                      value: row.yellowCards,
-                      max: 2,
-                      onChanged: (value) =>
-                          onChanged(row.copyWith(yellowCards: value)),
-                    ),
-                    FilterChip(
-                      label: const Text('Vermelho'),
-                      selected: row.redCard,
-                      onSelected: (value) =>
-                          onChanged(row.copyWith(redCard: value)),
-                    ),
+                    for (final stat in rules.stats)
+                      switch (stat.kind) {
+                        StatKind.count => _Counter(
+                          label: stat.shortLabel,
+                          value: row.value(stat.key),
+                          max: stat.max ?? 99,
+                          onChanged: (value) =>
+                              onChanged(row.withValue(stat.key, value)),
+                        ),
+                        StatKind.flag => FilterChip(
+                          label: Text(stat.shortLabel),
+                          selected: row.value(stat.key) > 0,
+                          onSelected: (value) =>
+                              onChanged(row.withValue(stat.key, value ? 1 : 0)),
+                        ),
+                      },
                   ],
                 ),
               ),

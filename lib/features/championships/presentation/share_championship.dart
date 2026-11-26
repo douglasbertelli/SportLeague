@@ -16,6 +16,7 @@ import '../../invites/data/invite_repository.dart' show shareTextProvider;
 import '../../teams/presentation/team_logo.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../domain/championship_rules.dart';
 
 /// Link da página pública do campeonato no site (sem login).
@@ -275,7 +276,12 @@ ChampionshipTeam? championEntry(
         if (t.status == EntryStatus.accepted) t.id,
     ];
     final names = {for (final t in teams) t.id: t.name};
-    final table = standings(ids, matches, names: names);
+    final table = standings(
+      ids,
+      matches,
+      names: names,
+      rules: championship.rules.standings,
+    );
     return table.isEmpty ? null : byId[table.first.teamId];
   }
   final finalMatch = finalOf(matches);
@@ -331,7 +337,12 @@ class ChampionshipShareCard extends StatelessWidget {
           if (t.status == EntryStatus.accepted) t.id,
       ];
       body = _MiniTable(
-        rows: standings(ids, matches, names: names).take(8).toList(),
+        rows: standings(
+          ids,
+          matches,
+          names: names,
+          rules: championship.rules.standings,
+        ).take(8).toList(),
         teams: byId,
       );
     } else if (groupsRunning) {
@@ -355,6 +366,7 @@ class ChampionshipShareCard extends StatelessWidget {
                   ],
                   matches.where((m) => m.groupLabel == label),
                   names: names,
+                  rules: championship.rules.standings,
                 ).take(perGroup).toList(),
                 teams: byId,
               ),

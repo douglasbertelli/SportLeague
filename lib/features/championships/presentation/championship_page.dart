@@ -18,6 +18,7 @@ import '../../teams/presentation/team_logo.dart';
 import '../../venues/domain/venue.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../domain/championship_rules.dart';
 import 'championship_team_picker_page.dart';
 import 'championship_signup.dart';
@@ -241,6 +242,7 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
         ],
         matches.where((m) => m.stage == MatchStage.league),
         names: names,
+        rules: championship.rules.standings,
       );
       final rounds = matches
           .where((m) => m.stage == MatchStage.league)
@@ -266,6 +268,7 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
           ],
           matches.where((m) => m.groupLabel == label),
           names: names,
+          rules: championship.rules.standings,
         ),
     ];
     final layout = GroupsLayout.of(championship, confirmed: teams.length);
@@ -669,6 +672,7 @@ class _TableTab extends StatelessWidget {
               ],
               matches.where((m) => m.stage == MatchStage.league),
               names: names,
+              rules: championship.rules.standings,
             ),
             names: names,
             logos: logos,
@@ -689,6 +693,7 @@ class _TableTab extends StatelessWidget {
                       ],
                       matches.where((m) => m.groupLabel == label),
                       names: names,
+                      rules: championship.rules.standings,
                     ),
                     names: names,
                     logos: logos,
@@ -715,6 +720,7 @@ class _TableTab extends StatelessWidget {
                           ],
                           matches.where((m) => m.groupLabel == label),
                           names: names,
+                          rules: championship.rules.standings,
                         ),
                     ], layout.qualifiers),
                     names: names,

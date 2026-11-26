@@ -15,6 +15,7 @@ import '../../../core/widgets/loading_button.dart';
 import '../../teams/data/team_repository.dart';
 import '../data/athlete_repository.dart';
 import '../domain/athlete.dart';
+import '../../sports/domain/sport_rules.dart';
 
 /// Cadastra um atleta no time ativo ou edita/exclui um existente.
 class AthleteFormPage extends ConsumerStatefulWidget {
@@ -225,7 +226,9 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final teamName = ref.watch(selectedTeamProvider).value?.name;
+    final selectedTeam = ref.watch(selectedTeamProvider).value;
+    final teamName = selectedTeam?.name;
+    final sportPositions = (selectedTeam?.rules ?? footballRules).positions;
     final teamId =
         widget.athlete?.teamId ?? ref.watch(selectedTeamProvider).value?.id;
     // Números já usados por outros atletas do time: não pode repetir.
@@ -239,10 +242,9 @@ class _AthleteFormPageState extends ConsumerState<AthleteFormPage> {
           other.jerseyNumber!: other.name,
     };
     final positions = [
-      ...footballPositions,
+      ...sportPositions,
       // Mantém uma posição antiga que não está mais na lista.
-      if (_position != null && !footballPositions.contains(_position))
-        _position!,
+      if (_position != null && !sportPositions.contains(_position)) _position!,
     ];
 
     return FormPage(

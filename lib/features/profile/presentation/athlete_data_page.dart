@@ -9,7 +9,7 @@ import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
-import '../../athletes/domain/athlete.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../data/profile_repository.dart';
 import '../domain/profile.dart';
 
@@ -110,11 +110,12 @@ class _AthleteDataPageState extends ConsumerState<AthleteDataPage> {
   @override
   Widget build(BuildContext context) {
     final birthDate = _birthDate;
+    // O perfil do jogador não é de um time; por enquanto, o futebol.
+    const rules = footballRules;
     final positions = [
-      ...footballPositions,
+      ...rules.positions,
       // Mantém uma posição antiga que não está mais na lista.
-      if (_position != null && !footballPositions.contains(_position))
-        _position!,
+      if (_position != null && !rules.positions.contains(_position)) _position!,
     ];
 
     return FormPage(
@@ -186,25 +187,27 @@ class _AthleteDataPageState extends ConsumerState<AthleteDataPage> {
                       : null;
                 },
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Pé dominante',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<PreferredFoot>(
-                segments: [
-                  for (final foot in PreferredFoot.values)
-                    ButtonSegment(value: foot, label: Text(foot.label)),
-                ],
-                selected: {?_foot},
-                emptySelectionAllowed: true,
-                showSelectedIcon: false,
-                onSelectionChanged: _loading
-                    ? null
-                    : (selection) =>
-                          setState(() => _foot = selection.firstOrNull),
-              ),
+              if (rules.usesDominantFoot) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Pé dominante',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<PreferredFoot>(
+                  segments: [
+                    for (final foot in PreferredFoot.values)
+                      ButtonSegment(value: foot, label: Text(foot.label)),
+                  ],
+                  selected: {?_foot},
+                  emptySelectionAllowed: true,
+                  showSelectedIcon: false,
+                  onSelectionChanged: _loading
+                      ? null
+                      : (selection) =>
+                            setState(() => _foot = selection.firstOrNull),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../domain/team_stats.dart';
 
-/// Card com jogos, vitórias, empates, derrotas, gols, saldo e aproveitamento
-/// (perfil e dashboard).
+/// Card com jogos, vitórias, empates (quando o esporte tem), derrotas, gols,
+/// saldo e aproveitamento (perfil e dashboard).
 class StatsGrid extends StatelessWidget {
-  const StatsGrid({super.key, required this.stats});
+  const StatsGrid({super.key, required this.stats, this.rules = footballRules});
 
   final TeamStats stats;
+  final SportRules rules;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,8 @@ class StatsGrid extends StatelessWidget {
                   label: 'Vitórias',
                   color: colors.primary,
                 ),
-                StatTile(value: '${stats.draws}', label: 'Empates'),
+                if (rules.allowsDraw)
+                  StatTile(value: '${stats.draws}', label: 'Empates'),
                 StatTile(
                   value: '${stats.losses}',
                   label: 'Derrotas',
@@ -37,8 +40,14 @@ class StatsGrid extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                StatTile(value: '${stats.goalsFor}', label: 'Gols pró'),
-                StatTile(value: '${stats.goalsAgainst}', label: 'Gols contra'),
+                StatTile(
+                  value: '${stats.goalsFor}',
+                  label: '${rules.scoreUnit.title} pró',
+                ),
+                StatTile(
+                  value: '${stats.goalsAgainst}',
+                  label: '${rules.scoreUnit.title} contra',
+                ),
                 StatTile(
                   value: difference > 0 ? '+$difference' : '$difference',
                   label: 'Saldo',

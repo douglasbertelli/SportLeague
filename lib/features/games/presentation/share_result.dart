@@ -14,6 +14,7 @@ import '../../teams/presentation/team_logo.dart';
 import '../data/player_stats_repository.dart';
 import '../domain/game.dart';
 import '../domain/player_stats.dart';
+import '../../sports/domain/sport_rules.dart';
 import 'game_card.dart' show formatGameDay;
 
 /// Abre o compartilhamento do sistema com a imagem (WhatsApp, Instagram…).
@@ -145,8 +146,14 @@ class GameResultCard extends StatelessWidget {
       _ => ('EMPATE', colors.onSurfaceVariant),
     };
     final venue = game.venue?.name ?? game.location;
-    final myScorers = _scorers(stats.where((s) => s.teamId == viewerTeamId));
-    final theirScorers = _scorers(stats.where((s) => s.teamId != viewerTeamId));
+    final myScorers = scorerNames(
+      stats.where((s) => s.teamId == viewerTeamId),
+      game.rules.scoringStatKey,
+    );
+    final theirScorers = scorerNames(
+      stats.where((s) => s.teamId != viewerTeamId),
+      game.rules.scoringStatKey,
+    );
     final bestPlayer = stats
         .where((s) => s.teamId == viewerTeamId && s.bestPlayer)
         .firstOrNull;
@@ -273,16 +280,6 @@ class GameResultCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// "Fulano (2)", na ordem de quem fez mais gols.
-  static List<String> _scorers(Iterable<PlayerGameStats> stats) {
-    final scorers = stats.where((s) => s.goals > 0).toList()
-      ..sort((a, b) => b.goals.compareTo(a.goals));
-    return [
-      for (final s in scorers)
-        '${s.athleteName ?? 'Atleta'}${s.goals > 1 ? ' (${s.goals})' : ''}',
-    ];
   }
 }
 
