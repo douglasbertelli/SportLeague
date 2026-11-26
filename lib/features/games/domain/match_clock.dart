@@ -12,6 +12,14 @@ enum MatchPhase {
 
   final String label;
 
+  /// Nome da fase com os períodos do esporte ("1º tempo", "Intervalo").
+  String labelIn(PeriodRules periods) => switch (this) {
+    MatchPhase.first => periods.names.first,
+    MatchPhase.interval => periods.intervalName,
+    MatchPhase.second => periods.names.last,
+    MatchPhase.finished => label,
+  };
+
   static MatchPhase? fromName(String? value) => value == null
       ? null
       : MatchPhase.values.firstWhere((phase) => phase.name == value);

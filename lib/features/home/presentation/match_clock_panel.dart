@@ -11,6 +11,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../games/data/game_repository.dart';
 import '../../games/domain/game.dart';
 import '../../games/domain/match_clock.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/data/team_repository.dart';
 
 /// Relógio da partida no card do jogo em andamento: cronômetro do tempo
@@ -102,7 +103,8 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Acabou o tempo do ${phase.label}. O relógio segue no acréscimo.',
+            'Acabou o tempo do ${phase.labelIn(widget.game.rules.periods)}. '
+            'O relógio segue no acréscimo.',
           ),
         ),
       );
@@ -140,6 +142,7 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
       context,
       builder: (_) => _PeriodSheet(
         initial: MatchClock.defaultPeriodMinutes(widget.game.modality),
+        firstPeriod: widget.game.rules.periods.names.first,
       ),
     );
     if (minutes != null) await _run(ClockAction.start, periodMinutes: minutes);
@@ -166,6 +169,7 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final clock = widget.game.clock;
+    final periods = widget.game.rules.periods;
     final muted = theme.textTheme.bodySmall?.copyWith(
       color: colors.onSurfaceVariant,
     );
@@ -176,7 +180,7 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
               child: FilledButton.tonalIcon(
                 onPressed: _saving ? null : _start,
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('Iniciar 1º tempo'),
+                label: Text('Iniciar ${periods.names.first}'),
               ),
             )
           : Center(child: Text('Aguardando o início da partida', style: muted));
@@ -199,9 +203,9 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
                   // No fim de jogo, o título do card já diz; aqui fica o
                   // tempo final do 2º tempo.
                   if (clock.phase == MatchPhase.finished)
-                    '2º tempo encerrado'
+                    '${periods.names.last} encerrado'
                   else
-                    clock.phase.label,
+                    clock.phase.labelIn(periods),
                   if (ticking && minutes != null) '$minutes min',
                   if (ticking && !clock.running) 'pausado',
                 ].join(' · '),
@@ -240,7 +244,7 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
           Text(
             formatClock(clock.elapsedAt(now)),
             semanticsLabel:
-                '${clock.elapsedAt(now).inMinutes} minutos de ${clock.phase.label}',
+                '${clock.elapsedAt(now).inMinutes} minutos de ${clock.phase.labelIn(periods)}',
             style: theme.textTheme.displayMedium?.copyWith(
               fontWeight: FontWeight.w700,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -273,13 +277,13 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
                   onPressed: enabled
                       ? () => _confirmThen(
                           ClockAction.endHalf,
-                          title: 'Encerrar o 1º tempo?',
+                          title: 'Encerrar o ${periods.names.first}?',
                           message: 'O relógio para e começa o intervalo.',
-                          label: 'Encerrar 1º tempo',
+                          label: 'Encerrar ${periods.names.first}',
                         )
                       : null,
                   icon: const Icon(Icons.flag_outlined),
-                  label: const Text('Encerrar 1º tempo'),
+                  label: Text('Encerrar ${periods.names.first}'),
                 ),
               if (clock.phase == MatchPhase.interval)
                 FilledButton.tonalIcon(
@@ -287,7 +291,7 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
                       ? () => _run(ClockAction.startSecond)
                       : null,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Iniciar 2º tempo'),
+                  label: Text('Iniciar ${periods.names.last}'),
                 ),
               if (clock.phase == MatchPhase.second)
                 FilledButton.tonalIcon(
@@ -314,9 +318,12 @@ class _MatchClockPanelState extends ConsumerState<MatchClockPanel> {
 
 /// Duração de cada tempo, ao iniciar a partida.
 class _PeriodSheet extends StatefulWidget {
-  const _PeriodSheet({required this.initial});
+  const _PeriodSheet({required this.initial, required this.firstPeriod});
 
   final int initial;
+
+  /// "1º tempo", no botão de iniciar.
+  final String firstPeriod;
 
   @override
   State<_PeriodSheet> createState() => _PeriodSheetState();
@@ -358,7 +365,7 @@ class _PeriodSheetState extends State<_PeriodSheet> {
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(_minutes),
           icon: const Icon(Icons.play_arrow),
-          label: const Text('Iniciar 1º tempo'),
+          label: Text('Iniciar ${widget.firstPeriod}'),
         ),
         const SheetBackButton(),
       ],

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../sports/domain/sport_rules.dart';
 import 'championship.dart';
 
 /// Jogo a criar (antes de ir para o banco).
@@ -378,9 +379,13 @@ List<PlannedMatch> planChampionship(
 
 /// Uma linha da classificação.
 class StandingRow {
-  StandingRow(this.teamId);
+  StandingRow(this.teamId, [this.rules = footballStandings]);
 
   final String teamId;
+
+  /// Pontuação do esporte.
+  final StandingsRules rules;
+
   int played = 0;
   int wins = 0;
   int draws = 0;
@@ -388,19 +393,21 @@ class StandingRow {
   int goalsFor = 0;
   int goalsAgainst = 0;
 
-  int get points => wins * 3 + draws;
+  int get points => rules.pointsFor(wins: wins, draws: draws, losses: losses);
   int get goalDifference => goalsFor - goalsAgainst;
 }
 
-/// Classificação dos [ids] pelos jogos com placar: pontos (3 por vitória, 1
-/// por empate), vitórias, saldo de gols, gols marcados e, por fim, o nome
-/// ([names]).
+/// Classificação dos [ids] pelos jogos com placar, pela pontuação e pelos
+/// critérios de desempate do esporte ([rules]; no futebol: pontos, 3 por
+/// vitória e 1 por empate, vitórias, saldo de gols e gols marcados) e, por
+/// fim, o nome ([names]).
 List<StandingRow> standings(
   List<String> ids,
   Iterable<ChampionshipMatch> matches, {
   Map<String, String> names = const {},
+  StandingsRules rules = footballStandings,
 }) {
-  final rows = {for (final id in ids) id: StandingRow(id)};
+  final rows = {for (final id in ids) id: StandingRow(id, rules)};
   for (final match in matches) {
     if (!match.hasScore || !match.hasTeams) continue;
     final home = rows[match.homeId];
@@ -426,13 +433,16 @@ List<StandingRow> standings(
       away.draws++;
     }
   }
+  int measure(StandingRow row, StandingsTiebreaker tiebreaker) =>
+      switch (tiebreaker) {
+        StandingsTiebreaker.points => row.points,
+        StandingsTiebreaker.wins => row.wins,
+        StandingsTiebreaker.scoreDifference => row.goalDifference,
+        StandingsTiebreaker.scoreFor => row.goalsFor,
+      };
   return rows.values.toList()..sort((a, b) {
-    for (final compare in [
-      b.points.compareTo(a.points),
-      b.wins.compareTo(a.wins),
-      b.goalDifference.compareTo(a.goalDifference),
-      b.goalsFor.compareTo(a.goalsFor),
-    ]) {
+    for (final tiebreaker in rules.tiebreakers) {
+      final compare = measure(b, tiebreaker).compareTo(measure(a, tiebreaker));
       if (compare != 0) return compare;
     }
     return (names[a.teamId] ?? a.teamId).compareTo(names[b.teamId] ?? b.teamId);

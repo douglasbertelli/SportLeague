@@ -14,6 +14,7 @@ import '../../plans/domain/plan_status.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../domain/formation.dart';
 import '../domain/game.dart';
+import '../../sports/domain/sport_rules.dart';
 import 'game_card.dart';
 import 'game_sheet_page.dart';
 import 'tactical_lineup.dart';
@@ -53,7 +54,10 @@ class _LineupPageState extends ConsumerState<LineupPage> {
   Formation? _formation;
   Map<int, String>? _placed;
 
-  int get _maxStarters => startersFor(widget.game.modality);
+  int get _maxStarters => widget.game.rules.startersFor(widget.game.modality);
+
+  /// Se o esporte tem a escalação desenhada no campo.
+  bool get _fieldSupported => widget.game.rules.supportsFieldLineup;
 
   ({String gameId, String teamId}) get _key =>
       (gameId: widget.game.id!, teamId: widget.teamId);
@@ -227,7 +231,7 @@ class _LineupPageState extends ConsumerState<LineupPage> {
       appBar: AppBar(
         title: const Text('Escalação'),
         actions: [
-          if (isOwner)
+          if (isOwner && _fieldSupported)
             IconButton(
               tooltip: 'Visualização da escalação',
               onPressed: () => _chooseStyle(settings.value!),
@@ -260,7 +264,9 @@ class _LineupPageState extends ConsumerState<LineupPage> {
           AsyncValue(value: final settings?),
           AsyncData(value: final formation),
         ) =>
-          settings.style == LineupStyle.field && settings.fieldAvailable
+          _fieldSupported &&
+                  settings.style == LineupStyle.field &&
+                  settings.fieldAvailable
               ? _field(athletes, lineup, formation)
               : _editor(context, athletes, lineup),
         (AsyncValue(hasError: true), _, _, _) ||

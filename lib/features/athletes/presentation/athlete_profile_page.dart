@@ -7,9 +7,10 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../reports/domain/content_report.dart';
 import '../../reports/presentation/report_sheet.dart';
 import '../../games/data/player_stats_repository.dart';
+import '../../games/domain/player_stats.dart';
+import '../../profile/presentation/my_numbers_section.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/season_button.dart';
-import '../../teams/presentation/team_stats_widgets.dart';
 import '../domain/athlete.dart';
 
 /// Perfil do atleta: foto, posição e número e os números em todos os jogos
@@ -106,46 +107,13 @@ class AthleteProfilePage extends ConsumerWidget {
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          StatTile(
-                            value: '${mine?.games ?? 0}',
-                            label: 'Jogos',
-                          ),
-                          StatTile(
-                            value: '${mine?.goals ?? 0}',
-                            label: 'Gols',
-                            color: colors.primary,
-                          ),
-                          StatTile(
-                            value: '${mine?.assists ?? 0}',
-                            label: 'Assist.',
-                            tooltip: 'Assistências',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          StatTile(
-                            value: '${mine?.yellowCards ?? 0}',
-                            label: 'Amarelos',
-                          ),
-                          StatTile(
-                            value: '${mine?.redCards ?? 0}',
-                            label: 'Vermelhos',
-                            color: colors.error,
-                          ),
-                          StatTile(
-                            value: '${mine?.bestPlayer ?? 0}',
-                            label: 'Craque',
-                            tooltip: 'Vezes em que foi o craque do jogo',
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: PlayerTotalsGrid(
+                    totals:
+                        mine ??
+                        AthleteTotals(
+                          athleteId: athlete.id ?? '',
+                          name: athlete.name,
+                        ),
                   ),
                 ),
               );

@@ -22,6 +22,7 @@ import '../../games/presentation/new_friendly.dart';
 import '../../games/presentation/presence.dart';
 import '../../profile/presentation/my_numbers_section.dart';
 import '../../teams/data/team_repository.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/domain/team.dart';
 import '../../teams/presentation/season_button.dart';
 import '../../teams/presentation/team_logo.dart';
@@ -185,7 +186,7 @@ class TeamDashboard extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator()),
             )
           else ...[
-            StatsGrid(stats: stats),
+            StatsGrid(stats: stats, rules: team.rules),
             const SizedBox(height: 8),
             Card(
               child: Padding(

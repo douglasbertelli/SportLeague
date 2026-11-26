@@ -19,6 +19,8 @@ import '../../games/data/player_stats_repository.dart';
 import '../../games/presentation/share_result.dart' show capturePng;
 import '../../plans/domain/plan_status.dart';
 import '../../games/domain/game.dart';
+import '../../games/domain/player_stats.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -338,15 +340,12 @@ class _BannerEditorState extends ConsumerState<BannerEditor> {
     try {
       final stats = await ref.read(gameStatsProvider(game.id!).future);
       final mine = stats.where((s) => s.teamId == _team.id).toList();
-      final scorers = [
-        for (final s
-            in mine.where((s) => s.goals > 0).toList()
-              ..sort((a, b) => b.goals.compareTo(a.goals)))
-          '${s.athleteName ?? 'Atleta'}${s.goals > 1 ? ' (${s.goals})' : ''}',
-      ];
+      final scoring = game.rules.scoringStatKey;
+      final scorers = scorerNames(mine, scoring);
       final best = mine.where((s) => s.bestPlayer).firstOrNull?.athleteName;
       final text = [
-        if (scorers.isNotEmpty) 'Gols: ${scorers.join(', ')}',
+        if (scorers.isNotEmpty)
+          '${game.rules.stat(scoring)?.label ?? 'Gols'}: ${scorers.join(', ')}',
         if (best != null) 'Craque do jogo: $best',
       ].join('\n');
       final controller = _fieldsOf(

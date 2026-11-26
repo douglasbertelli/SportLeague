@@ -21,6 +21,7 @@ class SportRules {
     required this.allowsDraw,
     required this.knockoutTiebreak,
     required this.scoreUnit,
+    required this.scoringStatKey,
     required this.stats,
     required this.rankings,
     required this.standings,
@@ -60,6 +61,10 @@ class SportRules {
 
   /// Como se chama o ponto do placar ("gol", "ponto"…).
   final ScoreUnit scoreUnit;
+
+  /// A estatística que soma no placar (gols): ordem da súmula e artilheiros
+  /// da imagem compartilhada e do banner.
+  final String scoringStatKey;
 
   /// O que cada atleta lança na súmula, na ordem das telas. O craque do jogo
   /// vale para todo esporte e não entra aqui.
@@ -140,6 +145,10 @@ class ScoreUnit {
 
   /// "1 gol", "3 gols".
   String count(int value) => '$value ${value == 1 ? singular : plural}';
+
+  /// "Gols", para rótulos.
+  String get title =>
+      plural.isEmpty ? plural : plural[0].toUpperCase() + plural.substring(1);
 }
 
 /// Tipo de estatística da súmula.
@@ -151,14 +160,21 @@ enum StatKind {
   flag,
 }
 
+/// Destaque da estatística nos quadros de números.
+enum StatEmphasis { none, primary, error }
+
 /// Uma estatística da súmula (`game_player_stats`).
 class StatDef {
   const StatDef({
     required this.key,
     required this.label,
     required this.shortLabel,
+    required this.totalsLabel,
+    required this.unit,
+    this.totalsTooltip,
     this.kind = StatKind.count,
     this.max,
+    this.emphasis = StatEmphasis.none,
   });
 
   /// Nome da coluna no banco (`goals`, `yellow_cards`…).
@@ -167,21 +183,51 @@ class StatDef {
   /// "Assistências".
   final String label;
 
-  /// "Assist.", para colunas estreitas.
+  /// "Assist.", no lançamento da súmula.
   final String shortLabel;
+
+  /// Nome nos quadros de totais ("Vermelhos", somando os jogos).
+  final String totalsLabel;
+
+  /// Dica do quadro de totais quando o nome é abreviado.
+  final String? totalsTooltip;
+
+  /// "1 assistência", "2 assistências" no resumo da súmula; a flag mostra só
+  /// o singular ("vermelho").
+  final ScoreUnit unit;
 
   final StatKind kind;
 
   /// Máximo por jogo (nulo = sem limite; flag é sempre 1).
   final int? max;
+
+  final StatEmphasis emphasis;
+
+  /// Como aparece no resumo da súmula; vazio quando é zero.
+  String describe(int value) => switch (kind) {
+    _ when value <= 0 => '',
+    StatKind.flag => unit.singular,
+    StatKind.count => unit.count(value),
+  };
 }
 
 /// Ranking de atletas por uma estatística ("Artilharia" pelos gols).
 class RankingDef {
-  const RankingDef({required this.title, required this.statKey});
+  const RankingDef({
+    required this.title,
+    required this.statKey,
+    required this.unit,
+    this.emptyMessage,
+  });
 
   final String title;
   final String statKey;
+
+  /// Depois do número: "5 gols", "3 assist.".
+  final String unit;
+
+  /// Mensagem quando ninguém tem a estatística; nula esconde o ranking.
+  final String? emptyMessage;
 }
 
 /// Critério de desempate da classificação, em ordem.
@@ -206,6 +252,20 @@ class StandingsRules {
   int pointsFor({required int wins, required int draws, required int losses}) =>
       wins * win + draws * draw + losses * loss;
 }
+
+/// Classificação do futebol: 3 por vitória, 1 por empate; desempate por
+/// vitórias, saldo de gols e gols marcados.
+const footballStandings = StandingsRules(
+  win: 3,
+  draw: 1,
+  loss: 0,
+  tiebreakers: [
+    StandingsTiebreaker.points,
+    StandingsTiebreaker.wins,
+    StandingsTiebreaker.scoreDifference,
+    StandingsTiebreaker.scoreFor,
+  ],
+);
 
 /// Futebol, com as regras de hoje.
 const footballRules = SportRules(
@@ -236,37 +296,52 @@ const footballRules = SportRules(
   allowsDraw: true,
   knockoutTiebreak: KnockoutTiebreak.penalties,
   scoreUnit: ScoreUnit('gol', 'gols'),
+  scoringStatKey: 'goals',
   stats: [
-    StatDef(key: 'goals', label: 'Gols', shortLabel: 'Gols'),
-    StatDef(key: 'assists', label: 'Assistências', shortLabel: 'Assist.'),
+    StatDef(
+      key: 'goals',
+      label: 'Gols',
+      shortLabel: 'Gols',
+      totalsLabel: 'Gols',
+      unit: ScoreUnit('gol', 'gols'),
+      emphasis: StatEmphasis.primary,
+    ),
+    StatDef(
+      key: 'assists',
+      label: 'Assistências',
+      shortLabel: 'Assist.',
+      totalsLabel: 'Assist.',
+      totalsTooltip: 'Assistências',
+      unit: ScoreUnit('assistência', 'assistências'),
+    ),
     StatDef(
       key: 'yellow_cards',
       label: 'Amarelos',
       shortLabel: 'Amarelos',
+      totalsLabel: 'Amarelos',
+      unit: ScoreUnit('amarelo', 'amarelos'),
       max: 2,
     ),
     StatDef(
       key: 'red_card',
       label: 'Vermelho',
       shortLabel: 'Vermelho',
+      totalsLabel: 'Vermelhos',
+      unit: ScoreUnit('vermelho', 'vermelhos'),
       kind: StatKind.flag,
+      emphasis: StatEmphasis.error,
     ),
   ],
   rankings: [
-    RankingDef(title: 'Artilharia', statKey: 'goals'),
-    RankingDef(title: 'Garçons', statKey: 'assists'),
+    RankingDef(
+      title: 'Artilharia',
+      statKey: 'goals',
+      unit: 'gols',
+      emptyMessage: 'Nenhum gol lançado nas súmulas ainda.',
+    ),
+    RankingDef(title: 'Garçons', statKey: 'assists', unit: 'assist.'),
   ],
-  standings: StandingsRules(
-    win: 3,
-    draw: 1,
-    loss: 0,
-    tiebreakers: [
-      StandingsTiebreaker.points,
-      StandingsTiebreaker.wins,
-      StandingsTiebreaker.scoreDifference,
-      StandingsTiebreaker.scoreFor,
-    ],
-  ),
+  standings: footballStandings,
   eventKinds: GameEventKind.values,
   supportsFieldLineup: true,
   usesDominantFoot: true,
