@@ -350,6 +350,12 @@ const footballRules = SportRules(
 /// Esportes que já têm regras (os outros ainda não aparecem no app).
 const supportedSports = [Sport.football];
 
+/// Modalidades dos esportes liberados, para as listas de escolha (campeonato,
+/// time fictício). Sem os esportes que ainda não aparecem no app.
+List<Modality> get availableModalities => [
+  for (final sport in supportedSports) ...Modality.of(sport),
+];
+
 /// Regras do [sport]. Só o futebol existe por enquanto.
 SportRules rulesFor(Sport sport) => switch (sport) {
   Sport.football => footballRules,

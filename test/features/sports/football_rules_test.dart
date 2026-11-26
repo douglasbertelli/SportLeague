@@ -162,6 +162,10 @@ void main() {
   });
 
   group('esporte de time, jogo e campeonato', () {
+    test('listas de escolha só com as modalidades dos esportes liberados', () {
+      expect(availableModalities, Modality.values);
+    });
+
     test('só o futebol tem regras', () {
       expect(supportedSports, [Sport.football]);
       expect(rulesFor(Sport.football), same(footballRules));

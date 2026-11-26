@@ -213,6 +213,17 @@ mudam.
   `plan_features` ou uma configuração, para liberar o vôlei sem publicar
   versão nova.
 
+> **Como ficou** (`20261127020000_team_sport_modalities.sql`): a tabela
+> `sport_modalities` já tinha entrado na Etapa 4. O gatilho `teams_check_sport`
+> recusa modalidade de outro esporte (`modality_sport`) e também a troca do
+> esporte de um time existente (`team_sport_locked`), já que os jogos, a
+> súmula e os campeonatos dele são daquele esporte. `team_profile_stats` não
+> mudou: o app e o site já escondem "Empates" pelas regras, e no futebol nada
+> muda. A escolha do esporte fica no cadastro do time (app) só quando
+> `supportedSports` tiver mais de um esporte; liberar o vôlei é mudar essa
+> lista (no app e no site) numa versão nova, e não uma configuração, porque
+> sem as regras do vôlei no código não há o que mostrar.
+
 ### O que fica para a Fase 2 (vôlei) e a Fase 3 (basquete)
 
 - **Relógio:** o banco continua com `match_phase` (first, interval, second,
