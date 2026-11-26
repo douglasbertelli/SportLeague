@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/domain/team.dart';
 
 /// Um atleta na escalação do jogo: titular ou reserva e, na escalação no
@@ -32,13 +33,9 @@ typedef LineupSettings = ({
   String? ownerId,
 });
 
-/// Quantos titulares cada modalidade tem em campo.
-int startersFor(Modality? modality) => switch (modality) {
-  Modality.futsal || Modality.beach => 5,
-  Modality.society => 7,
-  Modality.field => 11,
-  Modality.challenge || null => 5,
-};
+/// Quantos titulares cada modalidade tem em campo (regras do esporte).
+int startersFor(Modality? modality) =>
+    rulesForModality(modality).startersFor(modality);
 
 class LineupRepository {
   LineupRepository(this._client);
