@@ -5,6 +5,7 @@ import '../../../core/media/photo_picker.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_sheet.dart';
+import '../../sports/presentation/sport_picker.dart';
 import '../../teams/domain/team.dart';
 import '../data/opponent_repository.dart';
 import '../domain/opponent.dart';
@@ -165,6 +166,28 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
             if (widget.modalities case final modalities?
                 when modalities.isNotEmpty) ...[
               const SizedBox(height: 8),
+              // Com mais de um esporte, o esporte em cards e, embaixo, as
+              // modalidades dele.
+              if ({for (final m in modalities) m.sport}.toList()
+                  case final sports when sports.length > 1) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Esporte',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SportPicker(
+                  sports: sports,
+                  selected: (_modality ?? modalities.first).sport,
+                  onChanged: (sport) => setState(() {
+                    if (_modality?.sport == sport) return;
+                    _modality = modalities.firstWhere((m) => m.sport == sport);
+                  }),
+                ),
+                const SizedBox(height: 16),
+              ],
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -179,9 +202,11 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final modality in modalities)
+                    for (final modality in modalities.where(
+                      (m) => m.sport == (_modality ?? modalities.first).sport,
+                    ))
                       ChoiceChip(
-                        label: Text(modality.fullLabel),
+                        label: Text(modality.label),
                         selected: modality == _modality,
                         onSelected: (_) => setState(() => _modality = modality),
                       ),

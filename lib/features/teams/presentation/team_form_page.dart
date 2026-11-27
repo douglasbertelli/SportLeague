@@ -16,6 +16,7 @@ import '../../../core/router/routes.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../data/team_repository.dart';
 import '../../sports/domain/sport_rules.dart';
+import '../../sports/presentation/sport_picker.dart';
 import '../domain/team.dart';
 import '../../venues/domain/venue.dart';
 
@@ -528,15 +529,10 @@ class _TeamFormPageState extends ConsumerState<TeamFormPage>
           supportedSports.length > 1) ...[
         Text('Esporte', style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
-        SegmentedButton<Sport>(
-          segments: [
-            for (final sport in supportedSports)
-              ButtonSegment(value: sport, label: Text(sport.label)),
-          ],
-          selected: {_sport},
-          showSelectedIcon: false,
-          onSelectionChanged: (selection) => setState(() {
-            _sport = selection.first;
+        SportPicker(
+          selected: _sport,
+          onChanged: (sport) => setState(() {
+            _sport = sport;
             if (_modality?.sport != _sport) _modality = null;
           }),
         ),
