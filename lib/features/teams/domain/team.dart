@@ -41,6 +41,10 @@ enum Modality {
   /// quando o nome não serve ("volleyball_indoor").
   String get key => _key ?? name;
 
+  /// "Vôlei · Praia", para as listas que misturam esportes (a "Areia" do
+  /// futebol e a "Praia" do vôlei lado a lado).
+  String get fullLabel => '${sport.label} · $label';
+
   /// Modalidades do [sport], na ordem do enum.
   static List<Modality> of(Sport sport) => [
     for (final modality in values)

@@ -9,6 +9,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../../sports/domain/sport_rules.dart';
+import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship.dart';
@@ -29,7 +30,18 @@ class ChampionshipFormPage extends ConsumerStatefulWidget {
 class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.championship?.name);
-  late var _modality = widget.championship?.modality ?? Modality.society;
+
+  /// Ao criar, a modalidade do time ativo (se for de um esporte liberado);
+  /// sem time, o Society.
+  late var _modality =
+      widget.championship?.modality ??
+      ref
+          .read(selectedTeamProvider)
+          .value
+          ?.modalities
+          .where(availableModalities.contains)
+          .firstOrNull ??
+      Modality.society;
   late var _format = widget.championship?.format ?? ChampionshipFormat.league;
   late var _doubleRound = widget.championship?.doubleRound ?? false;
   // Grupos + mata-mata.
@@ -158,7 +170,7 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                 for (final modality in {...availableModalities, _modality})
                   DropdownMenuItem(
                     value: modality,
-                    child: Text(modality.label),
+                    child: Text(modality.fullLabel),
                   ),
               ],
               onChanged: (value) => setState(() => _modality = value!),

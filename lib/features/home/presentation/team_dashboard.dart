@@ -802,8 +802,9 @@ class _LiveActions extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Cartão, substituição e pênalti (e gol, para quem marcou): o dono
-        // de cada time.
-        if (ref.watch(canManageTeamProvider))
+        // de cada time. O vôlei não tem lances ao vivo.
+        if (ref.watch(canManageTeamProvider) &&
+            game.rules.eventKinds.isNotEmpty)
           action(
             Icons.add_circle_outline,
             'Lance',
