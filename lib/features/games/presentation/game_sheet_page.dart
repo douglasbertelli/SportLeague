@@ -207,7 +207,7 @@ class _TeamSection extends StatelessWidget {
               if (rows.isNotEmpty)
                 Text(
                   '${rows.length} ${rows.length == 1 ? 'jogador' : 'jogadores'}'
-                  ' · ${rules.scoreUnit.count(score)}',
+                  ' · ${(rules.stat(scoring)?.unit ?? rules.scoreUnit).count(score)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

@@ -18,20 +18,28 @@ enum Sport {
       Sport.values.where((sport) => sport.name == value).firstOrNull;
 }
 
-/// Modalidades; cada uma é de um esporte ([sport]). Por enquanto só há as do
-/// futebol. Como os jogos só acontecem entre times da mesma modalidade, o
-/// esporte de um jogo ou campeonato sai da modalidade.
+/// Modalidades; cada uma é de um esporte ([sport]). Como os jogos só
+/// acontecem entre times da mesma modalidade, o esporte de um jogo ou
+/// campeonato sai da modalidade. As do vôlei existem no código, mas só
+/// aparecem quando o vôlei entrar em `supportedSports`.
 enum Modality {
   futsal('Futsal', Sport.football),
   society('Society', Sport.football),
   field('Campo', Sport.football),
   beach('Areia', Sport.football),
-  challenge('Desafio', Sport.football);
+  challenge('Desafio', Sport.football),
+  volleyballIndoor('Quadra', Sport.volleyball, 'volleyball_indoor'),
+  volleyballBeach('Praia', Sport.volleyball, 'volleyball_beach');
 
-  const Modality(this.label, this.sport);
+  const Modality(this.label, this.sport, [this._key]);
 
   final String label;
   final Sport sport;
+  final String? _key;
+
+  /// Valor no banco (`team_modality`): o nome do enum, ou a chave própria
+  /// quando o nome não serve ("volleyball_indoor").
+  String get key => _key ?? name;
 
   /// Modalidades do [sport], na ordem do enum.
   static List<Modality> of(Sport sport) => [
@@ -40,12 +48,12 @@ enum Modality {
   ];
 
   static Modality fromName(String value) =>
-      Modality.values.firstWhere((modality) => modality.name == value);
+      Modality.values.firstWhere((modality) => modality.key == value);
 
   /// Nula para uma modalidade que esta versão do app não conhece (de um
   /// esporte novo): o que vem do banco usa esta, para não quebrar.
   static Modality? tryFromName(String? value) =>
-      Modality.values.where((modality) => modality.name == value).firstOrNull;
+      Modality.values.where((modality) => modality.key == value).firstOrNull;
 }
 
 enum TeamGender {
@@ -162,7 +170,7 @@ class Team {
     // Na ordem do enum, não na ordem em que foram marcadas.
     modalities: {
       for (final modality in Modality.values)
-        if ((map['modalities'] as List? ?? const []).contains(modality.name))
+        if ((map['modalities'] as List? ?? const []).contains(modality.key))
           modality,
     },
     gender: switch (map['gender']) {
@@ -319,7 +327,7 @@ class Team {
     'sport': sport.name,
     'modalities': [
       for (final modality in Modality.values)
-        if (modalities.contains(modality)) modality.name,
+        if (modalities.contains(modality)) modality.key,
     ],
     'gender': gender?.name,
     'age_group': ageGroup.name,

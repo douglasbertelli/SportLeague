@@ -29,7 +29,7 @@ class OpponentRepository {
       _client
           .from('teams')
           .select(teamColumns)
-          .contains('modalities', [modality.name])
+          .contains('modalities', [modality.key])
           .neq('id', teamId)
           .ilike('name', pattern)
           .isFilter('inactive_at', null)
@@ -39,7 +39,7 @@ class OpponentRepository {
           .from('guest_teams')
           .select()
           .eq('owner_id', ownerId)
-          .eq('modality', modality.name)
+          .eq('modality', modality.key)
           .ilike('name', pattern)
           .order('name')
           .limit(_limit),

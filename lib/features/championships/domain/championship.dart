@@ -185,7 +185,7 @@ class Championship {
   Map<String, dynamic> toMap() => {
     'owner_id': ownerId,
     'name': name.trim(),
-    'modality': modality.name,
+    'modality': modality.key,
     'format': format.key,
     'double_round': format != ChampionshipFormat.knockout && doubleRound,
     'group_count': format == ChampionshipFormat.groups ? groupCount : null,

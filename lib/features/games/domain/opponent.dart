@@ -34,7 +34,7 @@ class GuestTeam {
   Map<String, dynamic> toMap() => {
     'owner_id': ownerId,
     'name': name.trim(),
-    'modality': modality.name,
+    'modality': modality.key,
   };
 }
 

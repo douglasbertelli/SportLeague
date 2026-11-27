@@ -15,12 +15,15 @@ void main() {
   const rules = footballRules;
 
   group('modalidades', () {
-    test('todas as de hoje são do futebol', () {
-      for (final modality in Modality.values) {
+    test('as cinco de antes são do futebol; o vôlei tem as dele', () {
+      for (final modality in _footballModalities) {
         expect(modality.sport, Sport.football, reason: modality.name);
       }
-      expect(rules.modalities, Modality.values);
-      expect(Modality.of(Sport.volleyball), isEmpty);
+      expect(rules.modalities, _footballModalities);
+      expect(Modality.of(Sport.volleyball), [
+        Modality.volleyballIndoor,
+        Modality.volleyballBeach,
+      ]);
       expect(Modality.of(Sport.basketball), isEmpty);
     });
   });
@@ -163,13 +166,13 @@ void main() {
 
   group('esporte de time, jogo e campeonato', () {
     test('listas de escolha só com as modalidades dos esportes liberados', () {
-      expect(availableModalities, Modality.values);
+      expect(availableModalities, _footballModalities);
     });
 
-    test('só o futebol tem regras', () {
+    test('o vôlei tem regras, mas só o futebol está liberado', () {
       expect(supportedSports, [Sport.football]);
       expect(rulesFor(Sport.football), same(footballRules));
-      expect(() => rulesFor(Sport.volleyball), throwsUnsupportedError);
+      expect(rulesFor(Sport.volleyball), same(volleyballRules));
       expect(() => rulesFor(Sport.basketball), throwsUnsupportedError);
       expect(rulesForModality(null), same(footballRules));
     });
@@ -205,3 +208,12 @@ void main() {
     });
   });
 }
+
+/// As modalidades de antes do vôlei, todas do futebol.
+const _footballModalities = [
+  Modality.futsal,
+  Modality.society,
+  Modality.field,
+  Modality.beach,
+  Modality.challenge,
+];
