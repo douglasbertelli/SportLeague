@@ -47,6 +47,8 @@ import '../../features/profile/presentation/athlete_data_page.dart';
 import '../../features/profile/presentation/my_code_page.dart';
 import '../../features/profile/presentation/public_profile_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
+import '../../features/app_update/data/app_update.dart';
+import '../../features/app_update/presentation/update_required_page.dart';
 import '../../features/teams/domain/team.dart';
 import '../../features/teams/presentation/team_form_page.dart';
 import '../../features/teams/presentation/team_profile_page.dart';
@@ -70,6 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authSessionProvider, notify);
   ref.listen(currentProfileProvider, notify);
   ref.listen(myAddressProvider, notify);
+  ref.listen(updateRequiredProvider, notify);
 
   final router = GoRouter(
     initialLocation: Routes.splash,
@@ -79,9 +82,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       session: ref.read(authSessionProvider),
       profile: ref.read(currentProfileProvider),
       address: ref.read(myAddressProvider),
+      updateRequired: ref.read(updateRequiredProvider),
     ),
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashPage()),
+      GoRoute(
+        path: Routes.updateRequired,
+        builder: (_, _) => const UpdateRequiredPage(),
+      ),
       GoRoute(
         path: Routes.accountInactive,
         builder: (_, _) => const AccountInactivePage(),
@@ -345,7 +353,14 @@ String? appRedirect({
   required AsyncValue<Object?> session,
   required AsyncValue<Profile?> profile,
   required AsyncValue<Object?> address,
+  bool updateRequired = false,
 }) {
+  // Build abaixo do mínimo: antes de tudo, com ou sem login (só os
+  // documentos legais continuam abertos).
+  if (updateRequired) {
+    if (_legalRoutes.contains(location)) return null;
+    return location == Routes.updateRequired ? null : Routes.updateRequired;
+  }
   if (session.isLoading && !session.hasValue) return Routes.splash;
   if (_legalRoutes.contains(location)) return null;
 
@@ -392,6 +407,7 @@ String? appRedirect({
     Routes.onboardingProfile,
     Routes.onboardingAddress,
     Routes.accountInactive,
+    Routes.updateRequired,
     Routes.acceptTerms,
   };
   return entryRoutes.contains(location) ? Routes.home : null;

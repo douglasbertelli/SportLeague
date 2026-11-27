@@ -11,6 +11,11 @@ enum Sport {
 
   static Sport fromName(String value) =>
       Sport.values.firstWhere((sport) => sport.name == value);
+
+  /// Nulo para um esporte que esta versão do app não conhece (de uma versão
+  /// mais nova): o que vem do banco usa esta, para não quebrar.
+  static Sport? tryFromName(String? value) =>
+      Sport.values.where((sport) => sport.name == value).firstOrNull;
 }
 
 /// Modalidades; cada uma é de um esporte ([sport]). Por enquanto só há as do
@@ -36,6 +41,11 @@ enum Modality {
 
   static Modality fromName(String value) =>
       Modality.values.firstWhere((modality) => modality.name == value);
+
+  /// Nula para uma modalidade que esta versão do app não conhece (de um
+  /// esporte novo): o que vem do banco usa esta, para não quebrar.
+  static Modality? tryFromName(String? value) =>
+      Modality.values.where((modality) => modality.name == value).firstOrNull;
 }
 
 enum TeamGender {
@@ -146,7 +156,9 @@ class Team {
     id: map['id'] as String,
     ownerId: map['owner_id'] as String,
     name: map['name'] as String,
-    sport: Sport.fromName(map['sport'] as String),
+    // Esporte desconhecido (de uma versão mais nova) vira futebol só para não
+    // quebrar; as listas já tiram esses times (isSupportedSportRow).
+    sport: Sport.tryFromName(map['sport'] as String?) ?? Sport.football,
     // Na ordem do enum, não na ordem em que foram marcadas.
     modalities: {
       for (final modality in Modality.values)

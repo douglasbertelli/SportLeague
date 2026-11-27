@@ -22,7 +22,7 @@ class ProfileGame {
     opponentLogoUrl: map['opponent_logo_url'] as String?,
     opponentTeamId: map['opponent_team_id'] as String?,
     modality: switch (map['modality']) {
-      final String name => Modality.fromName(name),
+      final String name => Modality.tryFromName(name),
       _ => null,
     },
     venue: switch (map['venue']) {

@@ -13,6 +13,9 @@ abstract final class Routes {
   /// Conta marcada para exclusão (inativa por 7 dias): reativar ou sair.
   static const accountInactive = '/account-inactive';
 
+  /// Build abaixo do mínimo (`app_versions`): atualizar na loja.
+  static const updateRequired = '/update-required';
+
   /// Documentos legais (abertos também sem login).
   static const privacy = '/privacy';
   static const terms = '/terms';

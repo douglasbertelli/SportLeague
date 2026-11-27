@@ -2,12 +2,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/sports/domain/sport_rules.dart';
+
 const _connectionError =
     'Algo deu errado. Verifique sua conexão e tente novamente.';
 
 /// Converte erros do Supabase e do login social em mensagens amigáveis em
 /// português.
 String friendlyErrorMessage(Object error) {
+  if (error is UnsupportedSportException) return error.toString();
   if (error is AuthRetryableFetchException || error is AuthUnknownException) {
     // Falha de rede: a mensagem traz a URL da requisição, não o motivo.
     return _connectionError;
@@ -58,6 +61,20 @@ String friendlyErrorMessage(Object error) {
     }
     if (error.message.contains('report_target_not_found')) {
       return 'Esse conteúdo não existe mais.';
+    }
+    // Multiesporte: modalidade de outro esporte e troca do esporte do time
+    // (teams_check_sport), estatística da súmula fora das regras
+    // (sync_player_stats).
+    if (error.message.contains('modality_sport')) {
+      return 'Essa modalidade não é do esporte do time.';
+    }
+    if (error.message.contains('team_sport_locked')) {
+      return 'O esporte do time não pode ser trocado depois de criado.';
+    }
+    if (error.message.contains('stat_unknown') ||
+        error.message.contains('stat_invalid')) {
+      return 'Algum número da súmula não vale para este esporte. '
+          'Atualize o app e tente de novo.';
     }
     // Mensagem já escrita para quem usa (raise do banco em português, com
     // maiúscula e ponto final, ex.: "Só o dono e os técnicos publicam no

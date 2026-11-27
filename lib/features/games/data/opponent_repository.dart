@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../teams/data/team_repository.dart';
@@ -44,8 +45,14 @@ class OpponentRepository {
           .limit(_limit),
     ]);
     return (
-      registered: results[0].map(Team.fromMap).toList(),
-      guests: results[1].map(GuestTeam.fromMap).toList(),
+      registered: results[0]
+          .where(isSupportedSportRow)
+          .map(Team.fromMap)
+          .toList(),
+      guests: results[1]
+          .where(isSupportedModalityRow)
+          .map(GuestTeam.fromMap)
+          .toList(),
     );
   }
 
@@ -96,7 +103,7 @@ class OpponentRepository {
         .select()
         .eq('owner_id', ownerId)
         .order('name');
-    return rows.map(GuestTeam.fromMap).toList();
+    return rows.where(isSupportedModalityRow).map(GuestTeam.fromMap).toList();
   }
 
   /// Troca o nome do fictício (os amistosos por jogar e os campeonatos
