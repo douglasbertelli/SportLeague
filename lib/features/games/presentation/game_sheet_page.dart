@@ -322,6 +322,7 @@ class _TeamSheetEditorPageState extends ConsumerState<TeamSheetEditorPage> {
             gameId: widget.game.id!,
             teamId: widget.teamId,
             rows: _rows!.values.toList(),
+            statKeys: [for (final stat in widget.game.rules.stats) stat.key],
           );
       ref
         ..invalidate(gameStatsProvider(widget.game.id!))

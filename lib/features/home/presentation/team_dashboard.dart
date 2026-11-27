@@ -315,7 +315,10 @@ class _MyTeamNumbersState extends ConsumerState<_MyTeamNumbers> {
                 return Card(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: PlayerTotalsGrid(totals: _sum(rows)),
+                    child: PlayerTotalsGrid(
+                      totals: _sum(rows),
+                      rules: _rulesFor(teams, _all ? null : selectedId),
+                    ),
                   ),
                 );
               },
@@ -335,6 +338,17 @@ AthleteTotals _sum(List<AthleteTotals> rows) => AthleteTotals(
   yellowCards: rows.fold(0, (sum, row) => sum + row.yellowCards),
   redCards: rows.fold(0, (sum, row) => sum + row.redCards),
   bestPlayer: rows.fold(0, (sum, row) => sum + row.bestPlayer),
+  // Vôlei: pontos, aces e bloqueios.
+  extra:
+      {
+        for (final row in rows)
+          for (final MapEntry(:key, :value) in row.extra.entries) key: value,
+      }.map(
+        (key, _) => MapEntry(
+          key,
+          rows.fold(0, (sum, row) => sum + (row.extra[key] ?? 0)),
+        ),
+      ),
 );
 
 /// Logo, nome, resumo, seguidores e o atalho para o perfil público.
@@ -1062,4 +1076,14 @@ class _ContestButton extends ConsumerWidget {
       label: const Text('Contestar placar'),
     );
   }
+}
+
+/// Regras dos números do jogador: as do time [teamId]; no Geral (nulo), as do
+/// esporte dos times, se forem todos do mesmo (senão, as do futebol).
+SportRules _rulesFor(List<Team> teams, String? teamId) {
+  final chosen = teamId == null
+      ? teams
+      : teams.where((team) => team.id == teamId).toList();
+  final sports = {for (final team in chosen) team.sport};
+  return sports.length == 1 ? rulesFor(sports.first) : footballRules;
 }

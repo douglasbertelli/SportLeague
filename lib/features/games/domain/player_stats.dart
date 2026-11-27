@@ -12,6 +12,7 @@ class PlayerGameStats {
     this.yellowCards = 0,
     this.redCard = false,
     this.bestPlayer = false,
+    this.extra = const {},
   });
 
   factory PlayerGameStats.fromMap(Map<String, dynamic> map) {
@@ -44,6 +45,7 @@ class PlayerGameStats {
       yellowCards: read('yellow_cards'),
       redCard: read('red_card') > 0,
       bestPlayer: map['best_player'] as bool? ?? false,
+      extra: extraStats(stats),
     );
   }
 
@@ -65,12 +67,17 @@ class PlayerGameStats {
   /// Craque do jogo (um por time).
   final bool bestPlayer;
 
+  /// As estatísticas que não são colunas do futebol (vôlei: pontos, aces,
+  /// bloqueios), pela chave de `stats`.
+  final Map<String, int> extra;
+
   PlayerGameStats copyWith({
     int? goals,
     int? assists,
     int? yellowCards,
     bool? redCard,
     bool? bestPlayer,
+    Map<String, int>? extra,
   }) => PlayerGameStats(
     gameId: gameId,
     teamId: teamId,
@@ -82,6 +89,7 @@ class PlayerGameStats {
     yellowCards: yellowCards ?? this.yellowCards,
     redCard: redCard ?? this.redCard,
     bestPlayer: bestPlayer ?? this.bestPlayer,
+    extra: extra ?? this.extra,
   );
 
   /// Valor da estatística [key] das regras do esporte (flag: 0 ou 1).
@@ -90,7 +98,7 @@ class PlayerGameStats {
     'assists' => assists,
     'yellow_cards' => yellowCards,
     'red_card' => redCard ? 1 : 0,
-    _ => 0,
+    _ => extra[key] ?? 0,
   };
 
   /// Cópia com a estatística [key] valendo [value].
@@ -99,22 +107,37 @@ class PlayerGameStats {
     'assists' => copyWith(assists: value),
     'yellow_cards' => copyWith(yellowCards: value),
     'red_card' => copyWith(redCard: value > 0),
-    _ => this,
+    _ => copyWith(extra: {...extra, key: value}),
   };
 
-  /// Linha para gravar: as estatísticas vão em `stats` (o banco mantém as
-  /// colunas do futebol iguais a ela).
-  Map<String, dynamic> toMap() => {
+  /// Linha para gravar: as estatísticas [statKeys] do esporte do jogo vão em
+  /// `stats` (o banco recusa chave de outro esporte e mantém as colunas do
+  /// futebol iguais a ela).
+  Map<String, dynamic> toMap({List<String> statKeys = footballStatKeys}) => {
     'game_id': gameId,
     'team_id': teamId,
     'athlete_id': athleteId,
-    'stats': {for (final key in _keys) key: value(key)},
+    'stats': {for (final key in statKeys) key: value(key)},
     'best_player': bestPlayer,
   };
 
-  /// Chaves de `stats` que esta linha conhece (as do futebol, por enquanto).
-  static const _keys = ['goals', 'assists', 'yellow_cards', 'red_card'];
+  /// As chaves de `stats` do futebol (as colunas de `game_player_stats`).
+  static const footballStatKeys = [
+    'goals',
+    'assists',
+    'yellow_cards',
+    'red_card',
+  ];
 }
+
+/// As estatísticas de `stats` que não são colunas do futebol (vôlei: pontos,
+/// aces, bloqueios); só as numéricas.
+Map<String, int> extraStats(Map<String, dynamic>? stats) => {
+  for (final MapEntry(:key, :value)
+      in stats?.entries ?? const <MapEntry<String, dynamic>>[])
+    if (!PlayerGameStats.footballStatKeys.contains(key) && value is num)
+      key: value.toInt(),
+};
 
 /// "Fulano (2)", "Ciclano": quem tem a estatística [key] (gols, no futebol),
 /// de quem fez mais para quem fez menos.
@@ -141,6 +164,7 @@ class AthleteTotals {
     this.yellowCards = 0,
     this.redCards = 0,
     this.bestPlayer = 0,
+    this.extra = const {},
   });
 
   factory AthleteTotals.fromMap(Map<String, dynamic> map) => AthleteTotals(
@@ -154,6 +178,8 @@ class AthleteTotals {
     yellowCards: map['yellow_cards'] as int? ?? 0,
     redCards: map['red_cards'] as int? ?? 0,
     bestPlayer: map['best_player'] as int? ?? 0,
+    // Os totais das estatísticas que não são colunas do futebol (vôlei).
+    extra: extraStats(map['stats'] as Map<String, dynamic>?),
   );
 
   final String athleteId;
@@ -169,13 +195,16 @@ class AthleteTotals {
   /// Vezes em que foi o craque do jogo.
   final int bestPlayer;
 
+  /// Totais das estatísticas que não são colunas do futebol (vôlei).
+  final Map<String, int> extra;
+
   /// Total da estatística [key] das regras do esporte (a flag soma os jogos).
   int value(String key) => switch (key) {
     'goals' => goals,
     'assists' => assists,
     'yellow_cards' => yellowCards,
     'red_card' => redCards,
-    _ => 0,
+    _ => extra[key] ?? 0,
   };
 }
 

@@ -9,6 +9,7 @@ import '../../reports/presentation/report_sheet.dart';
 import '../../games/data/player_stats_repository.dart';
 import '../../games/domain/player_stats.dart';
 import '../../profile/presentation/my_numbers_section.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/presentation/season_button.dart';
 import '../domain/athlete.dart';
@@ -114,6 +115,13 @@ class AthleteProfilePage extends ConsumerWidget {
                           athleteId: athlete.id ?? '',
                           name: athlete.name,
                         ),
+                    // As estatísticas do esporte do time do atleta.
+                    rules:
+                        ref
+                            .watch(teamByIdProvider(athlete.teamId))
+                            .value
+                            ?.rules ??
+                        footballRules,
                   ),
                 ),
               );

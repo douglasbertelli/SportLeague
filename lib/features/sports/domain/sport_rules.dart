@@ -231,6 +231,7 @@ class RankingDef {
     required this.statKey,
     required this.unit,
     this.emptyMessage,
+    this.championshipTitle,
   });
 
   final String title;
@@ -241,6 +242,10 @@ class RankingDef {
 
   /// Mensagem quando ninguém tem a estatística; nula esconde o ranking.
   final String? emptyMessage;
+
+  /// Nome na aba de estatísticas do campeonato, quando é outro ("Garçons"
+  /// no time, "Assistências" no campeonato).
+  final String? championshipTitle;
 }
 
 /// Critério de desempate da classificação, em ordem.
@@ -474,7 +479,12 @@ const footballRules = SportRules(
       unit: 'gols',
       emptyMessage: 'Nenhum gol lançado nas súmulas ainda.',
     ),
-    RankingDef(title: 'Garçons', statKey: 'assists', unit: 'assist.'),
+    RankingDef(
+      title: 'Garçons',
+      statKey: 'assists',
+      unit: 'assist.',
+      championshipTitle: 'Assistências',
+    ),
   ],
   standings: footballStandings,
   eventKinds: GameEventKind.values,

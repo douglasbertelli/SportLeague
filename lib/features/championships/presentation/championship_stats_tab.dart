@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/empty_state.dart';
 import '../../teams/presentation/team_logo.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../data/championship_repository.dart';
 import '../domain/championship_stats.dart';
 
+/// As outras visões, além dos rankings de atletas do esporte.
 enum _View {
-  scorers('Artilharia'),
-  assists('Assistências'),
   cards('Cartões'),
   teams('Ataque e defesa'),
   fairPlay('Fair play'),
@@ -18,12 +18,19 @@ enum _View {
   final String label;
 }
 
-/// Estatísticas do campeonato: artilharia, assistências, cartões (com os
-/// suspensos), ataque e defesa, fair play e seleção da rodada.
+/// Estatísticas do campeonato: os rankings de atletas do esporte (no
+/// futebol, artilharia e assistências; no vôlei, pontos, aces e bloqueios),
+/// cartões (com os suspensos) e fair play nos esportes com cartão, ataque e
+/// defesa e seleção da rodada.
 class ChampionshipStatsTab extends ConsumerStatefulWidget {
-  const ChampionshipStatsTab({super.key, required this.championshipId});
+  const ChampionshipStatsTab({
+    super.key,
+    required this.championshipId,
+    this.rules = footballRules,
+  });
 
   final String championshipId;
+  final SportRules rules;
 
   @override
   ConsumerState<ChampionshipStatsTab> createState() =>
@@ -31,7 +38,12 @@ class ChampionshipStatsTab extends ConsumerStatefulWidget {
 }
 
 class _ChampionshipStatsTabState extends ConsumerState<ChampionshipStatsTab> {
-  _View _view = _View.scorers;
+  /// Ranking escolhido (a chave da estatística) ou, nulo, a [_view].
+  late String? _ranking = widget.rules.rankings.firstOrNull?.statKey;
+  _View _view = _View.teams;
+
+  /// Cartões e fair play só nos esportes com cartão na súmula.
+  bool get _hasCards => widget.rules.stat('yellow_cards') != null;
 
   @override
   Widget build(BuildContext context) {
@@ -56,32 +68,47 @@ class _ChampionshipStatsTabState extends ConsumerState<ChampionshipStatsTab> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  for (final view in _View.values)
+                  for (final ranking in widget.rules.rankings)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(view.label),
-                        selected: view == _view,
-                        onSelected: (_) => setState(() => _view = view),
+                        label: Text(ranking.championshipTitle ?? ranking.title),
+                        selected: _ranking == ranking.statKey,
+                        onSelected: (_) =>
+                            setState(() => _ranking = ranking.statKey),
                       ),
                     ),
+                  for (final view in _View.values)
+                    if (_hasCards ||
+                        (view != _View.cards && view != _View.fairPlay))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(view.label),
+                          selected: _ranking == null && view == _view,
+                          onSelected: (_) => setState(() {
+                            _ranking = null;
+                            _view = view;
+                          }),
+                        ),
+                      ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            ...switch (_view) {
-              _View.scorers => _players(stats.scorers, (p) => p.goals, (
-                'gol',
-                'gols',
-              ), empty: 'A artilharia vem da súmula dos jogos.'),
-              _View.assists => _players(stats.assisters, (p) => p.assists, (
-                'assistência',
-                'assistências',
-              ), empty: 'As assistências vêm da súmula dos jogos.'),
-              _View.cards => _cards(stats),
-              _View.teams => _teams(stats),
-              _View.fairPlay => _fairPlay(stats),
-              _View.rounds => _rounds(stats),
+            ...switch ((_ranking, widget.rules.stat(_ranking ?? ''))) {
+              (final key?, final stat?) => _players(
+                stats.ranking(key),
+                (p) => p.value(key),
+                (stat.unit.singular, stat.unit.plural),
+                empty: 'O ranking vem da súmula dos jogos.',
+              ),
+              _ => switch (_view) {
+                _View.cards => _cards(stats),
+                _View.teams => _teams(stats),
+                _View.fairPlay => _fairPlay(stats),
+                _View.rounds => _rounds(stats),
+              },
             },
           ],
         ),
@@ -187,7 +214,8 @@ class _ChampionshipStatsTabState extends ConsumerState<ChampionshipStatsTab> {
               subtitle:
                   '${team.played} jogos · saldo ${_signed(team.goalDifference)}',
               logoUrl: team.logoUrl,
-              value: '${team.goalsFor} ${team.goalsFor == 1 ? 'gol' : 'gols'}',
+              // Gols no futebol, sets no vôlei.
+              value: widget.rules.scoreUnit.count(team.goalsFor),
             ),
         ],
       ),

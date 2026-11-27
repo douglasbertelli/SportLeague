@@ -556,6 +556,7 @@ class FakePlayerStatsRepository implements PlayerStatsRepository {
     required String gameId,
     required String teamId,
     required List<PlayerGameStats> rows,
+    List<String> statKeys = PlayerGameStats.footballStatKeys,
   }) async {
     stats
       ..removeWhere((row) => row.gameId == gameId && row.teamId == teamId)

@@ -1,3 +1,5 @@
+import '../../games/domain/player_stats.dart';
+
 /// Estatísticas do campeonato (função championship_stats): atletas, times,
 /// suspensos e seleção da rodada.
 class ChampionshipStats {
@@ -41,6 +43,9 @@ class ChampionshipStats {
 
   /// Rankings prontos (só quem tem o número, do maior para o menor).
   List<StatsPlayer> get scorers => _top((p) => p.goals);
+
+  /// Ranking pela estatística [key] das regras do esporte.
+  List<StatsPlayer> ranking(String key) => _top((p) => p.value(key));
   List<StatsPlayer> get assisters => _top((p) => p.assists);
   List<StatsPlayer> get carded => _top((p) => p.yellowCards + p.redCards * 3);
 
@@ -80,6 +85,7 @@ class StatsPlayer {
     this.redCards = 0,
     this.bestPlayer = 0,
     this.games = 0,
+    this.extra = const {},
   });
 
   factory StatsPlayer.fromMap(Map<String, dynamic> map) => StatsPlayer(
@@ -92,6 +98,8 @@ class StatsPlayer {
     redCards: (map['red_cards'] as num?)?.toInt() ?? 0,
     bestPlayer: (map['best_player'] as num?)?.toInt() ?? 0,
     games: (map['games'] as num?)?.toInt() ?? 0,
+    // As estatísticas que não são colunas do futebol (vôlei).
+    extra: extraStats(map['stats'] as Map<String, dynamic>?),
   );
 
   final String name;
@@ -103,6 +111,18 @@ class StatsPlayer {
   final int redCards;
   final int bestPlayer;
   final int games;
+
+  /// Totais das estatísticas que não são colunas do futebol (vôlei).
+  final Map<String, int> extra;
+
+  /// Total da estatística [key] das regras do esporte.
+  int value(String key) => switch (key) {
+    'goals' => goals,
+    'assists' => assists,
+    'yellow_cards' => yellowCards,
+    'red_card' => redCards,
+    _ => extra[key] ?? 0,
+  };
 }
 
 class StatsTeam {

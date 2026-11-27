@@ -28,6 +28,8 @@ class PlayerStatsRepository {
     required String gameId,
     required String teamId,
     required List<PlayerGameStats> rows,
+    // As estatísticas do esporte do jogo (o banco recusa as de outro).
+    List<String> statKeys = PlayerGameStats.footballStatKeys,
   }) async {
     final keep = [for (final row in rows) row.athleteId];
     var remove = _client
@@ -48,7 +50,7 @@ class PlayerStatsRepository {
         .eq('team_id', teamId)
         .eq('best_player', true);
     await _client.from('game_player_stats').upsert([
-      for (final row in rows) row.toMap(),
+      for (final row in rows) row.toMap(statKeys: statKeys),
     ]);
   }
 
