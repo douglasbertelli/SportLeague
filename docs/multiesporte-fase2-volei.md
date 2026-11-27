@@ -142,6 +142,20 @@ sem tirar os campos de hoje: `team_player_totals`, `my_player_totals`,
 `private.championship_stats_data` e `team_profile_stats`. Esta última
 devolve também os sets e pontos pró/contra.
 
+> **Como ficou** (`20261127060000_stats_totals.sql`): o agregador
+> `private.jsonb_sum` soma o `stats` chave por chave, e `private.set_points`
+> soma os pontos de cada lado nos sets. As três funções que devolvem tabela
+> (`team_player_totals`, `my_player_totals`, `championship_player_totals`)
+> foram recriadas com a coluna `stats` no fim (mudar o formato da saída
+> exige `drop`), com as mesmas permissões. As que devolvem JSON ganharam
+> `stats` nos jogadores, totais, carreira e por time; os sets
+> (`set_scores`) nos últimos jogos e nos jogos do campeonato público; o
+> melhor de no campeonato público; e `points_for` / `points_against` no
+> perfil do time (0 no futebol). Testada num bloco desfeito que guardou a
+> saída de todas as funções antes, aplicou e conferiu que a saída depois,
+> sem os campos novos, era idêntica (5 times, 1 jogador, 1 campeonato, 3
+> perfis públicos), e que `stats` bate com as colunas do futebol.
+
 ### Etapa 4 — Placar em sets (app e site)
 
 - Formulário do amistoso: melhor de 3 ou de 5 (só no vôlei).
