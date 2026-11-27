@@ -581,6 +581,17 @@ void main() {
     ];
     container.invalidate(teamCoachesProvider('team-rival'));
     await tester.pumpAndSettle();
+    // A linha do time (com o esporte) pode empurrar a seção para baixo.
+    await tester.scrollUntilVisible(
+      find.text('Tite Bacchi'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Tite Bacchi'), findsOneWidget);
     expect(find.text('Técnico'), findsNWidgets(2));
   });

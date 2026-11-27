@@ -371,7 +371,7 @@ void main() {
         maxAge: 50,
       );
       expect(master.ageRange, 'A partir de 40 anos');
-      expect(master.summary, 'Master 40+');
+      expect(master.summary, 'Futebol · Master 40+');
       // Master não tem idade máxima; Livre não tem limites.
       expect(master.toMap()['max_age'], isNull);
       const open = Team(ownerId: 'u1', name: 'Livre FC', minAge: 10);
@@ -415,7 +415,7 @@ void main() {
       expect(team.ageGroup, AgeGroup.master);
       expect(team.foundedOn, DateTime(2015, 3, 8));
       // Master antigo, sem idade gravada: vale a sugerida (35).
-      expect(team.summary, 'Futsal, Areia, Desafio · Feminino · Master 35+');
+      expect(team.summary, 'Futebol · Futsal, Areia, Desafio · Feminino · Master 35+');
       expect(team.ageRange, 'A partir de 35 anos');
       expect(team.toMap()['modalities'], ['futsal', 'beach', 'challenge']);
       expect(team.toMap()['founded_on'], '2015-03-08');
@@ -434,7 +434,7 @@ void main() {
       expect(old.modalities, isEmpty);
       expect(old.gender, isNull);
       expect(old.ageGroup, AgeGroup.open);
-      expect(old.summary, 'Livre');
+      expect(old.summary, 'Futebol · Livre');
       expect(old.playsAs, PlaysAs.both);
       expect(old.hasContacts, isFalse);
       expect(old.kitUrls, isEmpty);
@@ -587,7 +587,7 @@ void main() {
       expect(created.ageGroup, AgeGroup.youth);
       expect(created.toMap()['min_age'], 13);
       expect(created.toMap()['max_age'], 15);
-      expect(created.summary, 'Desafio · Feminino · Base 13-15');
+      expect(created.summary, 'Futebol · Desafio · Feminino · Base 13-15');
       expect(created.foundedOn, isNotNull);
       expect(created.toMap()['city'], 'Campinas');
       expect(created.toMap()['state'], 'SP');
@@ -854,7 +854,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Amigos FC'), findsNothing);
       // Card como o da escolha de adversário: resumo e cidade.
-      expect(find.text('Society · Livre\nCampinas/SP'), findsOneWidget);
+      expect(find.text('Futebol · Society · Livre\nCampinas/SP'), findsOneWidget);
 
       await tester.tap(find.text('Bola Murcha'));
       await tester.pumpAndSettle();
