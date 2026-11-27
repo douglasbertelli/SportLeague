@@ -187,6 +187,21 @@ devolve também os sets e pontos pró/contra.
   sets e de pontos; mata-mata sem pênaltis.
 - Suspensões por cartão ficam desligadas no vôlei.
 
+> **Como ficou:** `Championship.bestOf` e `ChampionshipMatch.setScores`
+> (com os pontos de cada lado nos sets). O organizador lança os sets com a
+> tela de sets, que ficou genérica (`showSetsEditor`, usada também pelo jogo
+> do time), exigindo a partida terminada; o mata-mata avança pelo placar em
+> sets e não pede pênaltis. A classificação conta as vitórias e derrotas
+> "apertadas" (vencidas por um só: no vôlei, o tie-break) e os pontos dentro
+> dos sets, então o 3/2/1/0 e o desempate por saldo de pontos saem das
+> regras; no futebol, apertado vale igual (`closeWin = win`). A tabela do
+> vôlei não tem a coluna de empates e usa SP / SC / SS (sets) no lugar de
+> GP / GC / SG, no app, na imagem compartilhada e no site. O formulário do
+> campeonato escolhe melhor de 3 ou 5 e esconde a suspensão por cartão
+> (gravada como 0). No site, a função de classificação não roda direto nos
+> testes do Node (importa arquivos sem extensão); a pontuação e o desempate
+> estão cobertos pelos testes de `rules.ts`.
+
 ### Etapa 6 — Súmula e rankings do vôlei (app e site)
 
 - Súmula do vôlei com pontos, aces e bloqueios.

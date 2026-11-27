@@ -393,8 +393,23 @@ class StandingRow {
   int goalsFor = 0;
   int goalsAgainst = 0;
 
-  int get points => rules.pointsFor(wins: wins, draws: draws, losses: losses);
+  /// Vitórias e derrotas apertadas (vôlei: no tie-break, 3x2 ou 2x1).
+  int closeWins = 0;
+  int closeLosses = 0;
+
+  /// Pontos dentro dos sets (vôlei; 0 no futebol).
+  int pointsFor = 0;
+  int pointsAgainst = 0;
+
+  int get points => rules.pointsFor(
+    wins: wins,
+    draws: draws,
+    losses: losses,
+    closeWins: closeWins,
+    closeLosses: closeLosses,
+  );
   int get goalDifference => goalsFor - goalsAgainst;
+  int get pointDifference => pointsFor - pointsAgainst;
 }
 
 /// Classificação dos [ids] pelos jogos com placar, pela pontuação e pelos
@@ -422,12 +437,30 @@ List<StandingRow> standings(
       ..played += 1
       ..goalsFor += a
       ..goalsAgainst += h;
+    // Vôlei: pontos dentro dos sets (sem sets, 0).
+    home
+      ..pointsFor += match.homeSetPoints
+      ..pointsAgainst += match.awaySetPoints;
+    away
+      ..pointsFor += match.awaySetPoints
+      ..pointsAgainst += match.homeSetPoints;
+    // Apertado: vencido por um só (no vôlei, no tie-break: 3x2 ou 2x1). No
+    // futebol conta igual às outras (closeWin = win, closeLoss = loss).
+    final close = (h - a).abs() == 1;
     if (h > a) {
       home.wins++;
       away.losses++;
+      if (close) {
+        home.closeWins++;
+        away.closeLosses++;
+      }
     } else if (a > h) {
       away.wins++;
       home.losses++;
+      if (close) {
+        away.closeWins++;
+        home.closeLosses++;
+      }
     } else {
       home.draws++;
       away.draws++;
@@ -439,9 +472,8 @@ List<StandingRow> standings(
         StandingsTiebreaker.wins => row.wins,
         StandingsTiebreaker.scoreDifference => row.goalDifference,
         StandingsTiebreaker.scoreFor => row.goalsFor,
-        // Pontos dentro dos sets: a classificação do vôlei entra na Etapa 5
-        // da Fase 2 (precisa do placar de cada set).
-        StandingsTiebreaker.pointDifference => 0,
+        // Pontos dentro dos sets (vôlei).
+        StandingsTiebreaker.pointDifference => row.pointDifference,
       };
   return rows.values.toList()..sort((a, b) {
     for (final tiebreaker in rules.tiebreakers) {

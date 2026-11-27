@@ -21,12 +21,35 @@ Future<List<(int, int)>?> showSetsSheet(
   required String myTeam,
   required String opponent,
   required bool requireComplete,
+}) => showSetsEditor(
+  context,
+  modality: game.modality,
+  bestOf: game.bestOf,
+  initial: game.setScores,
+  firstName: myTeam,
+  secondName: opponent,
+  requireComplete: requireComplete,
+);
+
+/// Lança os sets de uma partida de vôlei da [modality] (jogo do time ou jogo
+/// de campeonato): cada set é ([firstName], [secondName]). Com
+/// [requireComplete], só devolve a partida terminada. Nulo se voltar.
+Future<List<(int, int)>?> showSetsEditor(
+  BuildContext context, {
+  required Modality? modality,
+  required int? bestOf,
+  required List<(int, int)>? initial,
+  required String firstName,
+  required String secondName,
+  required bool requireComplete,
 }) => showAppSheet<List<(int, int)>>(
   context,
   builder: (_) => _SetsSheet(
-    game: game,
-    myTeam: myTeam,
-    opponent: opponent,
+    modality: modality,
+    bestOf: bestOf,
+    initial: initial,
+    myTeam: firstName,
+    opponent: secondName,
     requireComplete: requireComplete,
   ),
 );
@@ -55,13 +78,17 @@ Future<bool> saveSets(
 
 class _SetsSheet extends StatefulWidget {
   const _SetsSheet({
-    required this.game,
+    required this.modality,
+    required this.bestOf,
+    required this.initial,
     required this.myTeam,
     required this.opponent,
     required this.requireComplete,
   });
 
-  final Game game;
+  final Modality? modality;
+  final int? bestOf;
+  final List<(int, int)>? initial;
   final String myTeam;
   final String opponent;
   final bool requireComplete;
@@ -71,14 +98,15 @@ class _SetsSheet extends StatefulWidget {
 }
 
 class _SetsSheetState extends State<_SetsSheet> {
-  late final SetRules _sets = widget.game.rules.sets!;
-  late final Modality? _modality = widget.game.modality;
+  late final SportRules _rules = rulesForModality(widget.modality);
+  late final SetRules _sets = _rules.sets!;
+  late final Modality? _modality = widget.modality;
   late final int _bestOf =
-      widget.game.bestOf ?? _sets.defaultBestOf[_modality] ?? 5;
+      widget.bestOf ?? _sets.defaultBestOf[_modality] ?? 5;
 
   /// Um par de campos por set (time, adversário).
   late final List<(TextEditingController, TextEditingController)> _rows = [
-    for (final (a, b) in widget.game.setScores ?? const <(int, int)>[])
+    for (final (a, b) in widget.initial ?? const <(int, int)>[])
       (TextEditingController(text: '$a'), TextEditingController(text: '$b')),
   ];
 
@@ -154,7 +182,7 @@ class _SetsSheetState extends State<_SetsSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final names = widget.game.rules.periods.names;
+    final names = _rules.periods.names;
 
     Widget field(TextEditingController controller, String label) => Expanded(
       child: TextField(

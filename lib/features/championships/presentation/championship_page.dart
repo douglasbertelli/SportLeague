@@ -12,6 +12,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../games/presentation/sets_sheet.dart';
 import '../../games/presentation/game_card.dart'
     show formatGameDay, formatGameTime;
 import '../../teams/presentation/team_logo.dart';
@@ -397,23 +398,61 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
     List<ChampionshipMatch> matches,
     Map<String, ChampionshipTeam> teams,
   ) async {
-    final result = await showAppSheet<_ScoreResult>(
-      context,
-      builder: (_) => _ScoreSheet(
-        match: match,
-        home: teams[match.homeId]!.name,
-        away: teams[match.awayId]!.name,
-      ),
-    );
-    if (result == null) return;
-    await _run(() async {
-      await _repository.setScore(
-        match.id,
-        home: result.home,
-        away: result.away,
-        homePenalties: result.homePenalties,
-        awayPenalties: result.awayPenalties,
+    // Vôlei: o placar é em sets (a partida terminada), sem pênaltis.
+    final setRules = championship.rules.sets;
+    List<(int, int)>? setScores;
+    _ScoreResult? result;
+    if (setRules != null) {
+      final bestOf =
+          championship.bestOf ??
+          setRules.defaultBestOf[championship.modality] ??
+          5;
+      setScores = await showSetsEditor(
+        context,
+        modality: championship.modality,
+        bestOf: bestOf,
+        initial: match.setScores,
+        firstName: teams[match.homeId]!.name,
+        secondName: teams[match.awayId]!.name,
+        requireComplete: true,
       );
+      if (setScores == null) return;
+      final won = setRules.matchResult(
+        setScores,
+        modality: championship.modality,
+        bestOf: bestOf,
+      )!;
+      result = (
+        home: won.a,
+        away: won.b,
+        homePenalties: null,
+        awayPenalties: null,
+      );
+    } else {
+      result = await showAppSheet<_ScoreResult>(
+        context,
+        builder: (_) => _ScoreSheet(
+          match: match,
+          home: teams[match.homeId]!.name,
+          away: teams[match.awayId]!.name,
+        ),
+      );
+    }
+    if (result == null) return;
+    final score = result;
+    final sets = setScores;
+    await _run(() async {
+      if (sets != null) {
+        await _repository.setSets(match.id, sets);
+      } else {
+        await _repository.setScore(
+          match.id,
+          home: score.home,
+          away: score.away,
+          homePenalties: score.homePenalties,
+          awayPenalties: score.awayPenalties,
+        );
+      }
       if (match.stage != MatchStage.knockout) return;
       // O vencedor entra no jogo seguinte; sem a final, acaba o campeonato.
       final updated = ChampionshipMatch(
@@ -424,10 +463,10 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
         slot: match.slot,
         homeId: match.homeId,
         awayId: match.awayId,
-        homeScore: result.home,
-        awayScore: result.away,
-        homePenalties: result.homePenalties,
-        awayPenalties: result.awayPenalties,
+        homeScore: score.home,
+        awayScore: score.away,
+        homePenalties: score.homePenalties,
+        awayPenalties: score.awayPenalties,
       );
       final next = nextKnockoutSlot(updated, matches);
       if (next != null) {
@@ -661,6 +700,8 @@ class _TableTab extends StatelessWidget {
         switch (championship.format) {
           ChampionshipFormat.league ||
           ChampionshipFormat.leagueKnockout => _StandingsTable(
+            allowsDraw: championship.rules.allowsDraw,
+            differenceLabel: championship.rules.sets != null ? 'SS' : 'SG',
             title: championship.format == ChampionshipFormat.leagueKnockout
                 ? 'Liga (passam ${championship.knockoutQualifiers})'
                 : null,
@@ -684,6 +725,10 @@ class _TableTab extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _StandingsTable(
+                    allowsDraw: championship.rules.allowsDraw,
+                    differenceLabel: championship.rules.sets != null
+                        ? 'SS'
+                        : 'SG',
                     title: 'Grupo $label',
                     qualifiers: championship.qualifiersPerGroup,
                     rows: standings(
@@ -707,6 +752,10 @@ class _TableTab extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _StandingsTable(
+                    allowsDraw: championship.rules.allowsDraw,
+                    differenceLabel: championship.rules.sets != null
+                        ? 'SS'
+                        : 'SG',
                     title:
                         'Melhores ${layout.qualifiers + 1}º colocados '
                         '(passam ${layout.missing})',
@@ -754,6 +803,8 @@ class _StandingsTable extends StatelessWidget {
     required this.logos,
     this.title,
     this.qualifiers,
+    this.allowsDraw = true,
+    this.differenceLabel = 'SG',
   });
 
   final List<StandingRow> rows;
@@ -763,6 +814,11 @@ class _StandingsTable extends StatelessWidget {
 
   /// Quantos passam (destacados).
   final int? qualifiers;
+
+  /// Coluna de empates (no vôlei não há) e a sigla do saldo: SG (gols) ou
+  /// SS (sets).
+  final bool allowsDraw;
+  final String differenceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -795,7 +851,14 @@ class _StandingsTable extends StatelessWidget {
                 number('#', header, width: 24),
                 const SizedBox(width: 8),
                 Expanded(child: Text('Time', style: header)),
-                for (final label in ['P', 'J', 'V', 'E', 'D', 'SG'])
+                for (final label in [
+                  'P',
+                  'J',
+                  'V',
+                  if (allowsDraw) 'E',
+                  'D',
+                  differenceLabel,
+                ])
                   number(label, header),
               ],
             ),
@@ -836,7 +899,7 @@ class _StandingsTable extends StatelessWidget {
                     ),
                     number('${row.played}', cell),
                     number('${row.wins}', cell),
-                    number('${row.draws}', cell),
+                    if (allowsDraw) number('${row.draws}', cell),
                     number('${row.losses}', cell),
                     number(
                       row.goalDifference > 0
@@ -1109,9 +1172,14 @@ class _MatchTile extends StatelessWidget {
       ),
     );
 
+    // Pênaltis no futebol; no vôlei, o placar de cada set.
     final penalties = match.homePenalties != null
         ? ' (${match.homePenalties} x ${match.awayPenalties} pên.)'
-        : '';
+        : switch (match.setScores) {
+            final sets? when sets.isNotEmpty =>
+              ' (${[for (final (a, b) in sets) '$a-$b'].join(', ')})',
+            _ => '',
+          };
 
     return Card(
       child: InkWell(

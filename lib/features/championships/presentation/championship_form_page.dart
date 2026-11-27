@@ -44,6 +44,20 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
   /// expulsão (0 desliga).
   late var _yellowLimit = widget.championship?.yellowLimit ?? 3;
   late var _redGames = widget.championship?.redGames ?? 1;
+
+  /// Vôlei: melhor de 3 ou de 5; sem escolha, o padrão da modalidade.
+  late int? _bestOf = widget.championship?.bestOf;
+
+  SportRules get _rules => rulesForModality(_modality);
+
+  /// Melhor de do vôlei; nulo nos outros esportes.
+  int? get _effectiveBestOf => switch (_rules.sets) {
+    final sets? => _bestOf ?? sets.defaultBestOf[_modality] ?? 5,
+    null => null,
+  };
+
+  /// Suspensão por cartão só nos esportes com cartão na súmula.
+  bool get _hasCards => _rules.stat('yellow_cards') != null;
   var _loading = false;
 
   @override
@@ -92,8 +106,9 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
       groupSize: _maxPerGroup,
       knockoutFill: _layout.effectiveFill,
       knockoutQualifiers: _leagueQualifiers,
-      yellowLimit: _yellowLimit,
-      redGames: _redGames,
+      yellowLimit: _hasCards ? _yellowLimit : 0,
+      redGames: _hasCards ? _redGames : 0,
+      bestOf: _effectiveBestOf,
     );
     try {
       final repository = ref.read(championshipRepositoryProvider);
@@ -148,6 +163,25 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
               ],
               onChanged: (value) => setState(() => _modality = value!),
             ),
+            // Vôlei: melhor de 3 ou de 5 para todos os jogos.
+            if (_rules.sets case final sets?) ...[
+              const SizedBox(height: 16),
+              Text('Partidas', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<int>(
+                segments: [
+                  for (final option in sets.bestOfOptions)
+                    ButtonSegment(
+                      value: option,
+                      label: Text('Melhor de $option'),
+                    ),
+                ],
+                selected: {?_effectiveBestOf},
+                showSelectedIcon: false,
+                onSelectionChanged: (selection) =>
+                    setState(() => _bestOf = selection.first),
+              ),
+            ],
             const SizedBox(height: 24),
             Text('Formato', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -227,40 +261,43 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                 onFillChanged: (fill) => setState(() => _fill = fill),
               ),
             ],
-            // Suspensão automática (a escalação e a súmula avisam).
-            const SizedBox(height: 24),
-            Text(
-              'Suspensão automática',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Vale para o próximo jogo do time. A escalação e a súmula '
-              'avisam quem está suspenso. Zero desliga.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            // Suspensão automática (a escalação e a súmula avisam); só nos
+            // esportes com cartão (no vôlei, não).
+            if (_hasCards) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Suspensão automática',
+                style: Theme.of(context).textTheme.titleSmall,
               ),
-            ),
-            _NumberField(
-              label: 'Amarelos para 1 jogo',
-              hint: _yellowLimit == 0
-                  ? 'Amarelos não suspendem'
-                  : 'A cada $_yellowLimit amarelos, 1 jogo fora',
-              value: _yellowLimit,
-              min: 0,
-              max: 10,
-              onChanged: (value) => setState(() => _yellowLimit = value),
-            ),
-            _NumberField(
-              label: 'Jogos por expulsão',
-              hint: _redGames == 0
-                  ? 'Expulsão não suspende'
-                  : 'Vermelho ou 2º amarelo',
-              value: _redGames,
-              min: 0,
-              max: 5,
-              onChanged: (value) => setState(() => _redGames = value),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                'Vale para o próximo jogo do time. A escalação e a súmula '
+                'avisam quem está suspenso. Zero desliga.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              _NumberField(
+                label: 'Amarelos para 1 jogo',
+                hint: _yellowLimit == 0
+                    ? 'Amarelos não suspendem'
+                    : 'A cada $_yellowLimit amarelos, 1 jogo fora',
+                value: _yellowLimit,
+                min: 0,
+                max: 10,
+                onChanged: (value) => setState(() => _yellowLimit = value),
+              ),
+              _NumberField(
+                label: 'Jogos por expulsão',
+                hint: _redGames == 0
+                    ? 'Expulsão não suspende'
+                    : 'Vermelho ou 2º amarelo',
+                value: _redGames,
+                min: 0,
+                max: 5,
+                onChanged: (value) => setState(() => _redGames = value),
+              ),
+            ],
             const SizedBox(height: 32),
             FilledButton.icon(
               onPressed: _loading ? null : _save,
