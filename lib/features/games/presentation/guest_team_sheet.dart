@@ -181,7 +181,7 @@ class _GuestTeamSheetState extends ConsumerState<GuestTeamSheet> {
                   children: [
                     for (final modality in modalities)
                       ChoiceChip(
-                        label: Text(modality.label),
+                        label: Text(modality.fullLabel),
                         selected: modality == _modality,
                         onSelected: (_) => setState(() => _modality = modality),
                       ),

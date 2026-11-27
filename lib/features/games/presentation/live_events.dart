@@ -10,6 +10,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../athletes/data/athlete_repository.dart';
 import '../../athletes/domain/athlete.dart';
 import '../../invites/data/invite_repository.dart' show shareTextProvider;
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/data/team_repository.dart';
 import '../data/game_event_repository.dart';
 import '../data/game_repository.dart';
@@ -25,13 +26,14 @@ GameSide viewerSide(Game game, String viewerTeamId) =>
 /// Se o dono do time [viewerTeamId] pode lançar (ou apagar) este lance, como
 /// no banco (private.can_add_game_event): quem marcou lança os gols dos dois
 /// lados e tudo do convidado; o adversário da plataforma, os lances dele
-/// menos gols.
+/// menos gols. Só os lances do esporte do jogo (o vôlei não tem nenhum).
 bool canAddGameEvent(
   Game game,
   String viewerTeamId, {
   required GameSide side,
   required GameEventKind kind,
 }) {
+  if (!game.rules.eventKinds.contains(kind)) return false;
   if (game.isHostedBy(viewerTeamId)) {
     return side == GameSide.host ||
         kind.isScoring ||

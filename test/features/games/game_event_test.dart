@@ -3,6 +3,7 @@ import 'package:sport_league/features/games/domain/game.dart';
 import 'package:sport_league/features/games/domain/game_event.dart';
 import 'package:sport_league/features/games/domain/match_clock.dart';
 import 'package:sport_league/features/games/presentation/live_events.dart';
+import 'package:sport_league/features/teams/domain/team.dart';
 
 void main() {
   group('minuto do lance', () {
@@ -67,6 +68,26 @@ void main() {
         isFalse,
         reason: 'o cartão do adversário da plataforma é dele',
       );
+    });
+
+    test('no vôlei, ninguém lança lances (o placar é por sets)', () {
+      final volleyball = Game(
+        id: 'g3',
+        teamId: 'host',
+        opponent: 'Convidado',
+        opponentGuestId: 'guest',
+        modality: Modality.volleyballIndoor,
+        scheduledAt: DateTime(2026, 11, 24, 15),
+      );
+      for (final side in GameSide.values) {
+        for (final kind in GameEventKind.values) {
+          expect(
+            canAddGameEvent(volleyball, 'host', side: side, kind: kind),
+            isFalse,
+            reason: '$kind',
+          );
+        }
+      }
     });
 
     test('contra convidado, quem marcou lança tudo', () {

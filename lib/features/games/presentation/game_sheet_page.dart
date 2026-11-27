@@ -120,6 +120,7 @@ class GameSheetPage extends ConsumerWidget {
                     icon: const Icon(Icons.share_outlined),
                   ),
                   if (canEditGameSheet(game) &&
+                      game.rules.eventKinds.isNotEmpty &&
                       ref.watch(canManageTeamProvider))
                     TextButton.icon(
                       onPressed: () => addLiveEvent(
