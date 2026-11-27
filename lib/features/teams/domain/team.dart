@@ -273,8 +273,10 @@ class Team {
     _ => null,
   };
 
-  /// "Society · Masculino · Base 13-15", para listas.
+  /// "Futebol · Society · Masculino · Base 13-15", para listas. O esporte vem
+  /// primeiro para distinguir os times de cada esporte.
   String get summary => [
+    sport.label,
     if (modalities.isNotEmpty) modalities.map((m) => m.label).join(', '),
     ?gender?.label,
     switch (ageGroup) {
