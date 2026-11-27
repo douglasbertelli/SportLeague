@@ -579,9 +579,9 @@ const volleyballRules = SportRules(
   ),
 );
 
-/// Esportes liberados nesta versão (os outros ainda não aparecem no app).
-/// Liberar o vôlei é a Etapa 7 da Fase 2.
-const supportedSports = [Sport.football];
+/// Esportes liberados nesta versão (os outros ainda não aparecem no app). O
+/// vôlei foi liberado na Etapa 7 da Fase 2 (build 0.1.0+8).
+const supportedSports = [Sport.football, Sport.volleyball];
 
 /// Modalidades dos esportes liberados, para as listas de escolha (campeonato,
 /// time fictício). Sem os esportes que ainda não aparecem no app.

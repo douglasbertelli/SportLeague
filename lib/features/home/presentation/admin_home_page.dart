@@ -7,6 +7,8 @@ import '../../games/presentation/games_tab.dart';
 import '../../notifications/presentation/notifications_page.dart';
 import '../../profile/domain/profile.dart';
 import '../../profile/presentation/profile_tab.dart';
+import '../../teams/data/team_repository.dart';
+import '../../teams/domain/team.dart';
 import '../../teams/presentation/team_search_page.dart';
 import '../../teams/presentation/team_switcher.dart';
 import 'app_drawer.dart';
@@ -42,6 +44,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final volleyball =
+        ref.watch(selectedTeamProvider).value?.sport == Sport.volleyball;
     // Um pedido para abrir a aba Jogos (aviso do Início ou uma notificação)
     // também troca para ela.
     ref.listen(gamesTabRequestProvider, (_, request) {
@@ -80,11 +84,19 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
         onDestinationSelected: (index) => setState(() => _index = index),
         destinations: [
           for (final tab in _tabs)
-            NavigationDestination(
-              icon: Icon(tab.icon),
-              selectedIcon: Icon(tab.selectedIcon),
-              label: tab.label,
-            ),
+            // Jogos com a bola do esporte do time ativo.
+            if (tab.label == 'Jogos' && volleyball)
+              NavigationDestination(
+                icon: const Icon(Icons.sports_volleyball_outlined),
+                selectedIcon: const Icon(Icons.sports_volleyball),
+                label: tab.label,
+              )
+            else
+              NavigationDestination(
+                icon: Icon(tab.icon),
+                selectedIcon: Icon(tab.selectedIcon),
+                label: tab.label,
+              ),
         ],
       ),
     );

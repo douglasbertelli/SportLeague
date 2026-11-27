@@ -12,16 +12,16 @@ Organize seu time: amistosos, placar ao vivo, campeonatos e mensalidade.
 
 Seu time organizado do convite ao apito final.
 
-O SportLeague tira o futebol amador do grupo de WhatsApp bagunçado e coloca tudo num só app: amistosos, placar ao vivo, súmula, estatísticas, campeonatos, mensalidade e vaquinha. Para Futsal, Society, Campo, Areia e Desafio.
+O SportLeague tira o futebol e o vôlei amador do grupo de WhatsApp bagunçado e coloca tudo num só app: amistosos, placar ao vivo, súmula, estatísticas, campeonatos, mensalidade e vaquinha. No futebol: Futsal, Society, Campo, Areia e Desafio. No vôlei: Quadra e Praia, com placar por sets.
 
 ⚽ JOGO AO VIVO
-Relógio com 1º e 2º tempo, acréscimo e apito em cada mudança. O placar é atualizado na hora, e o adversário acompanha junto.
+Relógio com 1º e 2º tempo, acréscimo e apito em cada mudança. O placar é atualizado na hora, e o adversário acompanha junto. No vôlei, o placar vai set a set.
 
 🤝 AMISTOSOS SEM CONFLITO
 Encontre times, convide e marque só nos horários livres. O adversário aceita ou recusa pelo app. Vai jogar contra um time que não usa o SportLeague? Crie um time fictício e o jogo já nasce marcado.
 
 📊 SÚMULA E ESTATÍSTICAS
-Gols, assistências, cartões e o craque de cada jogo viram artilharia, garçons e números por temporada.
+Gols, assistências, cartões e o craque de cada jogo viram artilharia, garçons e números por temporada. No vôlei: pontos, aces e bloqueios.
 
 🏆 CAMPEONATOS
 Pontos corridos, mata-mata ou grupos + mata-mata, com sorteio, tabela automática, classificação e imagem pronta para compartilhar.

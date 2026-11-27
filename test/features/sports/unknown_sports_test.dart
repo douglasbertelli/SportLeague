@@ -71,8 +71,10 @@ void main() {
   group('as listas tiram o que não é de um esporte liberado', () {
     test('times pelo esporte', () {
       expect(isSupportedSportRow({'sport': 'football'}), isTrue);
+      // Liberado no build +8.
+      expect(isSupportedSportRow({'sport': 'volleyball'}), isTrue);
       // Conhecido pelo enum, mas ainda não liberado (sem regras).
-      expect(isSupportedSportRow({'sport': 'volleyball'}), isFalse);
+      expect(isSupportedSportRow({'sport': 'basketball'}), isFalse);
       expect(isSupportedSportRow({'sport': 'curling'}), isFalse);
       expect(isSupportedSportRow({}), isFalse);
     });
@@ -81,10 +83,7 @@ void main() {
       for (final modality in availableModalities) {
         expect(isSupportedModalityRow({'modality': modality.key}), isTrue);
       }
-      expect(
-        isSupportedModalityRow({'modality': 'volleyball_indoor'}),
-        isFalse,
-      );
+      expect(isSupportedModalityRow({'modality': 'volleyball_indoor'}), isTrue);
       expect(isSupportedModalityRow({}), isFalse);
     });
   });
