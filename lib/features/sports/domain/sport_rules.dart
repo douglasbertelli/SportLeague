@@ -356,6 +356,31 @@ List<Modality> get availableModalities => [
   for (final sport in supportedSports) ...Modality.of(sport),
 ];
 
+/// Se a linha do banco (time: coluna `sport`) é de um esporte liberado nesta
+/// versão do app. Times de um esporte que o app não conhece, ou que ainda
+/// não liberou, ficam de fora das listas (não há regras para mostrá-los).
+bool isSupportedSportRow(Map<String, dynamic> row) =>
+    supportedSports.contains(Sport.tryFromName(row['sport'] as String?));
+
+/// Se a linha do banco (campeonato, time fictício: coluna `modality`) é de
+/// uma modalidade de um esporte liberado nesta versão do app.
+bool isSupportedModalityRow(Map<String, dynamic> row) =>
+    switch (Modality.tryFromName(row['modality'] as String?)) {
+      final modality? => supportedSports.contains(modality.sport),
+      null => false,
+    };
+
+/// Erro ao abrir algo (um campeonato, por exemplo) de um esporte que esta
+/// versão do app ainda não tem.
+class UnsupportedSportException implements Exception {
+  const UnsupportedSportException();
+
+  @override
+  String toString() =>
+      'Isto é de um esporte que esta versão do app ainda não tem. '
+      'Atualize o app na loja.';
+}
+
 /// Regras do [sport]. Só o futebol existe por enquanto.
 SportRules rulesFor(Sport sport) => switch (sport) {
   Sport.football => footballRules,

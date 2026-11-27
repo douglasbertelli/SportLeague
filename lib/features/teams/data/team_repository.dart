@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/storage/preferences_provider.dart';
 import '../../../core/supabase/supabase_providers.dart';
@@ -24,7 +25,7 @@ class TeamRepository {
         .select(teamColumns)
         .eq('owner_id', ownerId)
         .order('name');
-    return rows.map(Team.fromMap).toList();
+    return rows.where(isSupportedSportRow).map(Team.fromMap).toList();
   }
 
   /// Times em que o usuário é técnico, em ordem alfabética.
@@ -34,7 +35,7 @@ class TeamRepository {
         .select('$teamColumns, team_coaches!inner(profile_id)')
         .eq('team_coaches.profile_id', profileId)
         .order('name');
-    return rows.map(Team.fromMap).toList();
+    return rows.where(isSupportedSportRow).map(Team.fromMap).toList();
   }
 
   /// Times em que o usuário é atleta (jogador vinculado), em ordem
@@ -45,7 +46,7 @@ class TeamRepository {
         .select('$teamColumns, team_players!inner(profile_id)')
         .eq('team_players.profile_id', profileId)
         .order('name');
-    return rows.map(Team.fromMap).toList();
+    return rows.where(isSupportedSportRow).map(Team.fromMap).toList();
   }
 
   /// Times da plataforma pelo nome, em ordem alfabética (vazio lista os
@@ -63,7 +64,7 @@ class TeamRepository {
         .isFilter('inactive_at', null)
         .order('name')
         .limit(30);
-    return rows.map(Team.fromMap).toList();
+    return rows.where(isSupportedSportRow).map(Team.fromMap).toList();
   }
 
   /// Números e últimos resultados do time (função do banco).
@@ -109,7 +110,8 @@ class TeamRepository {
         .select(teamColumns)
         .eq('id', teamId)
         .maybeSingle();
-    return row == null ? null : Team.fromMap(row);
+    // Time de um esporte que esta versão não tem: como se não existisse.
+    return row == null || !isSupportedSportRow(row) ? null : Team.fromMap(row);
   }
 
   Future<Team> create(Team team) async {

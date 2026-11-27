@@ -15,7 +15,11 @@ class GuestTeam {
     id: map['id'] as String,
     ownerId: map['owner_id'] as String,
     name: map['name'] as String,
-    modality: Modality.fromName(map['modality'] as String),
+    // Modalidade desconhecida (esporte de uma versão mais nova) só para não
+    // quebrar; as listas já tiram essas linhas (isSupportedModalityRow).
+    modality:
+        Modality.tryFromName(map['modality'] as String?) ??
+        Modality.values.first,
     logoUrl: map['logo_url'] as String?,
   );
 

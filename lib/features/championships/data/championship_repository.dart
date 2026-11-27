@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../games/data/opponent_repository.dart';
@@ -20,7 +21,10 @@ class ChampionshipRepository {
         .from('championships')
         .select()
         .order('created_at', ascending: false);
-    return rows.map(Championship.fromMap).toList();
+    return rows
+        .where(isSupportedModalityRow)
+        .map(Championship.fromMap)
+        .toList();
   }
 
   Future<Championship> fetch(String id) async {
@@ -29,6 +33,9 @@ class ChampionshipRepository {
         .select()
         .eq('id', id)
         .single();
+    // Campeonato de um esporte que esta versão não tem (por um link ou uma
+    // notificação): a tela mostra o erro pedindo para atualizar.
+    if (!isSupportedModalityRow(row)) throw const UnsupportedSportException();
     return Championship.fromMap(row);
   }
 

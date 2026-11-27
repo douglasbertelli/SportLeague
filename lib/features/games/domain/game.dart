@@ -127,7 +127,7 @@ class Game {
       opponent: map['opponent'] as String,
       scheduledAt: DateTime.parse(map['scheduled_at'] as String).toLocal(),
       modality: switch (map['modality']) {
-        final String name => Modality.fromName(name),
+        final String name => Modality.tryFromName(name),
         _ => null,
       },
       opponentTeamId: map['opponent_team_id'] as String?,

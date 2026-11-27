@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sports/domain/sport_rules.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
@@ -111,7 +112,8 @@ class InviteRepository {
     ]);
     return [
       for (final row in [...players, ...coaches])
-        if (row['team'] case final Map<String, dynamic> team)
+        if (row['team'] case final Map<String, dynamic> team
+            when isSupportedSportRow(team))
           Team.fromMap(team),
     ];
   }
