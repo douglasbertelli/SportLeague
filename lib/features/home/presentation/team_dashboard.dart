@@ -18,6 +18,7 @@ import '../../games/presentation/game_card.dart';
 import '../../games/presentation/game_sheet_page.dart';
 import '../../games/presentation/lineup_page.dart';
 import '../../games/presentation/live_events.dart';
+import '../../games/presentation/sets_sheet.dart';
 import '../../games/presentation/new_friendly.dart';
 import '../../games/presentation/presence.dart';
 import '../../profile/presentation/my_numbers_section.dart';
@@ -587,6 +588,9 @@ class _LiveGameBody extends StatelessWidget {
     final colors = theme.colorScheme;
     final phase = game.clock?.phase;
     final finished = phase == MatchPhase.finished;
+    // Vôlei: placar em sets, sem relógio nem lances ao vivo.
+    final rules = game.rules;
+    final hasSets = rules.sets != null;
     final place = switch (game.venue) {
       final venue? => venue.name,
       null => game.location,
@@ -620,7 +624,14 @@ class _LiveGameBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        _LiveScore(team: team, game: game),
+        if (hasSets)
+          LiveSetsScore(
+            team: team,
+            game: game,
+            canEdit: canManage && game.isHostedBy(team.id!),
+          )
+        else
+          _LiveScore(team: team, game: game),
         // O local, centralizado embaixo do placar.
         if (place != null) ...[
           const SizedBox(height: 12),
@@ -657,8 +668,15 @@ class _LiveGameBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              MatchClockPanel(game: game, viewerTeamId: team.id!, clock: clock),
+              if (rules.hasClock)
+                MatchClockPanel(
+                  game: game,
+                  viewerTeamId: team.id!,
+                  clock: clock,
+                ),
+              // A contestação é em gols; no vôlei, ainda não.
               if (canManage &&
+                  !hasSets &&
                   finished &&
                   !game.isHostedBy(team.id!) &&
                   game.hasScore) ...[
@@ -670,16 +688,19 @@ class _LiveGameBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        // Últimos lances (todos veem, inclusive o jogador).
-        Text('Lances', style: theme.textTheme.titleSmall),
-        LiveTimeline(
-          game: game,
-          viewerTeamId: team.id!,
-          limit: 4,
-          onSeeAll: () =>
-              openGameSheet(context, game: game, viewerTeamId: team.id!),
-        ),
+        // Últimos lances (todos veem, inclusive o jogador); o vôlei não tem
+        // lances ao vivo.
+        if (rules.eventKinds.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Lances', style: theme.textTheme.titleSmall),
+          LiveTimeline(
+            game: game,
+            viewerTeamId: team.id!,
+            limit: 4,
+            onSeeAll: () =>
+                openGameSheet(context, game: game, viewerTeamId: team.id!),
+          ),
+        ],
       ],
     );
   }

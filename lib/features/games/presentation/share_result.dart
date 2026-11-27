@@ -54,6 +54,10 @@ Future<void> shareGameResult(
   final (mine, theirs) = game.scoreFor(viewerTeamId)!;
   final text =
       '${myTeam?.name ?? 'Meu time'} $mine × $theirs $opponent '
+      '${switch (game.setsLabelFor(viewerTeamId)) {
+        final sets? => '($sets) ',
+        null => '',
+      }}'
       '· ${formatGameDay(game.scheduledAt)}';
 
   await showAppSheet<void>(
@@ -226,6 +230,17 @@ class GameResultCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Vôlei: o placar de cada set.
+              if (game.setsLabelFor(viewerTeamId) case final sets?) ...[
+                const SizedBox(height: 4),
+                Text(
+                  sets,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(

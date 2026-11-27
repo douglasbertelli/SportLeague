@@ -165,6 +165,21 @@ devolve também os sets e pontos pró/contra.
   em sets. Sem relógio nem apito.
 - Imagem compartilhada do resultado e banner com os sets.
 
+> **Como ficou:** o placar ao vivo é **set a set** (decisão: o ponto a ponto
+> fica para depois de liberar o vôlei). Quem marcou lança cada set quando ele
+> termina; `SetRules.progress` (app) e `setsProgress` (site) aceitam a
+> partida em andamento, e o placar depois do jogo exige a partida terminada.
+> No app: `Game.bestOf` / `setScores` (com `setScoresFor` e `setsLabelFor`
+> na visão de quem olha), `GameRepository.setSets`, a tela
+> `sets_sheet.dart` (lançar sets e o placar ao vivo `LiveSetsScore`), o card
+> "Jogo em andamento" sem relógio nem lances no vôlei, "Sets: 25-20, …" no
+> card e na imagem compartilhada, e "Partida: melhor de 3 / 5" no
+> formulário do amistoso. No site: `SetsForm`, a ação `setSets`, os sets no
+> card e na página do jogo, o melhor de no formulário e as mensagens dos
+> erros de sets. **A contestação do placar fica desligada no vôlei** (ela é
+> em gols; aceitar uma contestação gravaria o placar sem sets, que o banco
+> recusa) e o banner continua sem os sets: os dois ficam para depois.
+
 ### Etapa 5 — Campeonato do vôlei (app e site)
 
 - Criar campeonato de vôlei com melhor de 3 ou de 5.

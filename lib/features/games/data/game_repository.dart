@@ -51,6 +51,18 @@ class GameRepository {
       .update({'team_score': teamScore, 'opponent_score': opponentScore})
       .eq('id', gameId);
 
+  /// Vôlei: os sets lançados por quem marcou, na visão dele (time,
+  /// adversário). O banco confere os sets e grava o placar em sets
+  /// vencidos; lista vazia ou nula tira o placar.
+  Future<void> setSets(String gameId, List<(int, int)>? sets) => _client
+      .from('games')
+      .update(
+        sets == null || sets.isEmpty
+            ? {'set_scores': null, 'team_score': null, 'opponent_score': null}
+            : {'set_scores': setScoresToJson(sets)},
+      )
+      .eq('id', gameId);
+
   /// Relógio da partida, com a hora do servidor (só quem marcou).
   /// [periodMinutes] é a duração de cada tempo, ao iniciar.
   Future<void> clock(String gameId, ClockAction action, {int? periodMinutes}) =>
