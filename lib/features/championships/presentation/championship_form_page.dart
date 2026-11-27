@@ -9,6 +9,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../plans/presentation/plan_gate.dart';
 import '../../sports/domain/sport_rules.dart';
+import '../../sports/presentation/sport_picker.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../data/championship_repository.dart';
@@ -162,18 +163,34 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                   : null,
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<Modality>(
-              initialValue: _modality,
-              decoration: const InputDecoration(labelText: 'Modalidade'),
-              items: [
-                // As dos esportes liberados (e a do campeonato, se for outra).
-                for (final modality in {...availableModalities, _modality})
-                  DropdownMenuItem(
-                    value: modality,
-                    child: Text(modality.fullLabel),
+            // Esporte em cards (só ao criar: depois, os times inscritos são
+            // do esporte do campeonato) e, embaixo, as modalidades dele.
+            if (widget.championship == null && supportedSports.length > 1) ...[
+              Text('Esporte', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SportPicker(
+                selected: _modality.sport,
+                onChanged: (sport) => setState(() {
+                  if (_modality.sport == sport) return;
+                  _modality = Modality.of(sport).first;
+                  _bestOf = null;
+                }),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text('Modalidade', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final modality in Modality.of(_modality.sport))
+                  ChoiceChip(
+                    label: Text(modality.label),
+                    selected: modality == _modality,
+                    onSelected: (_) => setState(() => _modality = modality),
                   ),
               ],
-              onChanged: (value) => setState(() => _modality = value!),
             ),
             // Vôlei: melhor de 3 ou de 5 para todos os jogos.
             if (_rules.sets case final sets?) ...[
@@ -207,7 +224,13 @@ class _ChampionshipFormPageState extends ConsumerState<ChampionshipFormPage> {
                       child: RadioListTile<ChampionshipFormat>(
                         value: format,
                         title: Text(format.label),
-                        subtitle: Text(format.description),
+                        subtitle: Text(
+                          // Sem empate no vôlei: nada de pênaltis.
+                          _rules.sets != null &&
+                                  format == ChampionshipFormat.knockout
+                              ? 'Jogos eliminatórios até a final'
+                              : format.description,
+                        ),
                       ),
                     ),
                 ],

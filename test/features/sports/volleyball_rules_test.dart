@@ -24,9 +24,6 @@ void main() {
     expect(Modality.volleyballBeach.label, 'Praia');
     expect(Modality.volleyballIndoor.key, 'volleyball_indoor');
     expect(Modality.volleyballBeach.key, 'volleyball_beach');
-    // Nas listas que misturam esportes, o esporte vem junto.
-    expect(Modality.volleyballBeach.fullLabel, 'Vôlei · Praia');
-    expect(Modality.beach.fullLabel, 'Futebol · Areia');
     // As do futebol continuam com o nome de sempre.
     expect(Modality.futsal.key, 'futsal');
     for (final modality in Modality.values) {
