@@ -71,6 +71,21 @@ String friendlyErrorMessage(Object error) {
     if (error.message.contains('team_sport_locked')) {
       return 'O esporte do time não pode ser trocado depois de criado.';
     }
+    // Placar em sets do vôlei (apply_game_sets, apply_match_sets).
+    if (error.message.contains('sets_invalid')) {
+      return 'Confira o placar dos sets: cada set precisa terminar com 2 '
+          'pontos de diferença, e o último é o tie-break.';
+    }
+    if (error.message.contains('sets_required')) {
+      return 'No vôlei, lance o placar de cada set.';
+    }
+    if (error.message.contains('sets_no_penalties')) {
+      return 'O vôlei não tem pênaltis.';
+    }
+    if (error.message.contains('sets_not_for_sport') ||
+        error.message.contains('sets_not_for_modality')) {
+      return 'Essa modalidade não tem placar em sets.';
+    }
     if (error.message.contains('stat_unknown') ||
         error.message.contains('stat_invalid')) {
       return 'Algum número da súmula não vale para este esporte. '

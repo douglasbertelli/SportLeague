@@ -118,6 +118,22 @@ vôlei aparece para o usuário.
   - `advance_knockout` continua pelo placar (sets), sem pênaltis no vôlei.
 - Testada num bloco desfeito no banco, como na Fase 1.
 
+> **Como ficou** (`20261127040000_volleyball_modalities.sql` e
+> `20261127050000_volleyball_sets.sql`): as regras de sets ficam na tabela
+> `modality_set_rules` (pontos por set, tie-break, diferença mínima e melhor
+> de padrão por modalidade), lida por `private.sets_result`, que confere os
+> sets e devolve os vencidos de cada lado; a partida pode estar em andamento
+> (ninguém venceu ainda), mas cada set lançado precisa estar terminado. Os
+> gatilhos `games_apply_sets` (roda antes de `games_check_score`, que
+> continua conferindo o horário do placar), `championship_matches_apply_sets`
+> e `championships_apply_best_of` gravam o placar pelos sets, põem o melhor
+> de padrão e recusam sets no futebol, placar sem sets e pênaltis no vôlei.
+> O time do jogo de campeonato pode lançar `set_scores` (lista de colunas
+> editáveis de `check_championship_game`), e a sincronia nos dois sentidos
+> leva os sets, invertendo quando o time do jogo é o visitante
+> (`private.flip_sets`). A migration A precisou ser aplicada antes do teste
+> da B (valores novos de enum não podem ser usados na mesma transação).
+
 ### Etapa 3 — Totais pela súmula genérica (banco)
 
 As funções de totais passam a devolver também `stats` (soma por chave),
