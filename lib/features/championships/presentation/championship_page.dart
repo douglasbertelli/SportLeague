@@ -602,7 +602,10 @@ class _ChampionshipPageState extends ConsumerState<ChampionshipPage> {
                       _startKnockout(championship, teams, matches),
                   onFinish: _finishLeague,
                 ),
-                ChampionshipStatsTab(championshipId: _id),
+                ChampionshipStatsTab(
+                  championshipId: _id,
+                  rules: championship.rules,
+                ),
                 _TeamsTab(
                   championship: championship,
                   teams: teams,

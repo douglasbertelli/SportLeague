@@ -210,6 +210,22 @@ devolve também os sets e pontos pró/contra.
 - A aba de estatísticas do campeonato e as páginas públicas, que ficaram
   de fora da Fase 1, passam a ler as regras também no futebol.
 
+> **Como ficou:** a linha da súmula e os totais guardam as estatísticas que
+> não são colunas do futebol (`extra` no app, `stats` no site) e a súmula
+> grava só as chaves do esporte do jogo (o banco recusa as de outro). Os
+> quadros de números usam as regras do esporte do time: perfil do atleta,
+> Meus números (no Geral, as do esporte dos times, se forem todos do mesmo)
+> e a lista de atletas do site, que ganhou a tabela pelas regras. A aba de
+> estatísticas do campeonato (app e site) tem um ranking por estatística do
+> esporte (no futebol, Artilharia e Assistências, como antes; no vôlei,
+> Pontuadores, Aces e Bloqueios), e cartões e fair play só aparecem nos
+> esportes com cartão; o "melhor ataque" conta sets no vôlei. A página
+> pública do campeonato usa o primeiro ranking do esporte. Mudou um texto no
+> futebol: a aba vazia do app diz "O ranking vem da súmula dos jogos." **O
+> perfil público do jogador (`/p`) continua do futebol**: ele soma times que
+> podem ser de esportes diferentes e pede um desenho próprio (fica para
+> depois).
+
 ### Etapa 7 — Liberar o vôlei
 
 - `supportedSports` ganha o vôlei (app e site). O cadastro do time no site
