@@ -337,6 +337,7 @@ class ChampionshipShareCard extends StatelessWidget {
           if (t.status == EntryStatus.accepted) t.id,
       ];
       body = _MiniTable(
+        differenceLabel: championship.rules.sets != null ? 'SS' : 'SG',
         rows: standings(
           ids,
           matches,
@@ -357,6 +358,7 @@ class ChampionshipShareCard extends StatelessWidget {
             SizedBox(
               width: labels.length == 1 ? 312 : 150,
               child: _MiniTable(
+                differenceLabel: championship.rules.sets != null ? 'SS' : 'SG',
                 title: 'Grupo $label',
                 compact: true,
                 rows: standings(
@@ -485,6 +487,7 @@ class _MiniTable extends StatelessWidget {
     required this.teams,
     this.title,
     this.compact = false,
+    this.differenceLabel = 'SG',
   });
 
   final List<StandingRow> rows;
@@ -493,6 +496,9 @@ class _MiniTable extends StatelessWidget {
 
   /// Nos grupos lado a lado: só a posição, o time e os pontos.
   final bool compact;
+
+  /// Sigla do saldo: SG (gols) ou SS (sets, no vôlei).
+  final String differenceLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -506,7 +512,7 @@ class _MiniTable extends StatelessWidget {
       width: 28,
       child: Text(text, style: style, textAlign: TextAlign.center),
     );
-    final columns = compact ? ['P'] : ['P', 'J', 'V', 'SG'];
+    final columns = compact ? ['P'] : ['P', 'J', 'V', differenceLabel];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -5,6 +5,7 @@ import '../../sports/domain/sport_rules.dart';
 import '../../../core/media/picked_image.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../games/data/opponent_repository.dart';
+import '../../games/domain/game.dart';
 import '../domain/championship.dart';
 import '../domain/championship_stats.dart';
 import '../domain/championship_rules.dart';
@@ -168,6 +169,17 @@ class ChampionshipRepository {
         'home_penalties': homePenalties,
         'away_penalties': awayPenalties,
       })
+      .eq('id', matchId);
+
+  /// Vôlei: os sets do jogo (mandante, visitante). O banco confere e grava o
+  /// placar em sets vencidos; lista vazia ou nula apaga o placar.
+  Future<void> setSets(String matchId, List<(int, int)>? sets) => _client
+      .from('championship_matches')
+      .update(
+        sets == null || sets.isEmpty
+            ? {'set_scores': null, 'home_score': null, 'away_score': null}
+            : {'set_scores': setScoresToJson(sets)},
+      )
       .eq('id', matchId);
 
   /// Põe (ou tira, com nulo) um time num lado do jogo do mata-mata.

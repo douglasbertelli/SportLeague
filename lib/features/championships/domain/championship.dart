@@ -1,3 +1,4 @@
+import '../../games/domain/game.dart';
 import '../../teams/domain/team.dart';
 
 /// Como o campeonato é disputado (escolhido por quem cria).
@@ -88,6 +89,7 @@ class Championship {
     this.redGames = 1,
     this.signupEnabled = false,
     this.signupCode,
+    this.bestOf,
   });
 
   factory Championship.fromMap(Map<String, dynamic> map) => Championship(
@@ -114,6 +116,7 @@ class Championship {
     redGames: map['red_games'] as int? ?? 1,
     signupEnabled: map['signup_enabled'] as bool? ?? false,
     signupCode: map['signup_code'] as String?,
+    bestOf: map['best_of'] as int?,
   );
 
   final String? id;
@@ -151,6 +154,9 @@ class Championship {
   /// Muda só pelo `setSignup` do repositório.
   final bool signupEnabled;
   final String? signupCode;
+
+  /// Vôlei: melhor de 3 ou de 5 (o banco põe o padrão da modalidade).
+  final int? bestOf;
 
   /// "3 amarelos = 1 jogo · vermelho = 1 jogo" (ou "sem suspensão").
   String get suspensionRule {
@@ -203,6 +209,8 @@ class Championship {
     'status': status.name,
     'yellow_limit': yellowLimit,
     'red_games': redGames,
+    // Só o vôlei tem melhor de; no futebol fica nulo.
+    'best_of': bestOf,
   };
 
   Championship copyWith({
@@ -231,6 +239,7 @@ class Championship {
     redGames: redGames,
     signupEnabled: signupEnabled ?? this.signupEnabled,
     signupCode: signupCode ?? this.signupCode,
+    bestOf: bestOf,
   );
 }
 
@@ -348,6 +357,7 @@ class ChampionshipMatch {
     this.awayScore,
     this.homePenalties,
     this.awayPenalties,
+    this.setScores,
   });
 
   factory ChampionshipMatch.fromMap(Map<String, dynamic> map) =>
@@ -370,6 +380,7 @@ class ChampionshipMatch {
         awayScore: map['away_score'] as int?,
         homePenalties: map['home_penalties'] as int?,
         awayPenalties: map['away_penalties'] as int?,
+        setScores: parseSetScores(map['set_scores']),
       );
 
   final String id;
@@ -389,6 +400,18 @@ class ChampionshipMatch {
   final int? awayScore;
   final int? homePenalties;
   final int? awayPenalties;
+
+  /// Vôlei: o placar de cada set (mandante, visitante); [homeScore] e
+  /// [awayScore] são os sets vencidos.
+  final List<(int, int)>? setScores;
+
+  /// Pontos de cada lado dentro dos sets (vôlei; 0 sem sets).
+  int get homeSetPoints =>
+      [for (final (a, _) in setScores ?? const <(int, int)>[]) a]
+          .fold(0, (s, p) => s + p);
+  int get awaySetPoints =>
+      [for (final (_, b) in setScores ?? const <(int, int)>[]) b]
+          .fold(0, (s, p) => s + p);
 
   bool get hasScore => homeScore != null && awayScore != null;
   bool get hasTeams => homeId != null && awayId != null;
