@@ -8,9 +8,9 @@ void main() {
   const rules = volleyballRules;
   final sets = volleyballRules.sets!;
 
-  test('ainda não liberado', () {
-    expect(supportedSports, isNot(contains(Sport.volleyball)));
-    expect(availableModalities, isNot(contains(Modality.volleyballIndoor)));
+  test('liberado (build +8)', () {
+    expect(supportedSports, contains(Sport.volleyball));
+    expect(availableModalities, contains(Modality.volleyballIndoor));
     expect(rulesFor(Sport.volleyball), same(volleyballRules));
     expect(rulesForModality(Modality.volleyballBeach), same(volleyballRules));
   });

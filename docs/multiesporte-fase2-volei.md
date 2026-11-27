@@ -235,6 +235,18 @@ devolve também os sets e pontos pró/contra.
   Termos, se citarem só o futebol.
 - Roteiro manual completo com dois times de vôlei e um de futebol.
 
+> **Como ficou:** o app vai para a versão `0.1.0+8`, com `supportedSports =
+> [football, volleyball]`; a aba Jogos usa a bola de vôlei quando o time ativo
+> é de vôlei. No site, `supportedSports` também ganha o vôlei e o cadastro do
+> time ganha a escolha do esporte (só ao criar; o banco não deixa trocar), e
+> a ação filtra as modalidades pelo esporte escolhido. A ficha do Google Play
+> e o site de apresentação citam o vôlei; os Termos já falavam em "futebol e
+> outras modalidades". Os testes que diziam "vôlei ainda não liberado" mudaram
+> para "liberado". **Ordem da liberação:** (1) publicar o +8 nas lojas;
+> (2) `update public.app_versions set min_build = 8 where platform =
+> 'android';` (3) só então mergear o site, que vai ao ar na hora — antes
+> disso, um app +7 convidado para um campeonato de vôlei quebraria.
+
 ## Verificação de cada PR
 
 - `flutter analyze`, `flutter test`, `npm test`, `tsc`, `lint` e

@@ -166,11 +166,12 @@ void main() {
 
   group('esporte de time, jogo e campeonato', () {
     test('listas de escolha só com as modalidades dos esportes liberados', () {
-      expect(availableModalities, _footballModalities);
+      // Futebol e vôlei (liberado no build +8), nessa ordem.
+      expect(availableModalities, Modality.values);
     });
 
-    test('o vôlei tem regras, mas só o futebol está liberado', () {
-      expect(supportedSports, [Sport.football]);
+    test('futebol e vôlei liberados; o basquete ainda sem regras', () {
+      expect(supportedSports, [Sport.football, Sport.volleyball]);
       expect(rulesFor(Sport.football), same(footballRules));
       expect(rulesFor(Sport.volleyball), same(volleyballRules));
       expect(() => rulesFor(Sport.basketball), throwsUnsupportedError);
