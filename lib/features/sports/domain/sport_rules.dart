@@ -28,6 +28,8 @@ class SportRules {
     required this.eventKinds,
     required this.supportsFieldLineup,
     required this.usesDominantFoot,
+    this.sets,
+    this.positionsByModality = const {},
   });
 
   final Sport sport;
@@ -84,6 +86,17 @@ class SportRules {
 
   /// Se o perfil do jogador pede o pé dominante.
   final bool usesDominantFoot;
+
+  /// Placar em sets (vôlei); nulo quando o placar é um número só (futebol).
+  final SetRules? sets;
+
+  /// Posições de uma modalidade, quando diferem das do esporte (na praia não
+  /// há levantador nem líbero).
+  final Map<Modality, List<String>> positionsByModality;
+
+  /// Posições oferecidas para um atleta da [modality].
+  List<String> positionsFor(Modality? modality) =>
+      positionsByModality[modality] ?? positions;
 
   /// Modalidades do esporte, na ordem do enum.
   List<Modality> get modalities => Modality.of(sport);
@@ -231,7 +244,19 @@ class RankingDef {
 }
 
 /// Critério de desempate da classificação, em ordem.
-enum StandingsTiebreaker { points, wins, scoreDifference, scoreFor }
+enum StandingsTiebreaker {
+  points,
+  wins,
+
+  /// Saldo do placar: gols no futebol, sets no vôlei.
+  scoreDifference,
+
+  /// Placar marcado: gols no futebol, sets no vôlei.
+  scoreFor,
+
+  /// Saldo de pontos dentro dos sets (vôlei).
+  pointDifference,
+}
 
 /// Pontuação e desempate da classificação.
 class StandingsRules {
@@ -239,18 +264,111 @@ class StandingsRules {
     required this.win,
     required this.draw,
     required this.loss,
+    int? closeWin,
+    int? closeLoss,
     required this.tiebreakers,
-  });
+  }) : closeWin = closeWin ?? win,
+       closeLoss = closeLoss ?? loss;
 
   final int win;
   final int draw;
   final int loss;
 
+  /// Vitória e derrota apertadas (vôlei: decididas no tie-break, 3x2 ou
+  /// 2x1). Sem valor, valem como as outras.
+  final int closeWin;
+  final int closeLoss;
+
   /// Depois deles, vale o nome do time.
   final List<StandingsTiebreaker> tiebreakers;
 
-  int pointsFor({required int wins, required int draws, required int losses}) =>
-      wins * win + draws * draw + losses * loss;
+  /// Pontos de [wins] vitórias (das quais [closeWins] apertadas), [draws]
+  /// empates e [losses] derrotas (das quais [closeLosses] apertadas).
+  int pointsFor({
+    required int wins,
+    required int draws,
+    required int losses,
+    int closeWins = 0,
+    int closeLosses = 0,
+  }) =>
+      (wins - closeWins) * win +
+      closeWins * closeWin +
+      draws * draw +
+      (losses - closeLosses) * loss +
+      closeLosses * closeLoss;
+}
+
+/// Placar em sets (vôlei): melhor de 3 ou de 5, sets até [pointsPerSet]
+/// (pela modalidade) e o último, o tie-break, até [tieBreakPoints], sempre
+/// com [minLead] pontos de diferença.
+class SetRules {
+  const SetRules({
+    required this.bestOfOptions,
+    required this.defaultBestOf,
+    required this.pointsPerSet,
+    required this.tieBreakPoints,
+    this.minLead = 2,
+  });
+
+  /// Melhor de quantos sets dá para escolher (3 ou 5).
+  final List<int> bestOfOptions;
+
+  /// Melhor de sugerido por modalidade.
+  final Map<Modality, int> defaultBestOf;
+
+  /// Pontos de cada set (menos o tie-break), por modalidade.
+  final Map<Modality, int> pointsPerSet;
+
+  final int tieBreakPoints;
+  final int minLead;
+
+  /// Sets para vencer a partida: 2 na melhor de 3, 3 na melhor de 5.
+  int setsToWin(int bestOf) => bestOf ~/ 2 + 1;
+
+  /// Pontos do set [number] (1, 2…): o último possível é o tie-break.
+  int targetFor(Modality? modality, int number, int bestOf) =>
+      number == bestOf ? tieBreakPoints : pointsPerSet[modality] ?? 25;
+
+  /// Se o set [a] x [b] terminou valendo: alguém chegou ao [target] com
+  /// [minLead] de diferença; passando do [target], só com a diferença
+  /// exata (26x24, não 27x24).
+  bool isFinishedSet(int a, int b, int target) {
+    final high = a > b ? a : b;
+    final lead = (a - b).abs();
+    if (a < 0 || b < 0 || high < target || lead < minLead) return false;
+    return high == target || lead == minLead;
+  }
+
+  /// Confere a partida em [sets] (placar de cada set, do time e do
+  /// adversário, ou do mandante e do visitante) e devolve os sets vencidos
+  /// de cada lado; nulo se não vale (set que não terminou, sets depois de
+  /// alguém já ter vencido, ou partida sem vencedor).
+  ({int a, int b})? matchResult(
+    List<(int, int)> sets, {
+    required Modality? modality,
+    required int bestOf,
+  }) {
+    if (!bestOfOptions.contains(bestOf)) return null;
+    final toWin = setsToWin(bestOf);
+    var (wonA, wonB) = (0, 0);
+    for (final (index, (a, b)) in sets.indexed) {
+      if (wonA == toWin || wonB == toWin) return null;
+      if (!isFinishedSet(a, b, targetFor(modality, index + 1, bestOf))) {
+        return null;
+      }
+      if (a > b) {
+        wonA++;
+      } else {
+        wonB++;
+      }
+    }
+    if (wonA != toWin && wonB != toWin) return null;
+    return (a: wonA, b: wonB);
+  }
+
+  /// Se o resultado foi apertado (decidido no tie-break: 3x2, 2x1).
+  bool isClose(({int a, int b}) result, int bestOf) =>
+      (result.a < result.b ? result.a : result.b) == setsToWin(bestOf) - 1;
 }
 
 /// Classificação do futebol: 3 por vitória, 1 por empate; desempate por
@@ -347,7 +465,95 @@ const footballRules = SportRules(
   usesDominantFoot: true,
 );
 
-/// Esportes que já têm regras (os outros ainda não aparecem no app).
+/// Classificação do vôlei (padrão CBV/FIVB): vitória por 3x0/3x1 (ou 2x0)
+/// vale 3; no tie-break (3x2, 2x1), 2 para quem vence e 1 para quem perde.
+/// Desempate por vitórias, saldo de sets e saldo de pontos.
+const volleyballStandings = StandingsRules(
+  win: 3,
+  draw: 0,
+  loss: 0,
+  closeWin: 2,
+  closeLoss: 1,
+  tiebreakers: [
+    StandingsTiebreaker.points,
+    StandingsTiebreaker.wins,
+    StandingsTiebreaker.scoreDifference,
+    StandingsTiebreaker.pointDifference,
+  ],
+);
+
+/// Vôlei (Fase 2, docs/multiesporte-fase2-volei.md). Existe no código, mas só
+/// aparece quando entrar em [supportedSports].
+const volleyballRules = SportRules(
+  sport: Sport.volleyball,
+  positions: ['Levantador', 'Oposto', 'Ponteiro', 'Central', 'Líbero'],
+  positionsByModality: {
+    Modality.volleyballBeach: ['Bloqueador', 'Defensor'],
+  },
+  periods: PeriodRules(
+    names: ['1º set', '2º set', '3º set', '4º set', '5º set'],
+    intervalName: 'Intervalo',
+    hasAddedTime: false,
+  ),
+  // Sem relógio: o placar ao vivo é por set.
+  periodMinutes: {},
+  fallbackPeriodMinutes: 0,
+  starters: {Modality.volleyballIndoor: 6, Modality.volleyballBeach: 2},
+  fallbackStarters: 6,
+  hasClock: false,
+  allowsDraw: false,
+  knockoutTiebreak: KnockoutTiebreak.none,
+  scoreUnit: ScoreUnit('set', 'sets'),
+  scoringStatKey: 'points',
+  stats: [
+    StatDef(
+      key: 'points',
+      label: 'Pontos',
+      shortLabel: 'Pontos',
+      totalsLabel: 'Pontos',
+      unit: ScoreUnit('ponto', 'pontos'),
+      emphasis: StatEmphasis.primary,
+    ),
+    StatDef(
+      key: 'aces',
+      label: 'Aces',
+      shortLabel: 'Aces',
+      totalsLabel: 'Aces',
+      unit: ScoreUnit('ace', 'aces'),
+    ),
+    StatDef(
+      key: 'blocks',
+      label: 'Bloqueios',
+      shortLabel: 'Bloq.',
+      totalsLabel: 'Bloq.',
+      totalsTooltip: 'Bloqueios',
+      unit: ScoreUnit('bloqueio', 'bloqueios'),
+    ),
+  ],
+  rankings: [
+    RankingDef(
+      title: 'Pontuadores',
+      statKey: 'points',
+      unit: 'pts',
+      emptyMessage: 'Nenhum ponto lançado nas súmulas ainda.',
+    ),
+    RankingDef(title: 'Aces', statKey: 'aces', unit: 'aces'),
+    RankingDef(title: 'Bloqueios', statKey: 'blocks', unit: 'bloq.'),
+  ],
+  standings: volleyballStandings,
+  eventKinds: [],
+  supportsFieldLineup: false,
+  usesDominantFoot: false,
+  sets: SetRules(
+    bestOfOptions: [3, 5],
+    defaultBestOf: {Modality.volleyballIndoor: 5, Modality.volleyballBeach: 3},
+    pointsPerSet: {Modality.volleyballIndoor: 25, Modality.volleyballBeach: 21},
+    tieBreakPoints: 15,
+  ),
+);
+
+/// Esportes liberados nesta versão (os outros ainda não aparecem no app).
+/// Liberar o vôlei é a Etapa 7 da Fase 2.
 const supportedSports = [Sport.football];
 
 /// Modalidades dos esportes liberados, para as listas de escolha (campeonato,
@@ -381,10 +587,12 @@ class UnsupportedSportException implements Exception {
       'Atualize o app na loja.';
 }
 
-/// Regras do [sport]. Só o futebol existe por enquanto.
+/// Regras do [sport] (ter regras não é estar liberado: ver
+/// [supportedSports]). O basquete ainda não tem.
 SportRules rulesFor(Sport sport) => switch (sport) {
   Sport.football => footballRules,
-  Sport.volleyball || Sport.basketball => throw UnsupportedError(
+  Sport.volleyball => volleyballRules,
+  Sport.basketball => throw UnsupportedError(
     '${sport.label} ainda não tem regras',
   ),
 };

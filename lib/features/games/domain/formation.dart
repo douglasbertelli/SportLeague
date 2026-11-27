@@ -43,6 +43,10 @@ PitchKind pitchFor(Modality? modality) => switch (modality) {
   Modality.futsal ||
   Modality.beach ||
   Modality.challenge ||
+  // O vôlei não tem escalação no campo (supportsFieldLineup); fica com a
+  // quadra só para o switch ser completo.
+  Modality.volleyballIndoor ||
+  Modality.volleyballBeach ||
   null => PitchKind.court,
 };
 

@@ -439,6 +439,9 @@ List<StandingRow> standings(
         StandingsTiebreaker.wins => row.wins,
         StandingsTiebreaker.scoreDifference => row.goalDifference,
         StandingsTiebreaker.scoreFor => row.goalsFor,
+        // Pontos dentro dos sets: a classificação do vôlei entra na Etapa 5
+        // da Fase 2 (precisa do placar de cada set).
+        StandingsTiebreaker.pointDifference => 0,
       };
   return rows.values.toList()..sort((a, b) {
     for (final tiebreaker in rules.tiebreakers) {

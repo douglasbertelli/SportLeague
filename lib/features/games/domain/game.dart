@@ -292,7 +292,7 @@ class Game {
       'opponent': opponent.trim(),
       'opponent_team_id': opponentTeamId,
       'opponent_guest_id': opponentGuestId,
-      'modality': modality?.name,
+      'modality': modality?.key,
       'host_is_home': hostIsHome,
       'scheduled_at': scheduledAt.toUtc().toIso8601String(),
       'venue_id': venueId,

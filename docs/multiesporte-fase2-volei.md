@@ -84,6 +84,22 @@ vôlei aparece para o usuário.
 - Testes das regras: quem venceu cada set, quem venceu a partida, set
   inválido (25x24, 26x25 sem 2 de diferença) e pontuação 3/2/1/0.
 
+> **Como ficou:** no app, `Modality.volleyballIndoor` / `volleyballBeach`
+> com a chave do banco (`Modality.key`: `volleyball_indoor`,
+> `volleyball_beach`; as do futebol continuam com o nome), e tudo que grava
+> ou consulta modalidade passou a usar `key`. `SetRules` (`setsToWin`,
+> `targetFor`, `isFinishedSet`, `matchResult`, `isClose`),
+> `StandingsRules.closeWin` / `closeLoss` (no futebol, iguais a vitória e
+> derrota) e o desempate `pointDifference` (por enquanto vale 0 na
+> classificação; entra de verdade na Etapa 5). `positionsFor(modality)`:
+> na praia, Bloqueador e Defensor. `rulesFor(Sport.volleyball)` devolve
+> `volleyballRules`, mas `supportedSports` continua só com o futebol. O
+> título da súmula passou a usar a unidade da estatística que soma no placar
+> ("pontos"), e não a do placar ("sets"). No site, o mesmo em `rules.ts`
+> (`matchResult`, `setTarget`, `isFinishedSet`, `isCloseResult`,
+> `positionsFor`). Um set no tie-break que vai para a vantagem (25x23)
+> vale: passou do alvo com a diferença exata de 2.
+
 ### Etapa 2 — Banco: modalidades, súmula e sets do vôlei (aditiva)
 
 - Migration A: `team_modality` ganha `volleyball_indoor` e

@@ -16,7 +16,12 @@ void main() {
       expect(Sport.tryFromName('curling'), isNull);
       expect(Sport.tryFromName(null), isNull);
       expect(Modality.tryFromName('futsal'), Modality.futsal);
-      expect(Modality.tryFromName('volleyball_indoor'), isNull);
+      expect(Modality.tryFromName('curling_ice'), isNull);
+      // As do vôlei são conhecidas pela chave do banco.
+      expect(
+        Modality.tryFromName('volleyball_indoor'),
+        Modality.volleyballIndoor,
+      );
       expect(Modality.tryFromName(null), isNull);
     });
 
@@ -38,7 +43,7 @@ void main() {
         'team_id': 't',
         'opponent': 'Rival',
         'scheduled_at': '2026-11-26T20:00:00Z',
-        'modality': 'volleyball_beach',
+        'modality': 'curling_ice',
       });
       expect(game.modality, isNull);
     });
@@ -48,7 +53,7 @@ void main() {
         'id': 'c',
         'owner_id': 'o',
         'name': 'Copa',
-        'modality': 'volleyball_indoor',
+        'modality': 'curling_ice',
         'format': 'league',
         'status': 'draft',
       });
@@ -57,7 +62,7 @@ void main() {
         'id': 'x',
         'owner_id': 'o',
         'name': 'Fictício',
-        'modality': 'volleyball_indoor',
+        'modality': 'curling_ice',
       });
       expect(guest.name, 'Fictício');
     });
@@ -73,8 +78,8 @@ void main() {
     });
 
     test('campeonatos e fictícios pela modalidade', () {
-      for (final modality in Modality.values) {
-        expect(isSupportedModalityRow({'modality': modality.name}), isTrue);
+      for (final modality in availableModalities) {
+        expect(isSupportedModalityRow({'modality': modality.key}), isTrue);
       }
       expect(
         isSupportedModalityRow({'modality': 'volleyball_indoor'}),

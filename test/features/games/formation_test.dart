@@ -5,7 +5,8 @@ import 'package:sport_league/features/teams/domain/team.dart';
 
 void main() {
   test('cada formação tem os titulares da modalidade e o goleiro', () {
-    for (final modality in Modality.values) {
+    // Só o futebol tem a escalação no campo (supportsFieldLineup).
+    for (final modality in Modality.of(Sport.football)) {
       for (final formation in formationsFor(modality)) {
         expect(
           formation.spots,
