@@ -98,6 +98,8 @@ class Game {
     this.location,
     this.teamScore,
     this.opponentScore,
+    this.bestOf,
+    this.setScores,
     this.clock,
     this.championship,
   });
@@ -140,6 +142,8 @@ class Game {
       location: map['location'] as String?,
       teamScore: map['team_score'] as int?,
       opponentScore: map['opponent_score'] as int?,
+      bestOf: map['best_of'] as int?,
+      setScores: parseSetScores(map['set_scores']),
       clock: MatchClock.fromMap(map),
       championship: GameChampionship.fromMap(map['championship_match']),
     );
@@ -197,6 +201,13 @@ class Game {
   final String? location;
   final int? teamScore;
   final int? opponentScore;
+
+  /// Vôlei: melhor de 3 ou de 5 (o banco põe o padrão da modalidade).
+  final int? bestOf;
+
+  /// Vôlei: o placar de cada set lançado, na visão de quem marcou o jogo
+  /// (time, adversário); [teamScore] e [opponentScore] são os sets vencidos.
+  final List<(int, int)>? setScores;
 
   /// Relógio da partida; nulo enquanto não foi iniciado. Controlado só pelas
   /// ações do relógio (não é enviado pelo formulário).
@@ -269,6 +280,26 @@ class Game {
         : (opponentScore!, teamScore!);
   }
 
+  /// Sets lançados do ponto de vista de [viewerTeamId] (mine, theirs); nulo
+  /// sem sets (futebol, ou vôlei ainda sem placar).
+  List<(int, int)>? setScoresFor(String viewerTeamId) {
+    final sets = setScores;
+    if (sets == null) return null;
+    return isHostedBy(viewerTeamId)
+        ? sets
+        : [for (final (a, b) in sets) (b, a)];
+  }
+
+  /// "25-20, 23-25, 25-18" do ponto de vista de [viewerTeamId]; nulo sem
+  /// sets.
+  String? setsLabelFor(String viewerTeamId) =>
+      switch (setScoresFor(viewerTeamId)) {
+        final sets? when sets.isNotEmpty => [
+          for (final (mine, theirs) in sets) '$mine-$theirs',
+        ].join(', '),
+        _ => null,
+      };
+
   /// "Vitória 3 x 1", "Empate 2 x 2" ou "Derrota 0 x 1" do ponto de vista de
   /// [viewerTeamId]; nulo sem placar.
   String? resultLabelFor(String viewerTeamId) {
@@ -296,6 +327,8 @@ class Game {
       'host_is_home': hostIsHome,
       'scheduled_at': scheduledAt.toUtc().toIso8601String(),
       'venue_id': venueId,
+      // Só o vôlei tem melhor de; no futebol fica nulo.
+      'best_of': bestOf,
       'location': location == null || location.isEmpty ? null : location,
     };
   }
@@ -342,3 +375,22 @@ String teamAbbreviation(String name) {
       : words.map((word) => word[0]).take(3).join();
   return abbreviation.toUpperCase();
 }
+
+/// Sets do banco (`[[25, 20], [23, 25]]`); nulo sem sets ou com formato
+/// inesperado.
+List<(int, int)>? parseSetScores(Object? value) {
+  if (value is! List) return null;
+  final sets = <(int, int)>[];
+  for (final set in value) {
+    if (set is! List || set.length != 2) return null;
+    final [a, b] = set;
+    if (a is! num || b is! num) return null;
+    sets.add((a.toInt(), b.toInt()));
+  }
+  return sets;
+}
+
+/// Sets para gravar (`set_scores`).
+List<List<int>> setScoresToJson(List<(int, int)> sets) => [
+  for (final (a, b) in sets) [a, b],
+];

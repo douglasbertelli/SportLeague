@@ -8,6 +8,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/form_page.dart';
 import '../../../core/widgets/loading_button.dart';
+import '../../sports/domain/sport_rules.dart';
 import '../../teams/data/team_repository.dart';
 import '../../teams/domain/team.dart';
 import '../data/game_repository.dart';
@@ -42,6 +43,16 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
   late bool _venueChosen = widget.game != null;
   late DateTime? _scheduledAt = widget.game?.scheduledAt ?? widget.scheduledAt;
   late Modality? _modality = widget.game?.modality;
+
+  /// Vôlei: melhor de 3 ou de 5; sem escolha, o padrão da modalidade.
+  late int? _bestOf = widget.game?.bestOf;
+
+  /// Melhor de para a [modality]; nulo fora do vôlei.
+  int? _effectiveBestOf(Modality? modality) =>
+      switch (rulesForModality(modality).sets) {
+        final sets? => _bestOf ?? sets.defaultBestOf[modality] ?? 5,
+        null => null,
+      };
 
   /// Mando do time que marca; mandante por padrão.
   late bool _hostIsHome = widget.game?.hostIsHome ?? true;
@@ -247,6 +258,7 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
       },
       modality: modality,
       hostIsHome: hostIsHome,
+      bestOf: _effectiveBestOf(modality),
       scheduledAt: scheduledAt,
       venueId: venue.id,
       // O texto antigo do local dá lugar ao local cadastrado.
@@ -383,6 +395,26 @@ class _GameFormPageState extends ConsumerState<GameFormPage> {
                 }),
               ),
             ),
+            // Vôlei: melhor de 3 ou de 5.
+            if (rulesForModality(modality).sets case final sets?) ...[
+              const SizedBox(height: 16),
+              Text('Partida', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<int>(
+                segments: [
+                  for (final option in sets.bestOfOptions)
+                    ButtonSegment(
+                      value: option,
+                      label: Text('Melhor de $option'),
+                    ),
+                ],
+                selected: {?_effectiveBestOf(modality)},
+                showSelectedIcon: false,
+                onSelectionChanged: _loading
+                    ? null
+                    : (selection) => setState(() => _bestOf = selection.first),
+              ),
+            ],
             const SizedBox(height: 16),
             Text('Jogar como', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),

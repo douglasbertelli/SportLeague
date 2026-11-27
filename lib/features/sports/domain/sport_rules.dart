@@ -348,6 +348,20 @@ class SetRules {
     required Modality? modality,
     required int bestOf,
   }) {
+    final result = progress(sets, modality: modality, bestOf: bestOf);
+    if (result == null) return null;
+    final toWin = setsToWin(bestOf);
+    return result.a == toWin || result.b == toWin ? result : null;
+  }
+
+  /// Como [matchResult], mas aceita a partida em andamento (ninguém venceu
+  /// ainda): o placar ao vivo, lançado set a set. Nulo se algum set não
+  /// terminou ou se há set depois de alguém já ter vencido.
+  ({int a, int b})? progress(
+    List<(int, int)> sets, {
+    required Modality? modality,
+    required int bestOf,
+  }) {
     if (!bestOfOptions.contains(bestOf)) return null;
     final toWin = setsToWin(bestOf);
     var (wonA, wonB) = (0, 0);
@@ -362,9 +376,12 @@ class SetRules {
         wonB++;
       }
     }
-    if (wonA != toWin && wonB != toWin) return null;
     return (a: wonA, b: wonB);
   }
+
+  /// Se a partida em [result] já tem vencedor.
+  bool isOver(({int a, int b}) result, int bestOf) =>
+      result.a == setsToWin(bestOf) || result.b == setsToWin(bestOf);
 
   /// Se o resultado foi apertado (decidido no tie-break: 3x2, 2x1).
   bool isClose(({int a, int b}) result, int bestOf) =>

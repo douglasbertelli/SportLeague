@@ -16,7 +16,9 @@ import '../data/dispute_repository.dart';
 import '../data/game_repository.dart';
 import '../domain/game.dart';
 import '../domain/score_dispute.dart';
+import '../../sports/domain/sport_rules.dart';
 import 'contest_score.dart';
+import 'sets_sheet.dart';
 import 'game_sheet_page.dart';
 import 'lineup_page.dart';
 import 'presence.dart';
@@ -135,10 +137,11 @@ class _GameCardState extends ConsumerState<GameCard> {
       GameStatus.scheduled when widget.stage == GameStage.scheduled => const [
         _GameAction.cancel,
       ],
-      // Depois do jogo, o adversário contesta o placar (uma vez por vez).
-      GameStatus.scheduled when _game.hasScore && dispute == null => const [
-        _GameAction.contest,
-      ],
+      // Depois do jogo, o adversário contesta o placar (uma vez por vez). A
+      // contestação é em gols; no vôlei (sets), ainda não.
+      GameStatus.scheduled
+          when _game.hasScore && dispute == null && _game.rules.sets == null =>
+        const [_GameAction.contest],
       GameStatus.scheduled => const [],
     };
   }
@@ -205,6 +208,30 @@ class _GameCardState extends ConsumerState<GameCard> {
 
   /// Placar do ponto de vista de quem marcou (o único que lança).
   Future<void> _enterScore() async {
+    // Vôlei: o placar é em sets, com a partida terminada.
+    if (_game.rules.sets != null) {
+      final sets = await showSetsSheet(
+        context,
+        game: _game,
+        myTeam:
+            _game.hostTeamName ??
+            ref.read(selectedTeamProvider).value?.name ??
+            'Seu time',
+        opponent: _game.opponent,
+        requireComplete: true,
+      );
+      if (sets == null || !mounted) return;
+      setState(() => _loading = true);
+      await saveSets(
+        context,
+        ref,
+        game: _game,
+        teamId: widget.viewerTeamId,
+        sets: sets,
+      );
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     final score = await showAppSheet<(int, int)>(
       context,
       builder: (_) => _ScoreSheet(
@@ -571,6 +598,11 @@ class _GameCardState extends ConsumerState<GameCard> {
                     if (_presenceOpen) ...[
                       const SizedBox(height: 8),
                       PresenceSummary(gameId: _game.id!, teamId: viewer),
+                    ],
+                    // Vôlei: o placar de cada set.
+                    if (_game.setsLabelFor(viewer) case final sets?) ...[
+                      const SizedBox(height: 4),
+                      Text('Sets: $sets', style: mutedStyle),
                     ],
                     if (statusLine != null) ...[
                       const SizedBox(height: 12),
